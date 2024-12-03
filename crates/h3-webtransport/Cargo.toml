@@ -1,0 +1,22 @@
+[package]
+name = "scuffle-h3-webtransport"
+version = "0.0.1"
+repository = "https://github.com/scufflecloud/scuffle"
+authors = ["Scuffle <opensource@scuffle.cloud>"]
+readme = "README.md"
+documentation = "https://docs.rs/scuffle-h3-webtransport"
+edition = "2021"
+license = "MIT"
+description = "Enhanced fork of the h3-webtransport crate tailored for Scuffle."
+keywords = ["h3", "webtransport", "http3"]
+
+[dependencies]
+bytes = "1"
+futures-util = { version = "0.3", default-features = false }
+http = "1"
+pin-project-lite = { version = "0.2", default-features = false }
+tokio = { version = "1.28", default-features = false }
+
+[dependencies.h3]
+version = "0"
+features = ["i-implement-a-third-party-backend-and-opt-into-breaking-changes"]
