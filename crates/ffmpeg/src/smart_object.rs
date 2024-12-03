@@ -2,7 +2,7 @@
 pub struct SmartPtr<T>(SmartObject<*mut T>);
 
 #[derive(Debug)]
-pub(crate) struct SmartObject<T> {
+pub struct SmartObject<T> {
 	value: Option<T>,
 	destructor: fn(&mut T),
 }

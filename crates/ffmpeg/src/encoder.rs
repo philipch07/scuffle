@@ -6,7 +6,7 @@ use crate::error::FfmpegError;
 use crate::frame::Frame;
 use crate::io::Output;
 use crate::packet::Packet;
-use crate::smart_object::SmartPtr;
+use crate::smart_object::{SmartObject, SmartPtr};
 
 pub struct Encoder {
 	incoming_time_base: AVRational,
@@ -20,7 +20,6 @@ pub struct Encoder {
 /// Safety: `Encoder` can be sent between threads.
 unsafe impl Send for Encoder {}
 
-#[derive(Clone, Debug)]
 pub struct VideoEncoderSettings {
 	pub width: i32,
 	pub height: i32,
@@ -76,7 +75,7 @@ impl VideoEncoderSettings {
 	}
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Default)]
 pub struct VideoEncoderBuilder(VideoEncoderSettings);
 
 impl VideoEncoderBuilder {
@@ -172,7 +171,7 @@ impl VideoEncoderBuilder {
 }
 
 impl VideoEncoderSettings {
-	fn apply(&self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
+	fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
 		if self.width <= 0 || self.height <= 0 || self.frame_rate <= 0 || self.pixel_format == AVPixelFormat::AV_PIX_FMT_NONE
 		{
 			return Err(FfmpegError::Arguments(
@@ -210,11 +209,9 @@ impl VideoEncoderSettings {
 	}
 }
 
-#[derive(Clone, Debug)]
 pub struct AudioEncoderSettings {
 	pub sample_rate: i32,
-	pub channel_layout: u64,
-	pub channel_count: i32,
+	pub ch_layout: Option<SmartObject<AVChannelLayout>>,
 	pub sample_fmt: AVSampleFormat,
 	pub thread_count: Option<i32>,
 	pub thread_type: Option<i32>,
@@ -232,8 +229,7 @@ impl Default for AudioEncoderSettings {
 	fn default() -> Self {
 		Self {
 			sample_rate: 0,
-			channel_layout: 0,
-			channel_count: 0,
+			ch_layout: None,
 			sample_fmt: AVSampleFormat::AV_SAMPLE_FMT_NONE,
 			thread_count: None,
 			thread_type: None,
@@ -252,19 +248,17 @@ impl Default for AudioEncoderSettings {
 impl AudioEncoderSettings {
 	pub fn builder(
 		sample_rate: i32,
-		channel_layout: u64,
 		channel_count: i32,
 		sample_fmt: AVSampleFormat,
 	) -> AudioEncoderBuilder {
 		AudioEncoderBuilder::default()
 			.sample_rate(sample_rate)
-			.channel_layout(channel_layout)
 			.channel_count(channel_count)
 			.sample_fmt(sample_fmt)
 	}
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Default)]
 pub struct AudioEncoderBuilder(AudioEncoderSettings);
 
 impl AudioEncoderBuilder {
@@ -273,13 +267,10 @@ impl AudioEncoderBuilder {
 		self
 	}
 
-	pub fn channel_layout(mut self, channel_layout: u64) -> Self {
-		self.0.channel_layout = channel_layout;
-		self
-	}
-
 	pub fn channel_count(mut self, channel_count: i32) -> Self {
-		self.0.channel_count = channel_count;
+		let mut ch_layout = SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe { av_channel_layout_uninit(ptr) });
+		unsafe { av_channel_layout_default(ch_layout.as_mut(), channel_count) };
+		self.0.ch_layout = Some(ch_layout);
 		self
 	}
 
@@ -344,21 +335,18 @@ impl AudioEncoderBuilder {
 }
 
 impl AudioEncoderSettings {
-	fn apply(&self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
+	fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
 		if self.sample_rate <= 0
-			|| self.channel_layout == 0
-			|| self.channel_count <= 0
+			|| self.ch_layout.is_none()
 			|| self.sample_fmt == AVSampleFormat::AV_SAMPLE_FMT_NONE
 		{
 			return Err(FfmpegError::Arguments(
-				"sample_rate, channel_layout, channel_count and sample_fmt must be set",
+				"sample_rate, channel_layout and sample_fmt must be set",
 			));
 		}
 
 		encoder.sample_rate = self.sample_rate;
-		encoder.channel_layout = self.channel_layout;
-		encoder.channels = self.channel_count;
-		encoder.ch_layout.nb_channels = self.channel_count;
+		encoder.ch_layout = self.ch_layout.unwrap().into_inner();
 		encoder.sample_fmt = self.sample_fmt;
 		encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
 		encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);
@@ -377,14 +365,13 @@ impl AudioEncoderSettings {
 	}
 }
 
-#[derive(Clone, Debug)]
 pub enum EncoderSettings {
 	Video(VideoEncoderSettings),
 	Audio(AudioEncoderSettings),
 }
 
 impl EncoderSettings {
-	fn apply(&self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
+	fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
 		match self {
 			EncoderSettings::Video(video_settings) => video_settings.apply(encoder),
 			EncoderSettings::Audio(audio_settings) => audio_settings.apply(encoder),
@@ -446,16 +433,18 @@ impl Encoder {
 
 		encoder_mut.time_base = incoming_time_base;
 
+		let codec_options = settings
+			.codec_specific_options()
+			.map(|options| options.as_mut_ptr_ref() as *mut *mut _)
+			.unwrap_or(std::ptr::null_mut());
+
+		let average_duration = settings.average_duration(outgoing_time_base);
+
 		settings.apply(encoder_mut)?;
 
 		if global_header {
 			encoder_mut.flags |= AV_CODEC_FLAG_GLOBAL_HEADER as i32;
 		}
-
-		let codec_options = settings
-			.codec_specific_options()
-			.map(|options| options.as_mut_ptr_ref() as *mut *mut _)
-			.unwrap_or(std::ptr::null_mut());
 
 		// Safety: `avcodec_open2` is safe to call, 'encoder' and 'codec' and
 		// 'codec_options' are a valid pointers.
@@ -472,8 +461,6 @@ impl Encoder {
 		}
 
 		ost.set_time_base(outgoing_time_base);
-
-		let average_duration = settings.average_duration(outgoing_time_base);
 
 		Ok(Self {
 			incoming_time_base,

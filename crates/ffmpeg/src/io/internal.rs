@@ -29,7 +29,7 @@ pub(crate) unsafe extern "C" fn read_packet<T: std::io::Read>(
 /// generically create the function pointer
 pub(crate) unsafe extern "C" fn write_packet<T: std::io::Write>(
 	opaque: *mut libc::c_void,
-	buf: *mut u8,
+	buf: *const u8,
 	buf_size: i32,
 ) -> i32 {
 	(*(opaque as *mut T))
@@ -93,7 +93,7 @@ pub(crate) struct Inner<T: Send + Sync> {
 pub(crate) struct InnerOptions {
 	pub(crate) buffer_size: usize,
 	pub(crate) read_fn: Option<unsafe extern "C" fn(*mut c_void, *mut u8, i32) -> i32>,
-	pub(crate) write_fn: Option<unsafe extern "C" fn(*mut c_void, *mut u8, i32) -> i32>,
+	pub(crate) write_fn: Option<unsafe extern "C" fn(*mut c_void, *const u8, i32) -> i32>,
 	pub(crate) seek_fn: Option<unsafe extern "C" fn(*mut c_void, i64, i32) -> i64>,
 	pub(crate) output_format: *const AVOutputFormat,
 }

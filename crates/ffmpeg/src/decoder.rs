@@ -51,7 +51,6 @@ impl std::fmt::Debug for AudioDecoder {
 		f.debug_struct("AudioDecoder")
 			.field("time_base", &self.time_base())
 			.field("sample_rate", &self.sample_rate())
-			.field("channel_layout", &self.channel_layout())
 			.field("channels", &self.channels())
 			.field("sample_fmt", &self.sample_format())
 			.finish()
@@ -229,12 +228,8 @@ impl AudioDecoder {
 		self.0.decoder.as_deref_except().sample_rate
 	}
 
-	pub fn channel_layout(&self) -> u64 {
-		self.0.decoder.as_deref_except().channel_layout
-	}
-
 	pub fn channels(&self) -> i32 {
-		self.0.decoder.as_deref_except().channels
+		self.0.decoder.as_deref_except().ch_layout.nb_channels
 	}
 
 	pub fn sample_format(&self) -> AVSampleFormat {

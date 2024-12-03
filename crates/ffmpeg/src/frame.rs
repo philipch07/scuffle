@@ -64,12 +64,11 @@ impl Frame {
 	}
 
 	pub fn duration(&self) -> Option<i64> {
-		check_i64(self.0.as_deref_except().duration).or_else(|| check_i64(self.0.as_deref_except().pkt_duration))
+		check_i64(self.0.as_deref_except().duration)
 	}
 
 	pub fn set_duration(&mut self, duration: Option<i64>) {
 		self.0.as_deref_mut_except().duration = duration.unwrap_or(AV_NOPTS_VALUE);
-		self.0.as_deref_mut_except().pkt_duration = duration.unwrap_or(AV_NOPTS_VALUE);
 	}
 
 	pub fn best_effort_timestamp(&self) -> Option<i64> {
@@ -101,7 +100,7 @@ impl Frame {
 	}
 
 	pub fn is_audio(&self) -> bool {
-		self.0.as_deref_except().channel_layout != 0
+		self.0.as_deref_except().ch_layout.nb_channels != 0
 	}
 
 	pub fn is_video(&self) -> bool {
@@ -226,14 +225,6 @@ impl AudioFrame {
 	pub fn set_sample_rate(&mut self, sample_rate: usize) {
 		self.0 .0.as_deref_mut_except().sample_rate = sample_rate as i32;
 	}
-
-	pub fn channel_layout(&self) -> u64 {
-		self.0 .0.as_deref_except().channel_layout
-	}
-
-	pub fn set_channel_layout(&mut self, channel_layout: u64) {
-		self.0 .0.as_deref_mut_except().channel_layout = channel_layout;
-	}
 }
 
 impl std::fmt::Debug for AudioFrame {
@@ -241,7 +232,6 @@ impl std::fmt::Debug for AudioFrame {
 		f.debug_struct("AudioFrame")
 			.field("nb_samples", &self.nb_samples())
 			.field("sample_rate", &self.sample_rate())
-			.field("channel_layout", &self.channel_layout())
 			.field("pts", &self.pts())
 			.field("dts", &self.dts())
 			.field("duration", &self.duration())
