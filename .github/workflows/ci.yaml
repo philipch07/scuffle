@@ -7,34 +7,15 @@ on:
 
   pull_request:
   workflow_dispatch:
-  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  pre-job:
-    runs-on: ubuntu-24.04
-    permissions:
-      actions: write
-      contents: read
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          concurrent_skipping: "never"
-          skip_after_successful_duplicate: "true"
-          paths_ignore: '["**/README.md", "**/docs/**"]'
-          do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
-
   clippy:
     name: Clippy
     runs-on: ubuntu-24.04
-    needs: pre-job
-    if: ${{ needs.pre-job.outputs.should_skip != 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,9 +30,10 @@ jobs:
           components: clippy
 
       - uses: Swatinem/rust-cache@v2
+        id: cache-rust
         with:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
-          key: clippy
+          shared-key: clippy
 
       - name: Make sure code is linted
         run: cargo +nightly xtask powerset clippy
@@ -59,8 +41,6 @@ jobs:
   fmt:
     name: Fmt
     runs-on: ubuntu-24.04
-    needs: pre-job
-    if: ${{ needs.pre-job.outputs.should_skip != 'true' }}
     permissions:
       checks: write
     steps:
@@ -78,8 +58,6 @@ jobs:
   hakari:
     name: Hakari
     runs-on: ubuntu-24.04
-    needs: pre-job
-    if: ${{ needs.pre-job.outputs.should_skip != 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -105,8 +83,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-24.04
-    needs: pre-job
-    if: ${{ needs.pre-job.outputs.should_skip != 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -123,7 +99,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
-          key: test
+          shared-key: test
 
       - uses: cargo-bins/cargo-binstall@main
 
