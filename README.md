@@ -4,27 +4,27 @@
 </div>
 
 <p align="center">
-    <a href="https://twitter.com/scufflecloud" style="text-decoration: none;">
-        <img height="25" src="https://img.shields.io/badge/Twitter-000000?style=flat&logo=x&logoColor=white" alt="Twitter">
-    </a>
-    <a href="https://bsky.app/profile/scuffle.cloud" style="text-decoration: none;">
-        <img height="25" src="https://img.shields.io/badge/Bluesky-00A0FF?style=flat&logo=bluesky&logoColor=white" alt="Bluesky">
-    </a>
-    <a href="https://discord.gg/scuffle" style="text-decoration: none;">
-        <img height="25" src="https://img.shields.io/badge/Discord-5865f2?style=flat&logo=discord&logoColor=white" alt="Discord">
-    </a>
-    <a href="https://linkedin.com/company/scufflecloud" style="text-decoration: none;">
-        <img height="25" src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn">
-    </a>
+    <a href="https://twitter.com/scufflecloud"><img height="30" src="https://img.shields.io/badge/Twitter-000000?style=for-the-badge&logo=x&logoColor=white"></a>
+    &nbsp;
+    <a href="https://bsky.app/profile/scuffle.cloud"><img height="30" src="https://img.shields.io/badge/Bluesky-00A0FF?style=for-the-badge&logo=bluesky&logoColor=white"></a>
+    &nbsp;
+    <a href="https://discord.gg/scuffle"><img height="30" src="https://img.shields.io/badge/Discord-5865f2?style=for-the-badge&logo=discord&logoColor=white"></a>
+    &nbsp;
+    <a href="https://linkedin.com/company/scufflecloud"><img height="30" src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white"></a>
 </p>
 
 <p align="center">
-    <a href="https://codecov.io/gh/ScuffleCloud/scuffle">
-        <img src="https://codecov.io/gh/ScuffleCloud/scuffle/graph/badge.svg?token=LJCYSZR4IV"/>
-    </a>
-    <a href="https://deps.rs/repo/github/ScuffleCloud/scuffle">
-        <img src="https://deps.rs/repo/github/ScuffleCloud/scuffle/status.svg" alt="dependency status"/>
-    </a>
+    <a href="https://opencollective.com/scuffle"><img height="30" src="https://img.shields.io/badge/support us-764bd1?style=for-the-badge&logo=opencollective&logoColor=white&labelColor=gray"/></a>
+    &nbsp;
+    <a href="https://jira.scuffle.cloud"><img height="30" src="https://img.shields.io/badge/issue tracker-0052CC?style=for-the-badge&logo=jira&logoColor=white&labelColor=gray"/></a>
+    &nbsp;
+    <a href="#"><img height="30" src="https://img.shields.io/badge/made with ❤️-f0a63e?style=for-the-badge&logo=rust&logoColor=white&labelColor=gray"/></a>
+</p>
+
+<p align="center">
+    <a href="https://codecov.io/gh/ScuffleCloud/scuffle"><img height="30" src="https://img.shields.io/codecov/c/github/ScuffleCloud/scuffle?logo=codecov&token=LJCYSZR4IV&style=for-the-badge"/></a>
+    &nbsp;
+    <a href="https://github.com/ScuffleCloud/scuffle/actions"><img height="30" src="https://img.shields.io/github/checks-status/ScuffleCloud/scuffle/main?style=for-the-badge&logo=githubactions&logoColor=white"/></a>
 </p>
 
 > [!WARNING]  
