@@ -161,7 +161,7 @@ where
 		let mut count = 0;
 
 		{
-			let mut new_batch = false;
+			let mut new_batch = true;
 			let mut batch = self.current_batch.lock().await;
 
 			for item in items {
@@ -554,5 +554,26 @@ mod tests {
 		assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 1);
 		assert!(start.elapsed() >= std::time::Duration::from_millis(5));
 		assert!(start.elapsed() < std::time::Duration::from_millis(20));
+	}
+
+	#[tokio::test]
+	async fn already_batch() {
+		let requests = Arc::new(AtomicUsize::new(0));
+
+		let fetcher = TestFetcher {
+			values: HashMap::from_iter(vec![("a", 1), ("b", 2), ("c", 3)]),
+			delay: std::time::Duration::from_millis(5),
+			requests: requests.clone(),
+			capacity: 2,
+		};
+
+		let loader = DataLoader::builder().batch_size(10).concurrency(1).build(fetcher);
+
+		let start = std::time::Instant::now();
+		let (a, b) = tokio::join!(loader.load("a"), loader.load("b"));
+		assert_eq!(a, Ok(Some(1)));
+		assert_eq!(b, Ok(Some(2)));
+		assert!(start.elapsed() < std::time::Duration::from_millis(15));
+		assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 1);
 	}
 }
