@@ -111,3 +111,6 @@ avresample = []
 postproc   = []
 swresample = []
 swscale    = []
+
+[package.metadata.xtask]
+skip = true
