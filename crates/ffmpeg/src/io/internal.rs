@@ -1,5 +1,5 @@
-use scuffle_ffmpeg_sys::*;
 use libc::{c_void, SEEK_CUR, SEEK_END, SEEK_SET};
+use scuffle_ffmpeg_sys::*;
 
 use crate::error::FfmpegError;
 use crate::smart_object::SmartPtr;
