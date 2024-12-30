@@ -1,6 +1,6 @@
 use std::ffi::CStr;
 
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 use super::internal::{read_packet, seek, Inner, InnerOptions};
 use crate::consts::{Const, DEFAULT_BUFFER_SIZE};

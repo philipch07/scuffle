@@ -1,4 +1,4 @@
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 use super::internal::{seek, write_packet, Inner, InnerOptions};
 use crate::consts::DEFAULT_BUFFER_SIZE;

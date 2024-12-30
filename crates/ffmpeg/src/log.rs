@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(i32)]

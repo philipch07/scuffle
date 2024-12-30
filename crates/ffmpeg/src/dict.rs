@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 use crate::error::FfmpegError;
 use crate::smart_object::SmartPtr;

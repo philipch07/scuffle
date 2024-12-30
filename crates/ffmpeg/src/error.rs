@@ -1,4 +1,4 @@
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FfmpegError {

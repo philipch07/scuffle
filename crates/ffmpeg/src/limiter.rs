@@ -1,4 +1,4 @@
-use scuffle_ffmpeg_sys::AVRational;
+use ffmpeg_sys_next::AVRational;
 
 use crate::frame::Frame;
 

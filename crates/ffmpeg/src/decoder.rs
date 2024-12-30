@@ -1,4 +1,4 @@
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 use crate::codec::DecoderCodec;
 use crate::error::{FfmpegError, AVERROR_EAGAIN};

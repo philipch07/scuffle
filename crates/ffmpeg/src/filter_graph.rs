@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::ptr::NonNull;
 
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 use crate::error::{FfmpegError, AVERROR_EAGAIN};
 use crate::frame::Frame;

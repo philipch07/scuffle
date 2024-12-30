@@ -1,4 +1,4 @@
-use scuffle_ffmpeg_sys::*;
+use ffmpeg_sys_next::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct DecoderCodec(*const AVCodec);
