@@ -21,12 +21,8 @@ members = [
     "crates/settings",
     "crates/settings/examples",
     "crates/signal",
-    "apps/image-processor",
-    "apps/image-processor/proto",
-    "apps/image-processor/examples",
     "crates/workspace-hack",
     "dev-tools/xtask",
-    "crates/ffmpeg-sys",
 ]
 
 resolver = "2"
