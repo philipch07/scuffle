@@ -1,25 +1,25 @@
 use crate::svc::ConnectionAcceptor;
 
-#[cfg(feature = "_quic")]
+#[cfg(feature = "h3")]
 pub mod quic;
-#[cfg(feature = "_tcp")]
+#[cfg(any(feature = "http1", feature = "http2"))]
 pub mod tcp;
 
 #[derive(derive_more::From, derive_more::Debug)]
 pub enum Server {
-	#[cfg(feature = "_quic")]
+	#[cfg(feature = "h3")]
 	Quic(quic::QuicServer),
-	#[cfg(feature = "_tcp")]
+	#[cfg(any(feature = "http1", feature = "http2"))]
 	#[debug("Tcp")]
 	Tcp(tcp::TcpServer),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum ServerError {
-	#[cfg(feature = "_quic")]
+	#[cfg(feature = "h3")]
 	#[error("quic: {0}")]
 	Quic(#[from] quic::QuicBackendError),
-	#[cfg(feature = "_tcp")]
+	#[cfg(any(feature = "http1", feature = "http2"))]
 	#[error("tcp: {0}")]
 	Tcp(#[from] tcp::TcpServerError),
 }
@@ -48,48 +48,48 @@ impl HttpServer for Server {
 	type Error = ServerError;
 
 	async fn start<S: ConnectionAcceptor + Clone>(&self, service: S, workers: usize) -> Result<(), Self::Error> {
-		#[cfg(not(any(feature = "_quic", feature = "_tcp")))]
+		#[cfg(not(any(feature = "h3", feature = "hyper")))]
 		let _ = (service, workers);
 
 		match self {
-			#[cfg(feature = "_quic")]
+			#[cfg(feature = "h3")]
 			Server::Quic(server) => Ok(server.start(service, workers).await?),
-			#[cfg(feature = "_tcp")]
+			#[cfg(any(feature = "http1", feature = "http2"))]
 			Server::Tcp(server) => Ok(server.start(service, workers).await?),
-			#[cfg(not(any(feature = "_quic", feature = "_tcp")))]
+			#[cfg(not(any(feature = "h3", feature = "http1", feature = "http2")))]
 			_ => unreachable!(),
 		}
 	}
 
 	async fn shutdown(&self) -> Result<(), Self::Error> {
 		match self {
-			#[cfg(feature = "_quic")]
+			#[cfg(feature = "h3")]
 			Server::Quic(server) => Ok(server.shutdown().await?),
-			#[cfg(feature = "_tcp")]
+			#[cfg(any(feature = "http1", feature = "http2"))]
 			Server::Tcp(server) => Ok(server.shutdown().await?),
-			#[cfg(not(any(feature = "_quic", feature = "_tcp")))]
+			#[cfg(not(any(feature = "h3", feature = "http1", feature = "http2")))]
 			_ => unreachable!(),
 		}
 	}
 
 	fn local_addr(&self) -> Result<std::net::SocketAddr, Self::Error> {
 		match self {
-			#[cfg(feature = "_quic")]
+			#[cfg(feature = "h3")]
 			Server::Quic(server) => Ok(server.local_addr()?),
-			#[cfg(feature = "_tcp")]
+			#[cfg(any(feature = "http1", feature = "http2"))]
 			Server::Tcp(server) => Ok(server.local_addr()?),
-			#[cfg(not(any(feature = "_quic", feature = "_tcp")))]
+			#[cfg(not(any(feature = "h3", feature = "http1", feature = "http2")))]
 			_ => unreachable!(),
 		}
 	}
 
 	async fn wait(&self) -> Result<(), Self::Error> {
 		match self {
-			#[cfg(feature = "_quic")]
+			#[cfg(feature = "h3")]
 			Server::Quic(server) => Ok(server.wait().await?),
-			#[cfg(feature = "_tcp")]
+			#[cfg(any(feature = "http1", feature = "http2"))]
 			Server::Tcp(server) => Ok(server.wait().await?),
-			#[cfg(not(any(feature = "_quic", feature = "_tcp")))]
+			#[cfg(not(any(feature = "h3", feature = "http1", feature = "http2")))]
 			_ => unreachable!(),
 		}
 	}
