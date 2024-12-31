@@ -11,13 +11,13 @@ description = "FFmpeg bindings for Rust."
 keywords = ["ffmpeg", "video", "audio", "media"]
 
 [dependencies]
-ffmpeg-sys-next = "7.1"
 libc = "0.2"
 bytes = { optional = true, version = "1" }
 tokio = { optional = true, version = "1" }
 crossbeam-channel = { optional = true, version = "0.5.13" }
 tracing = { optional = true, version = "0.1" }
 arc-swap = { version = "1.7" }
+ffmpeg-sys-next = { version = "7.1.0" }
 scuffle-workspace-hack.workspace = true
 
 [features]

@@ -54,24 +54,14 @@ scuffle-context.workspace = true
 scuffle-workspace-hack.workspace = true
 
 [features]
-_tcp = [
-    "hyper",
-    "hyper-util",
-]
-_quic = [
-    "h3",
-]
-
 error-backtrace = []
 
 http1 = [
-    "_tcp",
     "hyper/http1",
     "hyper-util/http1",
 ]
 
 http2 = [
-    "_tcp",
     "hyper/http2",
     "hyper-util/http2",
 ]
@@ -89,16 +79,12 @@ http3-webtransport = [
 
 # Quinn is a quic backend for http3
 quic-quinn = [
-    "_quic",
     "http3",
     "h3-quinn",
     "quinn",
 ]
 
-_tls = []
-
 tls-rustls = [
-    "_tls",
     "rustls",
     "tokio-rustls",
 ]
@@ -135,15 +121,12 @@ default = [
 
 [package.metadata.xtask]
 addative-features = [
-    "_tcp",
-    "_quic",
     "error-backtrace",
     "http1",
     "http2",
     "http3",
     "http3-webtransport",
     "quic-quinn",
-    "_tls",
     "tls-rustls",
     "tls-rustls-pem",
     "tracing",

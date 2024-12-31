@@ -4,7 +4,7 @@ use std::task::{Context, Poll};
 use bytes::{Buf, Bytes};
 use http_body::Frame;
 
-#[cfg(feature = "_quic")]
+#[cfg(feature = "h3")]
 use crate::backend::quic::QuicIncomingBody;
 
 pub struct IncomingBody {
@@ -33,9 +33,9 @@ impl std::fmt::Debug for IncomingBody {
 
 #[derive(derive_more::From)]
 pub(crate) enum IncomingBodyInner {
-	#[cfg(feature = "_tcp")]
+	#[cfg(feature = "hyper")]
 	Tcp(#[from] hyper::body::Incoming),
-	#[cfg(feature = "_quic")]
+	#[cfg(feature = "h3")]
 	Quic(#[from] QuicIncomingBody),
 	#[cfg_attr(not(any(feature = "http3", feature = "http1", feature = "http2")), allow(dead_code))]
 	Empty,
@@ -50,9 +50,9 @@ impl http_body::Body for IncomingBody {
 		let _ = cx;
 
 		match &mut self.inner {
-			#[cfg(feature = "_tcp")]
+			#[cfg(feature = "hyper")]
 			IncomingBodyInner::Tcp(body) => Pin::new(body).poll_frame(cx).map_err(Into::into),
-			#[cfg(feature = "_quic")]
+			#[cfg(feature = "h3")]
 			IncomingBodyInner::Quic(body) => Pin::new(body).poll_frame(cx).map_err(Into::into),
 			IncomingBodyInner::Empty => Poll::Ready(None),
 		}
@@ -60,9 +60,9 @@ impl http_body::Body for IncomingBody {
 
 	fn is_end_stream(&self) -> bool {
 		match &self.inner {
-			#[cfg(feature = "_tcp")]
+			#[cfg(feature = "hyper")]
 			IncomingBodyInner::Tcp(body) => body.is_end_stream(),
-			#[cfg(feature = "_quic")]
+			#[cfg(feature = "h3")]
 			IncomingBodyInner::Quic(body) => body.is_end_stream(),
 			IncomingBodyInner::Empty => true,
 		}
@@ -70,9 +70,9 @@ impl http_body::Body for IncomingBody {
 
 	fn size_hint(&self) -> http_body::SizeHint {
 		match &self.inner {
-			#[cfg(feature = "_tcp")]
+			#[cfg(feature = "hyper")]
 			IncomingBodyInner::Tcp(body) => body.size_hint(),
-			#[cfg(feature = "_quic")]
+			#[cfg(feature = "h3")]
 			IncomingBodyInner::Quic(body) => body.size_hint(),
 			IncomingBodyInner::Empty => http_body::SizeHint::with_exact(0),
 		}
