@@ -8,3 +8,7 @@ insert_final_newline = true
 charset = utf-8
 indent_style = tab
 trim_trailing_whitespace = true
+
+# Do not trim trailing whitespace in markdown files as it can be used for line breaks
+[*.md]
+trim_trailing_whitespace = false
