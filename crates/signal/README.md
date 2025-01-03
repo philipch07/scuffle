@@ -7,15 +7,16 @@
 
 ---
 
-A crate designed to provide a more user friendly interface to tokio::signal.
+A crate designed to provide a more user friendly interface to `tokio::signal`.
 
 ## Why do we need this?
 
-The tokio::signal provides a way for us to wait for a signal to be received in a non-blocking way, this crate extends that with a more helpful interface allowing the ability to listen to multiple signals concurrently.
+The `tokio::signal` module provides a way for us to wait for a signal to be received in a non-blocking way.
+This crate extends that with a more helpful interface allowing the ability to listen to multiple signals concurrently.
 
 ## Status
 
-This crate is currently under development and is not yet stable, unit tests are not yet fully implemented.
+This crate is currently under development and is not yet stable.
 
 Unit tests are not yet fully implemented. Use at your own risk.
 

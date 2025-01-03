@@ -11,7 +11,7 @@ A crate designed to provide a more ergonomic interface to the pprof crate.
 
 ## Status
 
-This crate is currently under development and is not yet stable, unit tests are not yet fully implemented.
+This crate is currently under development and is not yet stable.
 
 Unit tests are not yet fully implemented. Use at your own risk.
 

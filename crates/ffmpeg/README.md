@@ -19,7 +19,7 @@ TODO(troy): Add documenation about how this crate is different from other ffmpeg
 
 ## Status
 
-This crate is currently under development and is not yet stable, unit tests are not yet fully implemented.
+This crate is currently under development and is not yet stable.
 
 Unit tests are not yet fully implemented. Use at your own risk.
 

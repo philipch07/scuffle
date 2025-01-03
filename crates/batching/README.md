@@ -17,7 +17,7 @@ Often when we are building applications we need to load multiple items from a da
 
 Because we are buffering requests for a short period of time we do see higher latencies when there are not many requests. This is because the overhead from just processing the requests is lower then the time we spend buffering.
 
-However, this is often negated when we have a large number of requests as we see on average lower latencies due to more efficient use of resources. Latency is also more consistent as we are doing fewer requests to the external resource. 
+However, this is often negated when we have a large number of requests as we see on average lower latencies due to more efficient use of resources. Latency is also more consistent as we are doing fewer requests to the external resource.
 
 ## Usage
 
