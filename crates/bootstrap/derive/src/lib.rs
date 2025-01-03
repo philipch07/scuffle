@@ -10,12 +10,12 @@ mod main_impl;
 
 #[proc_macro]
 pub fn main(input: TokenStream) -> TokenStream {
-	handle_error(main_impl::impl_main(input.into()))
+    handle_error(main_impl::impl_main(input.into()))
 }
 
 fn handle_error(input: Result<proc_macro2::TokenStream, syn::Error>) -> TokenStream {
-	match input {
-		Ok(value) => value.into(),
-		Err(err) => err.to_compile_error().into(),
-	}
+    match input {
+        Ok(value) => value.into(),
+        Err(err) => err.to_compile_error().into(),
+    }
 }
