@@ -9,5 +9,5 @@ pub use service::Service;
 
 #[doc(hidden)]
 pub mod prelude {
-	pub use {anyhow, futures, scuffle_context, tokio};
+    pub use {anyhow, futures, scuffle_context, tokio};
 }

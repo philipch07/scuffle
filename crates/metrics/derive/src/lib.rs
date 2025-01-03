@@ -52,18 +52,18 @@ mod metrics_impl;
 /// ```
 #[proc_macro_attribute]
 pub fn metrics(args: TokenStream, input: TokenStream) -> TokenStream {
-	match metrics_impl(args, input) {
-		Ok(tokens) => tokens.into(),
-		Err(err) => err.to_compile_error().into(),
-	}
+    match metrics_impl(args, input) {
+        Ok(tokens) => tokens.into(),
+        Err(err) => err.to_compile_error().into(),
+    }
 }
 
 /// Implements a conversion `Into<opentelemetry::Value>` for the enum.
 /// This allows the enum to be used as a metric label.
 #[proc_macro_derive(MetricEnum, attributes(metrics))]
 pub fn metric_enum(input: TokenStream) -> TokenStream {
-	match metric_enum_impl(input.into()) {
-		Ok(tokens) => tokens.into(),
-		Err(err) => err.to_compile_error().into(),
-	}
+    match metric_enum_impl(input.into()) {
+        Ok(tokens) => tokens.into(),
+        Err(err) => err.to_compile_error().into(),
+    }
 }

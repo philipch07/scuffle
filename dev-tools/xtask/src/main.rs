@@ -6,15 +6,15 @@ mod utils;
 
 #[derive(Debug, clap::Parser)]
 #[command(
-	name = "cargo xtask",
-	bin_name = "cargo xtask",
-	about = "A utility for running commands in the workspace"
+    name = "cargo xtask",
+    bin_name = "cargo xtask",
+    about = "A utility for running commands in the workspace"
 )]
 struct Cli {
-	#[command(subcommand)]
-	command: Commands,
+    #[command(subcommand)]
+    command: Commands,
 }
 
 fn main() -> anyhow::Result<()> {
-	Cli::parse().command.run()
+    Cli::parse().command.run()
 }
