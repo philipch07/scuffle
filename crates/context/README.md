@@ -15,7 +15,7 @@ Its often useful to wait for all the futures to shutdown or to cancel them when 
 
 ## Usage
 
-Here is an example of how to use the `DataLoader` interface to batch multiple reads from a database.
+Here is an example of how to use the `Context` to cancel a spawned task.
 
 ```rust
 let (ctx, handler) = Context::new();
@@ -26,51 +26,6 @@ tokio::spawn(async move {
 
 // Will stop the spawned task and cancel all associated futures.
 handler.cancel();
-```
-
-Another use case might be to batch multiple writes to a database.
-
-```rust
-struct MyUserUpdater(SomeDatabase);
-
-impl BatchExecutor for MyUserUpdater {
-    type Request = User;
-    type Response = bool;
-
-    async fn execute(&self, requests: Vec<(Self::Request, BatchResponse<Self::Response>)>) {
-        let (users, responses) = requests.into_iter().unzip();
-
-        // You would need to build the query somehow, this is just an example
-        if let Err(e) = self.0.update("INSERT INTO users (id, name) VALUES ($1, $2), ($3, $4)").bind(users).await {
-            error!("Failed to insert users: {}", e);
-
-            for response in responses {
-                // Reply back saying we failed
-                response.send(false);
-            }
-
-            return;
-        }
-
-        // Reply back to the client that we successfully inserted the users
-        for response in responses {
-            response.send(true);
-        }
-    }
-}
-
-let batcher = Batcher::new(MyUserUpdater(database));
-
-// Will only make a single request to the database and insert both users
-// You can also use `batcher.execute_many` if you have more then one item to insert.
-let (success1, success2) = join!(batcher.execute(user1), batcher.execute(user2));
-if !success1 {
-    error!("Failed to insert user 1");
-}
-
-if !success2 {
-    error!("Failed to insert user 2");
-}
 ```
 
 ## License
