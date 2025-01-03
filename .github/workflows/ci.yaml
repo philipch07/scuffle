@@ -3,13 +3,13 @@ name: ci
 on:
   push:
     branches:
-      - main
+      - automation/brawl/try/*
+      - automation/brawl/merge/*
 
   pull_request:
-  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,9 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: clang curl pkg-config xz-utils libxv-dev ninja-build meson nasm protobuf-compiler
+      - name: Setup nasm
+        run: |
+          sudo apt-get install nasm
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
@@ -36,7 +36,7 @@ jobs:
           shared-key: clippy
 
       - name: Make sure code is linted
-        run: cargo +nightly xtask powerset clippy
+        run: cargo +nightly clippy
 
   fmt:
     name: Fmt
@@ -66,8 +66,6 @@ jobs:
         with:
           toolchain: nightly
 
-      - uses: cargo-bins/cargo-binstall@main
-
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-hakari
@@ -86,9 +84,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: clang curl pkg-config xz-utils libxv-dev ninja-build meson nasm protobuf-compiler
+      - name: Setup nasm
+        run: |
+          sudo apt-get install nasm
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
@@ -101,8 +99,6 @@ jobs:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
           shared-key: test
 
-      - uses: cargo-bins/cargo-binstall@main
-
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest,cargo-llvm-cov
@@ -110,13 +106,23 @@ jobs:
       # Note; we don't run the powerset here because it's very slow on CI
       # Perhaps we should consider it at some point.
       - name: Run tests
-        run: cargo +nightly llvm-cov nextest --branch --no-fail-fast --lcov --output-path ./lcov.info --profile ci
+        run: cargo +nightly llvm-cov nextest --no-fail-fast --all-features --lcov --output-path ./lcov.info --profile ci
+
+      - name: Codecov Override
+        if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
+        run: |
+          PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          RUN_COMMIT_SHA=$(git log -1 --pretty=format:%H)
+          echo "RUN_COMMIT_SHA=$RUN_COMMIT_SHA" >> $GITHUB_ENV
 
       - uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
           files: ./lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
+          override_pr: ${{ env.PR_NUMBER || github.event.pull_request.number || '' }}
+          override_commit: ${{ env.RUN_COMMIT_SHA || github.sha }}
           verbose: true
 
       - name: Upload test results to Codecov
@@ -124,4 +130,14 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           files: ./target/nextest/ci/junit.xml
+          override_pr: ${{ env.PR_NUMBER || github.event.pull_request.number || '' }}
+          override_commit: ${{ env.RUN_COMMIT_SHA || github.sha }}
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  brawl-done:
+    runs-on: ubuntu-24.04
+    needs: [hakari, test, clippy, fmt]
+    if: ${{ !cancelled() && github.event_name == 'push' }}
+    steps:
+      - name: calculate the correct exit status
+        run: jq --exit-status 'all(.result == "success" or .result == "skipped")' <<< '${{ toJson(needs) }}'
