@@ -53,13 +53,15 @@ use std::task::Poll;
 use futures_lite::Stream;
 use tokio_util::sync::{CancellationToken, WaitForCancellationFuture, WaitForCancellationFutureOwned};
 
+/// Create by calling [`ContextTrackerInner::child`].
 #[derive(Debug)]
 struct ContextTracker(Arc<ContextTrackerInner>);
 
 impl Drop for ContextTracker {
     fn drop(&mut self) {
-        let remaining = self.0.active_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-        if remaining == 1 && self.0.stopped.load(std::sync::atomic::Ordering::Relaxed) {
+        let prev_active_count = self.0.active_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        // If this was the last active `ContextTracker` and the context has been stopped, then notify the waiters
+        if prev_active_count == 1 && self.0.stopped.load(std::sync::atomic::Ordering::Relaxed) {
             self.0.notify.notify_waiters();
         }
     }
@@ -68,6 +70,7 @@ impl Drop for ContextTracker {
 #[derive(Debug)]
 struct ContextTrackerInner {
     stopped: AtomicBool,
+    /// This count keeps track of the number of `ContextTrackers` that exist for this `ContextTrackerInner`.
     active_count: AtomicUsize,
     notify: tokio::sync::Notify,
 }
@@ -81,15 +84,18 @@ impl ContextTrackerInner {
         })
     }
 
+    /// Create a new `ContextTracker` from an `Arc<ContextTrackerInner>`.
     fn child(self: &Arc<Self>) -> ContextTracker {
         self.active_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        ContextTracker(self.clone())
+        ContextTracker(Arc::clone(self))
     }
 
+    /// Mark this `ContextTrackerInner` as stopped.
     fn stop(&self) {
         self.stopped.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
+    /// Wait for this `ContextTrackerInner` to be stopped and all associated `ContextTracker`s to be dropped.
     async fn wait(&self) {
         let notify = self.notify.notified();
 
@@ -169,23 +175,24 @@ impl Context {
         Handler::global().context()
     }
 
-    /// Waits for the context to be done (the handler to be shutdown)
+    /// Wait for the context to be done (the handler to be shutdown).
     pub async fn done(&self) {
         self.token.cancelled().await;
     }
 
-    /// The same as done but takes ownership of the context
+    /// The same as [`Context::done`] but takes ownership of the context.
     pub async fn into_done(self) {
         self.done().await;
     }
 
-    /// Returns true if the context is done
+    /// Returns true if the context is done.
     #[must_use]
     pub fn is_done(&self) -> bool {
         self.token.is_cancelled()
     }
 }
 
+/// A wrapper type around [`CancellationToken`] that will cancel the token as soon as it is dropped.
 #[derive(Debug)]
 struct TokenDropGuard(CancellationToken);
 
@@ -286,8 +293,8 @@ impl Handler {
 }
 
 pin_project_lite::pin_project! {
-    /// A reference to a context
-    /// Can either be owned or borrowed
+    /// A reference to a context.
+    /// Can either be owned or borrowed.
     pub struct ContextRef<'a> {
         #[pin]
         inner: ContextRefInner<'a>,
