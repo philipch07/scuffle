@@ -100,7 +100,7 @@ impl DescriptorType for DecoderConfigDescriptor {
 
     fn primitive_mux<T: io::Write>(&self, writer: &mut T) -> io::Result<()> {
         writer.write_u8(self.object_type_indication)?;
-        let byte = (self.stream_type << 2) | (self.up_stream as u8) << 1 | self.reserved;
+        let byte = (self.stream_type << 2) | ((self.up_stream as u8) << 1) | self.reserved;
         writer.write_u8(byte)?;
         writer.write_u24::<BigEndian>(self.buffer_size_db)?;
         writer.write_u32::<BigEndian>(self.max_bitrate)?;

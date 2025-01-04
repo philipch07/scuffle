@@ -47,13 +47,13 @@ impl BoxType for Trak {
 
             match dyn_box {
                 DynBox::Tkhd(b) => {
-                    tkhd = Some(b);
+                    tkhd = Some(*b);
                 }
                 DynBox::Edts(b) => {
-                    edts = Some(b);
+                    edts = Some(*b);
                 }
                 DynBox::Mdia(b) => {
-                    mdia = Some(b);
+                    mdia = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);

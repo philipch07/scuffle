@@ -47,13 +47,13 @@ impl BoxType for Mdia {
 
             match dyn_box {
                 DynBox::Mdhd(b) => {
-                    mdhd = Some(b);
+                    mdhd = Some(*b);
                 }
                 DynBox::Hdlr(b) => {
-                    hdlr = Some(b);
+                    hdlr = Some(*b);
                 }
                 DynBox::Minf(b) => {
-                    minf = Some(b);
+                    minf = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);

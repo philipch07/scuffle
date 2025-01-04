@@ -86,13 +86,13 @@ impl BoxType for Av01 {
                     btrt = Some(b);
                 }
                 DynBox::Clap(b) => {
-                    visual_sample_entry.extension.clap = Some(b);
+                    visual_sample_entry.extension.clap = Some(*b);
                 }
                 DynBox::Pasp(b) => {
-                    visual_sample_entry.extension.pasp = Some(b);
+                    visual_sample_entry.extension.pasp = Some(*b);
                 }
                 DynBox::Colr(b) => {
-                    visual_sample_entry.extension.colr = Some(b);
+                    visual_sample_entry.extension.colr = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);
@@ -105,8 +105,8 @@ impl BoxType for Av01 {
         Ok(Self {
             header,
             visual_sample_entry,
-            av1c,
-            btrt,
+            av1c: *av1c,
+            btrt: btrt.map(|b| *b),
             unknown,
         })
     }

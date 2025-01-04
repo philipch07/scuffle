@@ -43,10 +43,10 @@ impl BoxType for Mvex {
 
             match dyn_box {
                 DynBox::Trex(b) => {
-                    trex.push(b);
+                    trex.push(*b);
                 }
                 DynBox::Mehd(b) => {
-                    mehd = Some(b);
+                    mehd = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);

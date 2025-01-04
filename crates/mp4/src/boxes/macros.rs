@@ -37,7 +37,7 @@ macro_rules! match_helper {
     ([parse] $expr:expr, $header:expr, $data:expr, $($name:tt,)*) => {
         match $expr {
             $(
-                &$name::NAME => Ok(Self::$name(<$name>::demux($header, $data)?)),
+                &$name::NAME => Ok(Self::$name(Box::new(<$name>::demux($header, $data)?))),
             )*
             _ => Ok(Self::Unknown(($header, $data))),
         }
@@ -65,7 +65,7 @@ macro_rules! impl_from {
         $(
             impl From<$type> for DynBox {
                 fn from(box_: $type) -> Self {
-                    Self::$type(box_)
+                    Self::$type(Box::new(box_))
                 }
             }
         )*
@@ -77,7 +77,7 @@ macro_rules! impl_box {
         #[derive(Debug, Clone, PartialEq)]
         pub enum DynBox {
             $(
-                $type($type),
+                $type(Box<$type>),
             )*
             Unknown((BoxHeader, Bytes)),
         }

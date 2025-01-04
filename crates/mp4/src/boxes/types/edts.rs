@@ -39,7 +39,7 @@ impl BoxType for Edts {
 
             match dyn_box {
                 DynBox::Elst(b) => {
-                    elst = Some(b);
+                    elst = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);

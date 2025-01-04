@@ -191,19 +191,19 @@ impl BoxType for Traf {
             let box_ = DynBox::demux(&mut reader)?;
             match box_ {
                 DynBox::Tfhd(b) => {
-                    tfhd = Some(b);
+                    tfhd = Some(*b);
                 }
                 DynBox::Trun(b) => {
-                    trun = Some(b);
+                    trun = Some(*b);
                 }
                 DynBox::Sbgp(b) => {
-                    sbgp = Some(b);
+                    sbgp = Some(*b);
                 }
                 DynBox::Subs(b) => {
-                    subs = Some(b);
+                    subs = Some(*b);
                 }
                 DynBox::Tfdt(b) => {
-                    tfdt = Some(b);
+                    tfdt = Some(*b);
                 }
                 _ => unknown.push(box_),
             }

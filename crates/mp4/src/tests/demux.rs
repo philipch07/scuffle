@@ -224,14 +224,14 @@ fn test_demux_avc_aac() {
                             version: 0,
                             flags: 0,
                         },
-                        entries: vec![DynBox::Url(Url {
+                        entries: vec![DynBox::Url(Box::new(Url {
                             header: FullBoxHeader {
                                 header: BoxHeader { box_type: *b"url " },
                                 version: 0,
                                 flags: 1,
                             },
                             location: None,
-                        })],
+                        }))],
                     },
                 }
             );
@@ -244,7 +244,7 @@ fn test_demux_avc_aac() {
                         version: 0,
                         flags: 0,
                     },
-                    entries: vec![DynBox::Avc1(Avc1 {
+                    entries: vec![DynBox::Avc1(Box::new(Avc1 {
                         header: BoxHeader { box_type: *b"avc1" },
                         visual_sample_entry: SampleEntry::<VisualSampleEntry> {
                             reserved: [0; 6],
@@ -294,7 +294,7 @@ fn test_demux_avc_aac() {
                             buffer_size_db: 0,
                         }),
                         unknown: vec![],
-                    })],
+                    }))],
                 }
             );
 
@@ -469,14 +469,14 @@ fn test_demux_avc_aac() {
                                 version: 0,
                                 flags: 0,
                             },
-                            entries: vec![DynBox::Url(Url {
+                            entries: vec![DynBox::Url(Box::new(Url {
                                 header: FullBoxHeader {
                                     header: BoxHeader { box_type: *b"url " },
                                     version: 0,
                                     flags: 1,
                                 },
                                 location: None,
-                            })],
+                            }))],
                         },
                         unknown: vec![],
                     },
@@ -488,7 +488,7 @@ fn test_demux_avc_aac() {
                                 version: 0,
                                 flags: 0,
                             },
-                            entries: vec![DynBox::Mp4a(Mp4a {
+                            entries: vec![DynBox::Mp4a(Box::new(Mp4a {
                                 header: BoxHeader { box_type: *b"mp4a" },
                                 audio_sample_entry: SampleEntry::<AudioSampleEntry> {
                                     data_reference_index: 1,
@@ -546,7 +546,7 @@ fn test_demux_avc_aac() {
                                     avg_bitrate: 128000,
                                 }),
                                 unknown: vec![],
-                            })],
+                            }))],
                         },
                         co64: None,
                         ctts: None,
@@ -1144,14 +1144,14 @@ fn test_demux_av1_aac() {
                             version: 0,
                             flags: 0,
                         },
-                        entries: vec![DynBox::Url(Url {
+                        entries: vec![DynBox::Url(Box::new(Url {
                             header: FullBoxHeader {
                                 header: BoxHeader { box_type: *b"url " },
                                 version: 0,
                                 flags: 1,
                             },
                             location: None,
-                        })],
+                        }))],
                     },
                 }
             );
@@ -1164,7 +1164,7 @@ fn test_demux_av1_aac() {
                         version: 0,
                         flags: 0,
                     },
-                    entries: vec![DynBox::Av01(Av01 {
+                    entries: vec![DynBox::Av01(Box::new(Av01 {
                         header: BoxHeader { box_type: *b"av01" },
                         visual_sample_entry: SampleEntry::<VisualSampleEntry> {
                             reserved: [0; 6],
@@ -1219,7 +1219,7 @@ fn test_demux_av1_aac() {
                         btrt: None,
                         // This box is not defined in the spec, so we are not parsing it.
                         unknown: vec![DynBox::Unknown((BoxHeader { box_type: *b"fiel" }, b"\x01\0".to_vec().into()))],
-                    })],
+                    }))],
                 }
             );
 
@@ -1394,14 +1394,14 @@ fn test_demux_av1_aac() {
                                 version: 0,
                                 flags: 0,
                             },
-                            entries: vec![DynBox::Url(Url {
+                            entries: vec![DynBox::Url(Box::new(Url {
                                 header: FullBoxHeader {
                                     header: BoxHeader { box_type: *b"url " },
                                     version: 0,
                                     flags: 1,
                                 },
                                 location: None,
-                            })],
+                            }))],
                         },
                         unknown: vec![],
                     },
@@ -1413,7 +1413,7 @@ fn test_demux_av1_aac() {
                                 version: 0,
                                 flags: 0,
                             },
-                            entries: vec![DynBox::Mp4a(Mp4a {
+                            entries: vec![DynBox::Mp4a(Box::new(Mp4a {
                                 header: BoxHeader { box_type: *b"mp4a" },
                                 audio_sample_entry: SampleEntry::<AudioSampleEntry> {
                                     data_reference_index: 1,
@@ -1471,7 +1471,7 @@ fn test_demux_av1_aac() {
                                     avg_bitrate: 69000,
                                 }),
                                 unknown: vec![],
-                            })],
+                            }))],
                         },
                         co64: None,
                         ctts: None,
@@ -1843,14 +1843,14 @@ fn test_demux_hevc_aac() {
                             version: 0,
                             flags: 0,
                         },
-                        entries: vec![DynBox::Url(Url {
+                        entries: vec![DynBox::Url(Box::new(Url {
                             header: FullBoxHeader {
                                 header: BoxHeader { box_type: *b"url " },
                                 version: 0,
                                 flags: 1,
                             },
                             location: None,
-                        })],
+                        }))],
                     },
                 }
             );
@@ -1864,7 +1864,7 @@ fn test_demux_hevc_aac() {
                         flags: 0,
                     },
                     entries: vec![
-                        DynBox::Hev1(Hev1 {
+                        DynBox::Hev1(Box::new(Hev1 {
                             header: BoxHeader { box_type: *b"hev1" },
                             visual_sample_entry: SampleEntry {
                                 reserved: [0, 0, 0, 0, 0, 0],
@@ -1939,8 +1939,7 @@ fn test_demux_hevc_aac() {
                             unknown: vec![
                                 DynBox::Unknown((BoxHeader { box_type: *b"fiel" }, b"\x01\0".to_vec().into()))
                             ],
-                        }),
-                    ],
+                        }))],
                 }
             );
 
@@ -2115,14 +2114,14 @@ fn test_demux_hevc_aac() {
                                 version: 0,
                                 flags: 0,
                             },
-                            entries: vec![DynBox::Url(Url {
+                            entries: vec![DynBox::Url(Box::new(Url {
                                 header: FullBoxHeader {
                                     header: BoxHeader { box_type: *b"url " },
                                     version: 0,
                                     flags: 1,
                                 },
                                 location: None,
-                            })],
+                            }))],
                         },
                         unknown: vec![],
                     },
@@ -2134,7 +2133,7 @@ fn test_demux_hevc_aac() {
                                 version: 0,
                                 flags: 0,
                             },
-                            entries: vec![DynBox::Mp4a(Mp4a {
+                            entries: vec![DynBox::Mp4a(Box::new(Mp4a {
                                 header: BoxHeader { box_type: *b"mp4a" },
                                 audio_sample_entry: SampleEntry::<AudioSampleEntry> {
                                     data_reference_index: 1,
@@ -2192,7 +2191,7 @@ fn test_demux_hevc_aac() {
                                     avg_bitrate: 128000,
                                 }),
                                 unknown: vec![],
-                            })],
+                            }))],
                         },
                         co64: None,
                         ctts: None,

@@ -46,7 +46,7 @@ impl BoxType for Dinf {
 
             match dyn_box {
                 DynBox::Dref(b) => {
-                    dref = Some(b);
+                    dref = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);

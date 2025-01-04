@@ -53,7 +53,7 @@ impl Amf0Reader {
         }
 
         let marker = self.cursor.read_u8()?;
-        let marker = Amf0Marker::from_u8(marker).ok_or_else(|| Amf0ReadError::UnknownMarker(marker))?;
+        let marker = Amf0Marker::from_u8(marker).ok_or(Amf0ReadError::UnknownMarker(marker))?;
 
         match marker {
             Amf0Marker::Number => self.read_number(),
@@ -71,7 +71,7 @@ impl Amf0Reader {
         let marker = self.cursor.read_u8()?;
         self.cursor.seek(SeekFrom::Current(-1))?; // seek back to the original position
 
-        let marker = Amf0Marker::from_u8(marker).ok_or_else(|| Amf0ReadError::UnknownMarker(marker))?;
+        let marker = Amf0Marker::from_u8(marker).ok_or(Amf0ReadError::UnknownMarker(marker))?;
         if marker != specified_marker {
             return Err(Amf0ReadError::WrongType);
         }

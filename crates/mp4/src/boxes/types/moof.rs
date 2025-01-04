@@ -44,10 +44,10 @@ impl BoxType for Moof {
             let box_ = DynBox::demux(&mut reader)?;
             match box_ {
                 DynBox::Mfhd(b) => {
-                    mfhd = Some(b);
+                    mfhd = Some(*b);
                 }
                 DynBox::Traf(b) => {
-                    traf.push(b);
+                    traf.push(*b);
                 }
                 _ => unknown.push(box_),
             }

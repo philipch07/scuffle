@@ -48,7 +48,7 @@ impl BoxType for Opus {
             let dyn_box = DynBox::demux(&mut reader)?;
             match dyn_box {
                 DynBox::Btrt(btrt_box) => {
-                    btrt = Some(btrt_box);
+                    btrt = Some(*btrt_box);
                 }
                 _ => {
                     unknown.push(dyn_box);

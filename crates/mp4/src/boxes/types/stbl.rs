@@ -95,49 +95,49 @@ impl BoxType for Stbl {
 
             match dyn_box {
                 DynBox::Stsd(b) => {
-                    stsd = Some(b);
+                    stsd = Some(*b);
                 }
                 DynBox::Stts(b) => {
-                    stts = Some(b);
+                    stts = Some(*b);
                 }
                 DynBox::Ctts(b) => {
-                    ctts = Some(b);
+                    ctts = Some(*b);
                 }
                 DynBox::Stsc(b) => {
-                    stsc = Some(b);
+                    stsc = Some(*b);
                 }
                 DynBox::Stsz(b) => {
-                    stsz = Some(b);
+                    stsz = Some(*b);
                 }
                 DynBox::Stz2(b) => {
-                    stz2 = Some(b);
+                    stz2 = Some(*b);
                 }
                 DynBox::Stco(b) => {
-                    stco = Some(b);
+                    stco = Some(*b);
                 }
                 DynBox::Co64(b) => {
-                    co64 = Some(b);
+                    co64 = Some(*b);
                 }
                 DynBox::Stss(b) => {
-                    stss = Some(b);
+                    stss = Some(*b);
                 }
                 DynBox::Stsh(b) => {
-                    stsh = Some(b);
+                    stsh = Some(*b);
                 }
                 DynBox::Padb(b) => {
-                    padb = Some(b);
+                    padb = Some(*b);
                 }
                 DynBox::Stdp(b) => {
-                    stdp = Some(b);
+                    stdp = Some(*b);
                 }
                 DynBox::Sdtp(b) => {
-                    sdtp = Some(b);
+                    sdtp = Some(*b);
                 }
                 DynBox::Sbgp(b) => {
-                    sbgp = Some(b);
+                    sbgp = Some(*b);
                 }
                 DynBox::Subs(b) => {
-                    subs = Some(b);
+                    subs = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);

@@ -64,10 +64,10 @@ impl BoxType for Mp4a {
             let dyn_box = DynBox::demux(&mut reader)?;
             match dyn_box {
                 DynBox::Btrt(btrt_box) => {
-                    btrt = Some(btrt_box);
+                    btrt = Some(*btrt_box);
                 }
                 DynBox::Esds(esds_box) => {
-                    esds = Some(esds_box);
+                    esds = Some(*esds_box);
                 }
                 _ => {
                     unknown.push(dyn_box);

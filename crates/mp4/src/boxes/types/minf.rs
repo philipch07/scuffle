@@ -59,22 +59,22 @@ impl BoxType for Minf {
 
             match dyn_box {
                 DynBox::Vmhd(b) => {
-                    vmhd = Some(b);
+                    vmhd = Some(*b);
                 }
                 DynBox::Smhd(b) => {
-                    smhd = Some(b);
+                    smhd = Some(*b);
                 }
                 DynBox::Hmhd(b) => {
-                    hmhd = Some(b);
+                    hmhd = Some(*b);
                 }
                 DynBox::Nmhd(b) => {
-                    nmhd = Some(b);
+                    nmhd = Some(*b);
                 }
                 DynBox::Dinf(b) => {
-                    dinf = Some(b);
+                    dinf = Some(*b);
                 }
                 DynBox::Stbl(b) => {
-                    stbl = Some(b);
+                    stbl = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);

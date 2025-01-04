@@ -73,7 +73,7 @@ impl FlvTag {
     pub fn demux(reader: &mut io::Cursor<Bytes>) -> Result<Self, FlvDemuxerError> {
         let tag_type = reader.read_u8()?;
         let data_size = reader.read_u24::<BigEndian>()?;
-        let timestamp = reader.read_u24::<BigEndian>()? | (reader.read_u8()? as u32) << 24;
+        let timestamp = reader.read_u24::<BigEndian>()? | ((reader.read_u8()? as u32) << 24);
         let stream_id = reader.read_u24::<BigEndian>()?;
 
         let data = reader.read_slice(data_size as usize)?;
@@ -99,16 +99,13 @@ impl FlvTagData {
                 let sound_format = (flags & 0b1111_0000) >> 4;
 
                 let sound_rate = (flags & 0b0000_1100) >> 2;
-                let sound_rate =
-                    SoundRate::from_u8(sound_rate).ok_or_else(|| FlvDemuxerError::InvalidSoundRate(sound_rate))?;
+                let sound_rate = SoundRate::from_u8(sound_rate).ok_or(FlvDemuxerError::InvalidSoundRate(sound_rate))?;
 
                 let sound_size = (flags & 0b0000_0010) >> 1;
-                let sound_size =
-                    SoundSize::from_u8(sound_size).ok_or_else(|| FlvDemuxerError::InvalidSoundSize(sound_size))?;
+                let sound_size = SoundSize::from_u8(sound_size).ok_or(FlvDemuxerError::InvalidSoundSize(sound_size))?;
 
                 let sound_type = flags & 0b0000_0001;
-                let sound_type =
-                    SoundType::from_u8(sound_type).ok_or_else(|| FlvDemuxerError::InvalidSoundType(sound_type))?;
+                let sound_type = SoundType::from_u8(sound_type).ok_or(FlvDemuxerError::InvalidSoundType(sound_type))?;
 
                 let data = FlvTagAudioData::demux(sound_format, &mut reader)?;
 
@@ -136,8 +133,7 @@ impl FlvTagData {
                     }
                 }
 
-                let frame_type =
-                    FrameType::from_u8(frame_type).ok_or_else(|| FlvDemuxerError::InvalidFrameType(frame_type))?;
+                let frame_type = FrameType::from_u8(frame_type).ok_or(FlvDemuxerError::InvalidFrameType(frame_type))?;
 
                 Ok(FlvTagData::Video {
                     frame_type,
@@ -213,8 +209,8 @@ impl FlvTagVideoData {
 
     pub fn demux_enhanced(packet_type: u8, reader: &mut io::Cursor<Bytes>) -> Result<Self, FlvDemuxerError> {
         // In the enhanced spec the codec id is the packet type
-        let packet_type = EnhancedPacketType::from_u8(packet_type)
-            .ok_or_else(|| FlvDemuxerError::InvalidEnhancedPacketType(packet_type))?;
+        let packet_type =
+            EnhancedPacketType::from_u8(packet_type).ok_or(FlvDemuxerError::InvalidEnhancedPacketType(packet_type))?;
         let mut video_codec = [0; 4];
         reader.read_exact(&mut video_codec)?;
         let video_codec = VideoFourCC::from(video_codec);

@@ -28,7 +28,7 @@ impl ChunkEncoder {
         let fmt = fmt as u8;
 
         if csid >= 64 + 255 {
-            writer.write_u8(fmt << 6 | 1)?;
+            writer.write_u8((fmt << 6) | 1)?;
             let csid = csid - 64;
 
             let div = csid / 256;
@@ -40,7 +40,7 @@ impl ChunkEncoder {
             writer.write_u8(fmt << 6)?;
             writer.write_u8((csid - 64) as u8)?;
         } else {
-            writer.write_u8(fmt << 6 | csid as u8)?;
+            writer.write_u8((fmt << 6) | csid as u8)?;
         }
 
         Ok(())

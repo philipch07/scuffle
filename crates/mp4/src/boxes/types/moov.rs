@@ -48,13 +48,13 @@ impl BoxType for Moov {
 
             match dyn_box {
                 DynBox::Mvhd(b) => {
-                    mvhd = Some(b);
+                    mvhd = Some(*b);
                 }
                 DynBox::Trak(b) => {
-                    traks.push(b);
+                    traks.push(*b);
                 }
                 DynBox::Mvex(b) => {
-                    mvex = Some(b);
+                    mvex = Some(*b);
                 }
                 _ => {
                     unknown.push(dyn_box);
