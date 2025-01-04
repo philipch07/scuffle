@@ -9,19 +9,19 @@ use crate::messages::MessageTypeID;
 pub struct EventMessagesWriter;
 
 impl EventMessagesWriter {
-	pub fn write_stream_begin(
-		encoder: &ChunkEncoder,
-		writer: &mut BytesWriter,
-		stream_id: u32,
-	) -> Result<(), EventMessagesError> {
-		let mut data = Vec::new();
+    pub fn write_stream_begin(
+        encoder: &ChunkEncoder,
+        writer: &mut BytesWriter,
+        stream_id: u32,
+    ) -> Result<(), EventMessagesError> {
+        let mut data = Vec::new();
 
-		data.write_u16::<BigEndian>(define::RTMP_EVENT_STREAM_BEGIN)
-			.expect("write u16");
-		data.write_u32::<BigEndian>(stream_id).expect("write u32");
+        data.write_u16::<BigEndian>(define::RTMP_EVENT_STREAM_BEGIN)
+            .expect("write u16");
+        data.write_u32::<BigEndian>(stream_id).expect("write u32");
 
-		encoder.write_chunk(writer, Chunk::new(0x02, 0, MessageTypeID::UserControlEvent, 0, data.into()))?;
+        encoder.write_chunk(writer, Chunk::new(0x02, 0, MessageTypeID::UserControlEvent, 0, data.into()))?;
 
-		Ok(())
-	}
+        Ok(())
+    }
 }

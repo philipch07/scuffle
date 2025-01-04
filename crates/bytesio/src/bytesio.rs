@@ -11,33 +11,33 @@ pub trait AsyncReadWrite: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
 impl<T> AsyncReadWrite for T where T: AsyncRead + AsyncWrite + Unpin + Send + Sync {}
 
 pub struct BytesIO<S: AsyncReadWrite> {
-	stream: Framed<S, BytesCodec>,
+    stream: Framed<S, BytesCodec>,
 }
 
 impl<S: AsyncReadWrite> BytesIO<S> {
-	pub fn new(stream: S) -> Self {
-		Self {
-			stream: Framed::new(stream, BytesCodec::new()),
-		}
-	}
+    pub fn new(stream: S) -> Self {
+        Self {
+            stream: Framed::new(stream, BytesCodec::new()),
+        }
+    }
 
-	pub fn with_capacity(stream: S, capacity: usize) -> Self {
-		Self {
-			stream: Framed::with_capacity(stream, BytesCodec::new(), capacity),
-		}
-	}
+    pub fn with_capacity(stream: S, capacity: usize) -> Self {
+        Self {
+            stream: Framed::with_capacity(stream, BytesCodec::new(), capacity),
+        }
+    }
 
-	pub async fn write(&mut self, bytes: Bytes) -> Result<(), BytesIOError> {
-		self.stream.send(bytes).await.map_err(|_| BytesIOError::ClientClosed)?;
+    pub async fn write(&mut self, bytes: Bytes) -> Result<(), BytesIOError> {
+        self.stream.send(bytes).await.map_err(|_| BytesIOError::ClientClosed)?;
 
-		Ok(())
-	}
+        Ok(())
+    }
 
-	pub async fn read(&mut self) -> Result<BytesMut, BytesIOError> {
-		let Some(Ok(message)) = self.stream.next().await else {
-			return Err(BytesIOError::ClientClosed);
-		};
+    pub async fn read(&mut self) -> Result<BytesMut, BytesIOError> {
+        let Some(Ok(message)) = self.stream.next().await else {
+            return Err(BytesIOError::ClientClosed);
+        };
 
-		Ok(message)
-	}
+        Ok(message)
+    }
 }
