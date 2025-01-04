@@ -116,8 +116,8 @@ impl ContextTrackerInner {
 
 /// A context for cancelling futures and waiting for shutdown.
 ///
-/// A context can be created from a handler or another context so to have a
-/// hierarchy of contexts.
+/// A context can be created from a handler by calling [`Handler::context`] or
+/// from another context by calling [`Context::new_child`] so to have a hierarchy of contexts.
 ///
 /// Contexts can then be attached to futures or streams in order to
 /// automatically cancel them when the context is done, when invoking
@@ -142,14 +142,14 @@ impl Clone for Context {
 impl Context {
     #[must_use]
     /// Create a new context using the global handler.
-    /// Returns a tuple and a child handler.
+    /// Returns a child context and child handler of the global handler.
     pub fn new() -> (Self, Handler) {
         Handler::global().new_child()
     }
 
     #[must_use]
     /// Create a new child context from this context.
-    /// Returns a tuple and a child handler.
+    /// Returns a new child context and child handler of this context.
     ///
     /// # Example
     ///
@@ -300,8 +300,10 @@ impl Handler {
 }
 
 pin_project_lite::pin_project! {
-    /// A reference to a context.
+    /// A reference to a context which implements [`Future`] and can be polled.
     /// Can either be owned or borrowed.
+    ///
+    /// Create by using the [`From`] implementations.
     #[project = ContextRefProj]
     pub enum ContextRef<'a> {
         Owned {
@@ -311,17 +313,6 @@ pin_project_lite::pin_project! {
         Ref {
             #[pin] fut: WaitForCancellationFuture<'a>,
         },
-    }
-}
-
-impl std::future::Future for ContextRef<'_> {
-    type Output = ();
-
-    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        match self.project() {
-            ContextRefProj::Owned { fut, .. } => fut.poll(cx),
-            ContextRefProj::Ref { fut } => fut.poll(cx),
-        }
     }
 }
 
@@ -338,6 +329,17 @@ impl<'a> From<&'a Context> for ContextRef<'a> {
     fn from(ctx: &'a Context) -> Self {
         ContextRef::Ref {
             fut: ctx.token.cancelled(),
+        }
+    }
+}
+
+impl std::future::Future for ContextRef<'_> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        match self.project() {
+            ContextRefProj::Owned { fut, .. } => fut.poll(cx),
+            ContextRefProj::Ref { fut } => fut.poll(cx),
         }
     }
 }

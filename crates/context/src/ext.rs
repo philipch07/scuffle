@@ -34,8 +34,24 @@ impl<F: Future> Future for FutureWithContext<'_, F> {
 }
 
 pub trait ContextFutExt<Fut> {
-    /// Wraps a future with a context, allowing the future to be cancelled when
-    /// the context is done
+    /// Wraps a future with a context and cancels the future when the context is done.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use scuffle_context::{Context, ContextFutExt};
+    /// # tokio_test::block_on(async {
+    /// let (ctx, handler) = Context::new();
+    ///
+    /// tokio::spawn(async move {
+    ///    // Do some work
+    ///    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    /// }.with_context(ctx));
+    ///
+    /// // Will stop the spawned task and cancel all associated futures.
+    /// handler.cancel();
+    /// # });
+    /// ```
     fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> FutureWithContext<'a, Fut>
     where
         Self: Sized;
@@ -86,8 +102,7 @@ impl<F: Stream> Stream for StreamWithContext<'_, F> {
 }
 
 pub trait ContextStreamExt<Stream> {
-    /// Wraps a stream with a context, allowing the stream to be stopped when
-    /// the context is done
+    /// Wraps a stream with a context and stops the stream when the context is done.
     fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, Stream>
     where
         Self: Sized;
