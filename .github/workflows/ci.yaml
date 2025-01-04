@@ -106,6 +106,7 @@ jobs:
           sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
           sudo rm -rf ffmpeg-7.1-linux-clang-default
           sudo rm -rf ffmpeg.tar.xz
+          sudo ldconfig
 
       - uses: Swatinem/rust-cache@v2
         with:
