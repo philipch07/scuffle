@@ -100,8 +100,12 @@ fn test_transmuxer_avc_aac() {
     let output = ffprobe.wait_with_output().unwrap();
     assert!(output.status.success());
 
+    let output = String::from_utf8(output.stdout).unwrap();
+
+    println!("{}", output);
+
     // Check the output is valid.
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&output).unwrap();
 
     assert_eq!(json["format"]["format_name"], "mov,mp4,m4a,3gp,3g2,mj2");
     assert_eq!(json["format"]["duration"], "1.002667");
