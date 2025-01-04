@@ -96,11 +96,16 @@ jobs:
 
       - name: Install ffmpeg
         run: |
-          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz && \
-          tar -xvf ffmpeg.tar.xz && \
-          mv ffmpeg-7.1-linux-clang-default/include/* /usr/include && \
-          mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib && \
-          mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
+          set -xeo pipefail
+
+          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz
+          tar -xvf ffmpeg.tar.xz
+
+          sudo mv ffmpeg-7.1-linux-clang-default/include/* /usr/include
+          sudo mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib
+          sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
+          sudo rm -rf ffmpeg-7.1-linux-clang-default
+          sudo rm -rf ffmpeg.tar.xz
 
       - uses: Swatinem/rust-cache@v2
         with:
