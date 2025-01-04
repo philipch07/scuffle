@@ -9,3 +9,4 @@ bytes = "1.5"
 byteorder = "1.5"
 bytesio = { path = "../bytesio" }
 exp_golomb = { path = "../exp_golomb" }
+scuffle-workspace-hack.workspace = true

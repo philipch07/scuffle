@@ -21,6 +21,7 @@ tracing = "0.1"
 
 bytesio = { path = "../bytesio", features = ["default"] }
 amf0 = { path = "../amf0" }
+scuffle-workspace-hack.workspace = true
 
 [dev-dependencies]
 tokio = { version = "1.36", features = ["full"] }

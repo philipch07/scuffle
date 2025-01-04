@@ -11,6 +11,7 @@ dependencies = [
  "bytesio",
  "num-derive",
  "num-traits",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -73,6 +74,7 @@ dependencies = [
  "bytesio",
  "num-derive",
  "num-traits",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -193,6 +195,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "bytesio",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -364,6 +367,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "futures",
+ "scuffle-workspace-hack",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -882,6 +886,7 @@ version = "0.0.1"
 dependencies = [
  "bytes",
  "bytesio",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -958,6 +963,7 @@ dependencies = [
  "h265",
  "num-derive",
  "num-traits",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -1136,6 +1142,7 @@ dependencies = [
  "bytes",
  "bytesio",
  "exp_golomb",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -1146,6 +1153,7 @@ dependencies = [
  "bytes",
  "bytesio",
  "exp_golomb",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -1580,6 +1588,7 @@ dependencies = [
  "h264",
  "h265",
  "paste",
+ "scuffle-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -2277,6 +2286,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rand",
+ "scuffle-workspace-hack",
  "serde_json",
  "sha2",
  "tokio",
@@ -2720,8 +2730,10 @@ name = "scuffle-workspace-hack"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.6.0",
+ "byteorder",
  "bytes",
  "cc",
+ "chrono",
  "clap",
  "clap_builder",
  "config",
@@ -2761,6 +2773,7 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-subscriber",
+ "uuid",
  "zerocopy",
 ]
 
@@ -3278,6 +3291,7 @@ dependencies = [
  "h264",
  "h265",
  "mp4",
+ "scuffle-workspace-hack",
  "serde",
  "serde_json",
 ]

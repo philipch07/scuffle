@@ -16,6 +16,7 @@ aac = { path = "../aac" }
 amf0 = { path = "../amf0" }
 flv = { path = "../flv" }
 mp4 = { path = "../mp4" }
+scuffle-workspace-hack.workspace = true
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }

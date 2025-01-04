@@ -10,3 +10,4 @@ byteorder = "1.5"
 num-traits = "0.2"
 num-derive = "0.4"
 bytesio = { path = "../bytesio" }
+scuffle-workspace-hack.workspace = true
