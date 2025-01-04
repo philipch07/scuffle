@@ -6,45 +6,6 @@ use futures_lite::Stream;
 
 use crate::ContextRef;
 
-pub trait ContextFutExt<Fut> {
-    /// Wraps a future with a context, allowing the future to be cancelled when
-    /// the context is done
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> FutureWithContext<'a, Fut>
-    where
-        Self: Sized;
-}
-
-impl<F: IntoFuture> ContextFutExt<F::IntoFuture> for F {
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> FutureWithContext<'a, F::IntoFuture>
-    where
-        F: IntoFuture,
-    {
-        FutureWithContext {
-            future: self.into_future(),
-            ctx: ctx.into(),
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-pub trait ContextStreamExt<Stream> {
-    /// Wraps a stream with a context, allowing the stream to be stopped when
-    /// the context is done
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, Stream>
-    where
-        Self: Sized;
-}
-
-impl<F: Stream> ContextStreamExt<F> for F {
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, F> {
-        StreamWithContext {
-            stream: self,
-            ctx: ctx.into(),
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
 pin_project_lite::pin_project! {
     /// A future with a context attached to it.
     ///
@@ -68,6 +29,27 @@ impl<F: Future> Future for FutureWithContext<'_, F> {
             (_, Poll::Ready(v)) => std::task::Poll::Ready(Some(v)),
             (Poll::Ready(_), Poll::Pending) => std::task::Poll::Ready(None),
             _ => std::task::Poll::Pending,
+        }
+    }
+}
+
+pub trait ContextFutExt<Fut> {
+    /// Wraps a future with a context, allowing the future to be cancelled when
+    /// the context is done
+    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> FutureWithContext<'a, Fut>
+    where
+        Self: Sized;
+}
+
+impl<F: IntoFuture> ContextFutExt<F::IntoFuture> for F {
+    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> FutureWithContext<'a, F::IntoFuture>
+    where
+        F: IntoFuture,
+    {
+        FutureWithContext {
+            future: self.into_future(),
+            ctx: ctx.into(),
+            _marker: std::marker::PhantomData,
         }
     }
 }
@@ -100,5 +82,23 @@ impl<F: Stream> Stream for StreamWithContext<'_, F> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.stream.size_hint()
+    }
+}
+
+pub trait ContextStreamExt<Stream> {
+    /// Wraps a stream with a context, allowing the stream to be stopped when
+    /// the context is done
+    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, Stream>
+    where
+        Self: Sized;
+}
+
+impl<F: Stream> ContextStreamExt<F> for F {
+    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, F> {
+        StreamWithContext {
+            stream: self,
+            ctx: ctx.into(),
+            _marker: std::marker::PhantomData,
+        }
     }
 }
