@@ -34,7 +34,8 @@ impl<F: Future> Future for FutureWithContext<'_, F> {
 }
 
 pub trait ContextFutExt<Fut> {
-    /// Wraps a future with a context and cancels the future when the context is done.
+    /// Wraps a future with a context and cancels the future when the context is
+    /// done.
     ///
     /// # Example
     ///
@@ -102,7 +103,8 @@ impl<F: Stream> Stream for StreamWithContext<'_, F> {
 }
 
 pub trait ContextStreamExt<Stream> {
-    /// Wraps a stream with a context and stops the stream when the context is done.
+    /// Wraps a stream with a context and stops the stream when the context is
+    /// done.
     fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, Stream>
     where
         Self: Sized;

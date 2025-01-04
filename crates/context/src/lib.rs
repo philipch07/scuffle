@@ -117,7 +117,8 @@ impl ContextTrackerInner {
 /// A context for cancelling futures and waiting for shutdown.
 ///
 /// A context can be created from a handler by calling [`Handler::context`] or
-/// from another context by calling [`Context::new_child`] so to have a hierarchy of contexts.
+/// from another context by calling [`Context::new_child`] so to have a
+/// hierarchy of contexts.
 ///
 /// Contexts can then be attached to futures or streams in order to
 /// automatically cancel them when the context is done, when invoking
@@ -393,13 +394,21 @@ mod tests {
 
         // This is expected to timeout
         // TODO: Is there a better solution to test if the future is pending?
-        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown()).await.is_err());
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown())
+                .await
+                .is_err()
+        );
         assert_eq!(handler.is_done(), true);
         assert_eq!(ctx.is_done(), true);
 
         drop(ctx);
 
-        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown()).await.is_ok());
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown())
+                .await
+                .is_ok()
+        );
         assert_eq!(handler.is_done(), true);
     }
 }
