@@ -94,6 +94,14 @@ jobs:
           toolchain: nightly
           components: llvm-tools-preview
 
+      - name: Install ffmpeg
+        run: |
+          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz && \
+          tar -xvf ffmpeg.tar.xz && \
+          mv ffmpeg-7.1-linux-clang-default/include/* /usr/include && \
+          mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib && \
+          mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
+
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
