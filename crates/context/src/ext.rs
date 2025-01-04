@@ -1,4 +1,6 @@
-use std::{future::{Future, IntoFuture}, pin::Pin, task::Poll};
+use std::future::{Future, IntoFuture};
+use std::pin::Pin;
+use std::task::Poll;
 
 use futures_lite::Stream;
 

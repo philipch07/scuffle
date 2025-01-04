@@ -63,7 +63,8 @@ struct ContextTracker(Arc<ContextTrackerInner>);
 impl Drop for ContextTracker {
     fn drop(&mut self) {
         let prev_active_count = self.0.active_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-        // If this was the last active `ContextTracker` and the context has been stopped, then notify the waiters
+        // If this was the last active `ContextTracker` and the context has been
+        // stopped, then notify the waiters
         if prev_active_count == 1 && self.0.stopped.load(std::sync::atomic::Ordering::Relaxed) {
             self.0.notify.notify_waiters();
         }
@@ -73,7 +74,8 @@ impl Drop for ContextTracker {
 #[derive(Debug)]
 struct ContextTrackerInner {
     stopped: AtomicBool,
-    /// This count keeps track of the number of `ContextTrackers` that exist for this `ContextTrackerInner`.
+    /// This count keeps track of the number of `ContextTrackers` that exist for
+    /// this `ContextTrackerInner`.
     active_count: AtomicUsize,
     notify: tokio::sync::Notify,
 }
@@ -98,7 +100,8 @@ impl ContextTrackerInner {
         self.stopped.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
-    /// Wait for this `ContextTrackerInner` to be stopped and all associated `ContextTracker`s to be dropped.
+    /// Wait for this `ContextTrackerInner` to be stopped and all associated
+    /// `ContextTracker`s to be dropped.
     async fn wait(&self) {
         let notify = self.notify.notified();
 
@@ -195,7 +198,8 @@ impl Context {
     }
 }
 
-/// A wrapper type around [`CancellationToken`] that will cancel the token as soon as it is dropped.
+/// A wrapper type around [`CancellationToken`] that will cancel the token as
+/// soon as it is dropped.
 #[derive(Debug)]
 struct TokenDropGuard(CancellationToken);
 
