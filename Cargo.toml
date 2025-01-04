@@ -22,6 +22,17 @@ members = [
     "crates/settings/examples",
     "crates/signal",
     "crates/workspace-hack",
+    "crates/aac",
+    "crates/amf0",
+    "crates/av1",
+    "crates/bytesio",
+    "crates/exp_golomb",
+    "crates/flv",
+    "crates/h264",
+    "crates/h265",
+    "crates/mp4",
+    "crates/rtmp",
+    "crates/transmuxer",
     "dev-tools/xtask",
 ]
 

@@ -1,0 +1,19 @@
+[package]
+name = "flv"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+byteorder = "1.5"
+bytes = "1.5"
+num-traits = "0.2"
+num-derive = "0.4"
+
+bytesio = { path = "../bytesio" }
+av1 = { path = "../av1" }
+h264 = { path = "../h264" }
+h265 = { path = "../h265" }
+aac = { path = "../aac" }
+amf0 = { path = "../amf0" }
+scuffle-workspace-hack.workspace = true

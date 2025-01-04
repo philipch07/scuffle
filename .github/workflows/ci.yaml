@@ -94,6 +94,24 @@ jobs:
           toolchain: nightly
           components: llvm-tools-preview
 
+      - name: Install ffmpeg
+        run: |
+          set -xeo pipefail
+
+          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz
+          tar -xvf ffmpeg.tar.xz
+
+          sudo mv ffmpeg-7.1-linux-clang-default/include/* /usr/include
+          sudo mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib
+          sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
+          sudo rm -rf ffmpeg-7.1-linux-clang-default
+          sudo rm -rf ffmpeg.tar.xz
+          sudo ldconfig
+
+      - name: Install ffmpeg dependencies
+        run: |
+          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2
+
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
