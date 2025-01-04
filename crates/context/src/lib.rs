@@ -295,15 +295,8 @@ impl Handler {
 pin_project_lite::pin_project! {
     /// A reference to a context.
     /// Can either be owned or borrowed.
-    pub struct ContextRef<'a> {
-        #[pin]
-        inner: ContextRefInner<'a>,
-    }
-}
-
-pin_project_lite::pin_project! {
-    #[project = ContextRefInnerProj]
-    enum ContextRefInner<'a> {
+    #[project = ContextRefProj]
+    pub enum ContextRef<'a> {
         Owned {
             #[pin] fut: WaitForCancellationFutureOwned,
             tracker: ContextTracker,
@@ -318,30 +311,26 @@ impl std::future::Future for ContextRef<'_> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        match self.project().inner.project() {
-            ContextRefInnerProj::Owned { fut, .. } => fut.poll(cx),
-            ContextRefInnerProj::Ref { fut } => fut.poll(cx),
+        match self.project() {
+            ContextRefProj::Owned { fut, .. } => fut.poll(cx),
+            ContextRefProj::Ref { fut } => fut.poll(cx),
         }
     }
 }
 
 impl From<Context> for ContextRef<'_> {
     fn from(ctx: Context) -> Self {
-        ContextRef {
-            inner: ContextRefInner::Owned {
-                fut: ctx.token.cancelled_owned(),
-                tracker: ctx.tracker,
-            },
+        ContextRef::Owned {
+            fut: ctx.token.cancelled_owned(),
+            tracker: ctx.tracker,
         }
     }
 }
 
 impl<'a> From<&'a Context> for ContextRef<'a> {
     fn from(ctx: &'a Context) -> Self {
-        ContextRef {
-            inner: ContextRefInner::Ref {
-                fut: ctx.token.cancelled(),
-            },
+        ContextRef::Ref {
+            fut: ctx.token.cancelled(),
         }
     }
 }
