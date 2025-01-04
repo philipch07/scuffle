@@ -43,7 +43,7 @@ pub trait ContextFutExt<Fut> {
     /// # tokio_test::block_on(async {
     /// let (ctx, handler) = Context::new();
     ///
-    /// tokio::spawn(async move {
+    /// tokio::spawn(async {
     ///    // Do some work
     ///    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     /// }.with_context(ctx));

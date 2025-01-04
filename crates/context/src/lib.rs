@@ -343,3 +343,63 @@ impl std::future::Future for ContextRef<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::Context;
+
+    #[tokio::test]
+    async fn cancel() {
+        let (ctx, handler) = Context::new();
+        let (child_ctx, child_handler) = ctx.new_child();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+        assert_eq!(child_handler.is_done(), false);
+        assert_eq!(child_ctx.is_done(), false);
+
+        handler.cancel();
+
+        assert_eq!(handler.is_done(), true);
+        assert_eq!(ctx.is_done(), true);
+        assert_eq!(child_handler.is_done(), true);
+        assert_eq!(child_ctx.is_done(), true);
+    }
+
+    #[tokio::test]
+    async fn cancel_child() {
+        let (ctx, handler) = Context::new();
+        let (child_ctx, child_handler) = ctx.new_child();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+        assert_eq!(child_handler.is_done(), false);
+        assert_eq!(child_ctx.is_done(), false);
+
+        child_handler.cancel();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+        assert_eq!(child_handler.is_done(), true);
+        assert_eq!(child_ctx.is_done(), true);
+    }
+
+    #[tokio::test]
+    async fn shutdown() {
+        let (ctx, handler) = Context::new();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+
+        // This is expected to timeout
+        // TODO: Is there a better solution to test if the future is pending?
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown()).await.is_err());
+        assert_eq!(handler.is_done(), true);
+        assert_eq!(ctx.is_done(), true);
+
+        drop(ctx);
+
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown()).await.is_ok());
+        assert_eq!(handler.is_done(), true);
+    }
+}
