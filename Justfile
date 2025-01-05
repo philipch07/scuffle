@@ -19,8 +19,8 @@ test *args:
     export RUSTUP_TOOLCHAIN=nightly
 
     INSTA_FORCE_PASS=1 cargo llvm-cov clean --workspace
-    INSTA_FORCE_PASS=1 cargo llvm-cov nextest --branch --include-build-script --no-report {{args}}
-    cargo test --doc {{args}}
+    INSTA_FORCE_PASS=1 cargo llvm-cov nextest --include-build-script --no-report {{args}}
+    cargo llvm-cov test --doc --no-report {{args}}
 
     # Do not generate the coverage report on CI
     cargo insta review
