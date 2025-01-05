@@ -300,17 +300,29 @@ impl Handler {
 
 #[cfg(test)]
 mod tests {
-    use crate::Context;
+    use crate::{Context, Handler};
+
+    #[tokio::test]
+    async fn new() {
+        let (ctx, handler) = Context::new();
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+
+        let handler = Handler::default();
+        assert_eq!(handler.is_done(), false);
+    }
 
     #[tokio::test]
     async fn cancel() {
         let (ctx, handler) = Context::new();
         let (child_ctx, child_handler) = ctx.new_child();
+        let child_ctx2 = ctx.clone();
 
         assert_eq!(handler.is_done(), false);
         assert_eq!(ctx.is_done(), false);
         assert_eq!(child_handler.is_done(), false);
         assert_eq!(child_ctx.is_done(), false);
+        assert_eq!(child_ctx2.is_done(), false);
 
         handler.cancel();
 
@@ -318,6 +330,7 @@ mod tests {
         assert_eq!(ctx.is_done(), true);
         assert_eq!(child_handler.is_done(), true);
         assert_eq!(child_ctx.is_done(), true);
+        assert_eq!(child_ctx2.is_done(), true);
     }
 
     #[tokio::test]
@@ -353,14 +366,44 @@ mod tests {
         );
         assert_eq!(handler.is_done(), true);
         assert_eq!(ctx.is_done(), true);
-
-        drop(ctx);
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(200), ctx.into_done())
+                .await
+                .is_ok()
+        );
 
         assert!(
             tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown())
                 .await
                 .is_ok()
         );
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(200), handler.wait())
+                .await
+                .is_ok()
+        );
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(200), handler.done())
+                .await
+                .is_ok()
+        );
         assert_eq!(handler.is_done(), true);
+    }
+
+    #[tokio::test]
+    async fn global_handler() {
+        let handler = Handler::global();
+
+        assert_eq!(handler.is_done(), false);
+
+        handler.cancel();
+
+        assert_eq!(handler.is_done(), true);
+        assert_eq!(Handler::global().is_done(), true);
+        assert_eq!(Context::global().is_done(), true);
+
+        let (child_ctx, child_handler) = Handler::global().new_child();
+        assert_eq!(child_handler.is_done(), true);
+        assert_eq!(child_ctx.is_done(), true);
     }
 }
