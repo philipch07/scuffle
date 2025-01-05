@@ -1,6 +1,6 @@
 //! # scuffle-batching
 //!
-//! > [!WARNING]
+//! > WARNING
 //! > This crate is under active development and may not be stable.
 //!
 //!  [![crates.io](https://img.shields.io/crates/v/scuffle-batching.svg)](https://crates.io/crates/scuffle-batching) [![docs.rs](https://img.shields.io/docsrs/scuffle-batching)](https://docs.rs/scuffle-batching)

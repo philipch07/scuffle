@@ -1,6 +1,6 @@
 //! # scuffle-context
 //!
-//! > [!WARNING]
+//! > WARNING
 //! > This crate is under active development and may not be stable.
 //!
 //!  [![crates.io](https://img.shields.io/crates/v/scuffle-context.svg)](https://crates.io/crates/scuffle-context) [![docs.rs](https://img.shields.io/docsrs/scuffle-context)](https://docs.rs/scuffle-context)
