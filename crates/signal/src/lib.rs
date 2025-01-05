@@ -110,6 +110,10 @@ impl std::future::Future for SignalHandler {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use scuffle_future_ext::FutureExt;
+
     use super::*;
 
     fn raise_signal(kind: SignalKind) {
@@ -127,23 +131,19 @@ mod tests {
 
         raise_signal(SignalKind::user_defined1());
 
-        let recv = tokio::time::timeout(tokio::time::Duration::from_millis(5), &mut handler)
-            .await
-            .unwrap();
+        let recv = (&mut handler).with_timeout(Duration::from_millis(5)).await.unwrap();
 
         assert_eq!(recv, SignalKind::user_defined1(), "expected SIGUSR1");
 
         // We already received the signal, so polling again should return Poll::Pending
-        let recv = tokio::time::timeout(tokio::time::Duration::from_millis(5), &mut handler).await;
+        let recv = (&mut handler).with_timeout(Duration::from_millis(5)).await;
 
         assert!(recv.is_err(), "expected timeout");
 
         raise_signal(SignalKind::user_defined2());
 
         // We should be able to receive the signal again
-        let recv = tokio::time::timeout(tokio::time::Duration::from_millis(5), &mut handler)
-            .await
-            .unwrap();
+        let recv = (&mut handler).with_timeout(Duration::from_millis(5)).await.unwrap();
 
         assert_eq!(recv, SignalKind::user_defined2(), "expected SIGUSR2");
     }

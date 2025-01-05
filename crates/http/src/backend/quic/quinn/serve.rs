@@ -4,6 +4,7 @@ use bytes::Bytes;
 use h3::server::RequestStream;
 use http::Response;
 use scuffle_context::ContextFutExt;
+use scuffle_future_ext::FutureExt;
 #[cfg(feature = "http3-webtransport")]
 use scuffle_h3_webtransport::server::WebTransportUpgradePending;
 
@@ -122,7 +123,7 @@ async fn serve_handle_inner(
     .with_context(&ctx);
 
     let Some(connection) = if let Some(timeout) = config.handshake_timeout {
-        tokio::time::timeout(timeout, conn).await.with_config(ErrorConfig {
+        conn.with_timeout(timeout).await.with_config(ErrorConfig {
             context: "quinn handshake",
             scope: ErrorScope::Connection,
             severity: ErrorSeverity::Debug,
@@ -147,7 +148,7 @@ async fn serve_handle_inner(
             .with_context(&ctx);
 
         if let Some(timeout) = config.handshake_timeout {
-            tokio::time::timeout(timeout, fut).await.with_config(ErrorConfig {
+            fut.with_timeout(timeout).await.with_config(ErrorConfig {
                 context: "quinn handshake",
                 scope: ErrorScope::Connection,
                 severity: ErrorSeverity::Debug,

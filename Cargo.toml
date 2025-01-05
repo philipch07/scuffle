@@ -34,6 +34,7 @@ members = [
     "crates/rtmp",
     "crates/transmuxer",
     "dev-tools/xtask",
+    "crates/future-ext",
 ]
 
 resolver = "2"

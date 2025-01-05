@@ -105,8 +105,9 @@ async fn serve_stream_inner(
     match tls_acceptor {
         #[cfg(feature = "tls-rustls")]
         Some(acceptor) => {
-            use crate::error::{ErrorConfig, ErrorKind, ErrorScope, ErrorSeverity, ResultErrorExt};
+            use scuffle_future_ext::FutureExt;
 
+            use crate::error::{ErrorConfig, ErrorKind, ErrorScope, ErrorSeverity, ResultErrorExt};
             let Some(stream) = async {
                 // We should read a bit of the stream to see if they are attempting to use TLS
                 // or not. This is so we can immediately return a bad request if they arent
@@ -115,7 +116,7 @@ async fn serve_stream_inner(
                 let is_tls = util::is_tls(&mut stream, handle);
 
                 let is_tls = if let Some(timeout) = config.handshake_timeout {
-                    tokio::time::timeout(timeout, is_tls).await.with_config(ErrorConfig {
+                    is_tls.with_timeout(timeout).await.with_config(ErrorConfig {
                         context: "tls handshake",
                         scope: ErrorScope::Connection,
                         severity: ErrorSeverity::Debug,
@@ -135,7 +136,7 @@ async fn serve_stream_inner(
                 let lazy = tokio_rustls::LazyConfigAcceptor::new(Default::default(), stream);
 
                 let accepted = if let Some(timeout) = config.handshake_timeout {
-                    tokio::time::timeout(timeout, lazy).await.with_config(ErrorConfig {
+                    lazy.with_timeout(timeout).await.with_config(ErrorConfig {
                         context: "tls handshake",
                         scope: ErrorScope::Connection,
                         severity: ErrorSeverity::Debug,
@@ -154,7 +155,9 @@ async fn serve_stream_inner(
                 };
 
                 let stream = if let Some(timeout) = config.handshake_timeout {
-                    tokio::time::timeout(timeout, accepted.into_stream(tls_config))
+                    accepted
+                        .into_stream(tls_config)
+                        .with_timeout(timeout)
                         .await
                         .with_config(ErrorConfig {
                             context: "tls handshake",

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use scuffle_future_ext::FutureExt;
 use tokio::process::Command;
 use tokio::sync::mpsc;
 
@@ -34,7 +35,9 @@ async fn test_basic_rtmp_clean() {
         .spawn()
         .expect("failed to execute ffmpeg");
 
-    let (ffmpeg_stream, _) = tokio::time::timeout(Duration::from_millis(1000), listener.accept())
+    let (ffmpeg_stream, _) = listener
+        .accept()
+        .with_timeout(Duration::from_millis(1000))
         .await
         .expect("timedout")
         .expect("failed to accept");
@@ -55,7 +58,9 @@ async fn test_basic_rtmp_clean() {
         )
     };
 
-    let event = tokio::time::timeout(Duration::from_millis(1000), ffmpeg_event_reciever.recv())
+    let event = ffmpeg_event_reciever
+        .recv()
+        .with_timeout(Duration::from_millis(1000))
         .await
         .expect("timedout")
         .expect("failed to recv event");
@@ -70,7 +75,9 @@ async fn test_basic_rtmp_clean() {
     let mut got_audio = false;
     let mut got_metadata = false;
 
-    while let Some(data) = tokio::time::timeout(Duration::from_millis(1000), ffmpeg_data_reciever.recv())
+    while let Some(data) = ffmpeg_data_reciever
+        .recv()
+        .with_timeout(Duration::from_millis(1000))
         .await
         .expect("timedout")
     {
@@ -119,7 +126,9 @@ async fn test_basic_rtmp_unclean() {
         .spawn()
         .expect("failed to execute ffmpeg");
 
-    let (ffmpeg_stream, _) = tokio::time::timeout(Duration::from_millis(1000), listener.accept())
+    let (ffmpeg_stream, _) = listener
+        .accept()
+        .with_timeout(Duration::from_millis(1000))
         .await
         .expect("timedout")
         .expect("failed to accept");
@@ -140,7 +149,9 @@ async fn test_basic_rtmp_unclean() {
         )
     };
 
-    let event = tokio::time::timeout(Duration::from_millis(1000), ffmpeg_event_reciever.recv())
+    let event = ffmpeg_event_reciever
+        .recv()
+        .with_timeout(Duration::from_millis(1000))
         .await
         .expect("timedout")
         .expect("failed to recv event");
@@ -155,7 +166,9 @@ async fn test_basic_rtmp_unclean() {
     let mut got_audio = false;
     let mut got_metadata = false;
 
-    while let Some(data) = tokio::time::timeout(Duration::from_millis(1000), ffmpeg_data_reciever.recv())
+    while let Some(data) = ffmpeg_data_reciever
+        .recv()
+        .with_timeout(Duration::from_millis(1000))
         .await
         .expect("timedout")
     {
