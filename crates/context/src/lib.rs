@@ -43,6 +43,7 @@
 //! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
@@ -298,6 +299,7 @@ impl Handler {
     }
 }
 
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
 #[cfg(test)]
 mod tests {
     use scuffle_future_ext::FutureExt;

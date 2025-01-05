@@ -20,12 +20,14 @@ test *args:
 
     INSTA_FORCE_PASS=1 cargo llvm-cov clean --workspace
     INSTA_FORCE_PASS=1 cargo llvm-cov nextest --include-build-script --no-report -- {{args}}
-    cargo llvm-cov test --doc --doctests --no-report -- {{args}}
+    # Coverage for doctests is currently broken in llvm-cov.
+    # Once it fully works we can add the `--doctests` flag to the test and report command again.
+    cargo llvm-cov test --doc --no-report -- {{args}}
 
     # Do not generate the coverage report on CI
     cargo insta review
-    cargo llvm-cov report --lcov --doctests --output-path ./lcov.info
-    cargo llvm-cov report --html --doctests
+    cargo llvm-cov report --lcov --output-path ./lcov.info
+    cargo llvm-cov report --html
 
 deny *args:
     cargo deny {{args}} --all-features check
