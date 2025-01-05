@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::io::Cursor;
 
 use byteorder::ReadBytesExt;
-use bytesio::bytes_writer::BytesWriter;
 
 use crate::{Amf0Marker, Amf0ReadError, Amf0Reader, Amf0Value, Amf0WriteError, Amf0Writer};
 
@@ -148,22 +147,22 @@ fn test_write_number() {
     let mut amf0_number = vec![0x00];
     amf0_number.extend_from_slice(&772.161_f64.to_be_bytes());
 
-    let mut writer = BytesWriter::default();
+    let mut vec = Vec::<u8>::new();
 
-    Amf0Writer::write_number(&mut writer, 772.161).unwrap();
+    Amf0Writer::write_number(&mut vec, 772.161).unwrap();
 
-    assert_eq!(writer.dispose(), amf0_number);
+    assert_eq!(vec, amf0_number);
 }
 
 #[test]
 fn test_write_boolean() {
     let amf0_boolean = vec![0x01, 0x01];
 
-    let mut writer = BytesWriter::default();
+    let mut vec = Vec::<u8>::new();
 
-    Amf0Writer::write_bool(&mut writer, true).unwrap();
+    Amf0Writer::write_bool(&mut vec, true).unwrap();
 
-    assert_eq!(writer.dispose(), amf0_boolean);
+    assert_eq!(vec, amf0_boolean);
 }
 
 #[test]
@@ -171,22 +170,22 @@ fn test_write_string() {
     let mut amf0_string = vec![0x02, 0x00, 0x0b];
     amf0_string.extend_from_slice(b"Hello World");
 
-    let mut writer = BytesWriter::default();
+    let mut vec = Vec::<u8>::new();
 
-    Amf0Writer::write_string(&mut writer, "Hello World").unwrap();
+    Amf0Writer::write_string(&mut vec, "Hello World").unwrap();
 
-    assert_eq!(writer.dispose(), amf0_string);
+    assert_eq!(vec, amf0_string);
 }
 
 #[test]
 fn test_write_null() {
     let amf0_null = vec![0x05];
 
-    let mut writer = BytesWriter::default();
+    let mut vec = Vec::<u8>::new();
 
-    Amf0Writer::write_null(&mut writer).unwrap();
+    Amf0Writer::write_null(&mut vec).unwrap();
 
-    assert_eq!(writer.dispose(), amf0_null);
+    assert_eq!(vec, amf0_null);
 }
 
 #[test]
@@ -196,9 +195,9 @@ fn test_write_object() {
     amf0_object.extend_from_slice(&[0x05]);
     amf0_object.extend_from_slice(&[0x00, 0x00, 0x09]);
 
-    let mut writer = BytesWriter::default();
+    let mut vec = Vec::<u8>::new();
 
-    Amf0Writer::write_object(&mut writer, &HashMap::from([("test".to_string(), Amf0Value::Null)])).unwrap();
+    Amf0Writer::write_object(&mut vec, &HashMap::from([("test".to_string(), Amf0Value::Null)])).unwrap();
 
-    assert_eq!(writer.dispose(), amf0_object);
+    assert_eq!(vec, amf0_object);
 }

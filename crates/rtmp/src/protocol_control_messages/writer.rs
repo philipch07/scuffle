@@ -1,6 +1,7 @@
+use std::io;
+
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes;
-use bytesio::bytes_writer::BytesWriter;
 
 use super::errors::ProtocolControlMessageError;
 use crate::chunk::{Chunk, ChunkEncoder};
@@ -11,7 +12,7 @@ pub struct ProtocolControlMessagesWriter;
 impl ProtocolControlMessagesWriter {
     pub fn write_set_chunk_size(
         encoder: &ChunkEncoder,
-        writer: &mut BytesWriter,
+        writer: &mut impl io::Write,
         chunk_size: u32, // 31 bits
     ) -> Result<(), ProtocolControlMessageError> {
         // According to spec the first bit must be 0.
@@ -33,7 +34,7 @@ impl ProtocolControlMessagesWriter {
 
     pub fn write_window_acknowledgement_size(
         encoder: &ChunkEncoder,
-        writer: &mut BytesWriter,
+        writer: &mut impl io::Write,
         window_size: u32,
     ) -> Result<(), ProtocolControlMessageError> {
         encoder.write_chunk(
@@ -52,7 +53,7 @@ impl ProtocolControlMessagesWriter {
 
     pub fn write_set_peer_bandwidth(
         encoder: &ChunkEncoder,
-        writer: &mut BytesWriter,
+        writer: &mut impl io::Write,
         window_size: u32,
         limit_type: u8,
     ) -> Result<(), ProtocolControlMessageError> {

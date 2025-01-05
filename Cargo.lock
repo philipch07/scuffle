@@ -3,18 +3,6 @@
 version = 4
 
 [[package]]
-name = "aac"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "bytesio",
- "num-derive",
- "num-traits",
- "scuffle-workspace-hack",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -74,6 +62,7 @@ dependencies = [
  "bytesio",
  "num-derive",
  "num-traits",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
 ]
 
@@ -217,6 +206,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "bytesio",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
 ]
 
@@ -909,6 +899,7 @@ version = "0.0.1"
 dependencies = [
  "bytes",
  "bytesio",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
 ]
 
@@ -976,7 +967,6 @@ dependencies = [
 name = "flv"
 version = "0.0.1"
 dependencies = [
- "aac",
  "amf0",
  "av1",
  "byteorder",
@@ -986,6 +976,8 @@ dependencies = [
  "h265",
  "num-derive",
  "num-traits",
+ "scuffle-aac",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
 ]
 
@@ -1165,6 +1157,7 @@ dependencies = [
  "bytes",
  "bytesio",
  "exp_golomb",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
 ]
 
@@ -1176,6 +1169,7 @@ dependencies = [
  "bytes",
  "bytesio",
  "exp_golomb",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
 ]
 
@@ -1602,7 +1596,6 @@ dependencies = [
 name = "mp4"
 version = "0.0.1"
 dependencies = [
- "aac",
  "av1",
  "byteorder",
  "bytes",
@@ -1611,6 +1604,8 @@ dependencies = [
  "h264",
  "h265",
  "paste",
+ "scuffle-aac",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
  "serde",
  "serde_json",
@@ -2482,6 +2477,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "scuffle-aac"
+version = "0.0.1"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "num-derive",
+ "num-traits",
+ "scuffle-bitio",
+ "scuffle-workspace-hack",
+]
+
+[[package]]
 name = "scuffle-batching"
 version = "0.0.4"
 dependencies = [
@@ -2501,6 +2508,10 @@ dependencies = [
  "scuffle-workspace-hack",
  "tokio",
 ]
+
+[[package]]
+name = "scuffle-bitio"
+version = "0.0.1"
 
 [[package]]
 name = "scuffle-bootstrap"
@@ -3332,7 +3343,6 @@ dependencies = [
 name = "transmuxer"
 version = "0.0.1"
 dependencies = [
- "aac",
  "amf0",
  "av1",
  "byteorder",
@@ -3342,6 +3352,8 @@ dependencies = [
  "h264",
  "h265",
  "mp4",
+ "scuffle-aac",
+ "scuffle-bitio",
  "scuffle-workspace-hack",
  "serde",
  "serde_json",

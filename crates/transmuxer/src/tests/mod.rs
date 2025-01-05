@@ -4,10 +4,9 @@ use std::io::{
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use aac::AudioObjectType;
-use bytesio::bytes_writer::BytesWriter;
 use flv::FlvHeader;
 use mp4::codec::{AudioCodec, VideoCodec};
+use scuffle_aac::AudioObjectType;
 
 use crate::define::{AudioSettings, VideoSettings};
 use crate::{TransmuxResult, Transmuxer};
@@ -27,7 +26,7 @@ fn test_transmuxer_avc_aac() {
 
     let data = cursor.into_inner().slice(pos..);
 
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     transmuxer.demux(data).unwrap();
 
@@ -90,12 +89,7 @@ fn test_transmuxer_avc_aac() {
         .spawn()
         .unwrap();
 
-    ffprobe
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(&writer.dispose())
-        .expect("write to stdin");
+    ffprobe.stdin.as_mut().unwrap().write_all(&writer).expect("write to stdin");
 
     let output = ffprobe.wait_with_output().unwrap();
     assert!(output.status.success());
@@ -141,7 +135,7 @@ fn test_transmuxer_av1_aac() {
 
     let data = cursor.into_inner().slice(pos..);
 
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     transmuxer.demux(data).unwrap();
 
@@ -213,7 +207,7 @@ fn test_transmuxer_av1_aac() {
         .spawn()
         .unwrap();
 
-    ffprobe.stdin.as_mut().unwrap().write_all(&writer.dispose()).unwrap();
+    ffprobe.stdin.as_mut().unwrap().write_all(&writer).unwrap();
 
     let output = ffprobe.wait_with_output().unwrap();
     assert!(output.status.success());
@@ -254,7 +248,7 @@ fn test_transmuxer_hevc_aac() {
 
     let data = cursor.into_inner().slice(pos..);
 
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     transmuxer.demux(data).unwrap();
 
@@ -321,12 +315,7 @@ fn test_transmuxer_hevc_aac() {
         .spawn()
         .unwrap();
 
-    ffprobe
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(&writer.dispose())
-        .expect("write to stdin");
+    ffprobe.stdin.as_mut().unwrap().write_all(&writer).expect("write to stdin");
 
     let output = ffprobe.wait_with_output().unwrap();
     assert!(output.status.success());

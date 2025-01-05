@@ -7,7 +7,6 @@ use std::io;
 use amf0::Amf0Value;
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
-use bytesio::bytes_writer::BytesWriter;
 use flv::{
     AacPacket, Av1Packet, AvcPacket, EnhancedPacket, FlvTag, FlvTagAudioData, FlvTagData, FlvTagVideoData, FrameType,
     HevcPacket, SoundType,
@@ -103,7 +102,7 @@ impl Transmuxer {
     /// Get the next transmuxed packet. This will return `None` if there is not
     /// enough data to create a packet.
     pub fn mux(&mut self) -> Result<Option<TransmuxResult>, TransmuxError> {
-        let mut writer = BytesWriter::default();
+        let mut writer = Vec::new();
 
         let Some((video_settings, _)) = &self.settings else {
             let Some((video_settings, audio_settings)) = self.init_sequence(&mut writer)? else {
@@ -118,10 +117,8 @@ impl Transmuxer {
 
             self.settings = Some((video_settings.clone(), audio_settings.clone()));
 
-            let data = writer.dispose();
-
             return Ok(Some(TransmuxResult::InitSegment {
-                data,
+                data: Bytes::from(writer),
                 audio_settings,
                 video_settings,
             }));
@@ -267,7 +264,7 @@ impl Transmuxer {
             if is_audio {
                 self.audio_duration += total_duration as u64;
                 return Ok(Some(TransmuxResult::MediaSegment(MediaSegment {
-                    data: writer.dispose(),
+                    data: Bytes::from(writer),
                     ty: MediaType::Audio,
                     keyframe: false,
                     timestamp: self.audio_duration - total_duration as u64,
@@ -276,7 +273,7 @@ impl Transmuxer {
                 self.video_duration += total_duration as u64;
                 self.last_video_timestamp = tag.timestamp;
                 return Ok(Some(TransmuxResult::MediaSegment(MediaSegment {
-                    data: writer.dispose(),
+                    data: Bytes::from(writer),
                     ty: MediaType::Video,
                     keyframe: is_keyframe,
                     timestamp: self.video_duration - total_duration as u64,
@@ -351,7 +348,10 @@ impl Transmuxer {
     }
 
     /// Create the init segment.
-    fn init_sequence(&mut self, writer: &mut BytesWriter) -> Result<Option<(VideoSettings, AudioSettings)>, TransmuxError> {
+    fn init_sequence(
+        &mut self,
+        writer: &mut impl io::Write,
+    ) -> Result<Option<(VideoSettings, AudioSettings)>, TransmuxError> {
         // We need to find the tag that is the video sequence header
         // and the audio sequence header
         let (video_sequence_header, audio_sequence_header, scriptdata_tag) = self.find_tags();

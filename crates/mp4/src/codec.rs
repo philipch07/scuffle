@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use aac::AudioObjectType;
+use scuffle_aac::AudioObjectType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VideoCodec {

@@ -14,6 +14,7 @@ bytesio = { path = "../bytesio" }
 av1 = { path = "../av1" }
 h264 = { path = "../h264" }
 h265 = { path = "../h265" }
-aac = { path = "../aac" }
+scuffle-aac = { path = "../aac" }
 amf0 = { path = "../amf0" }
 scuffle-workspace-hack.workspace = true
+scuffle-bitio = { workspace = true }

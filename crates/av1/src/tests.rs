@@ -1,6 +1,6 @@
 use std::io;
 
-use bytesio::bit_reader::BitReader;
+use scuffle_bitio::BitReader;
 
 use crate::config::AV1CodecConfigurationRecord;
 use crate::seq::{ColorConfig, OperatingPoint, SequenceHeaderObu};
@@ -24,7 +24,7 @@ fn test_config_demux() {
     assert!(config.chroma_subsampling_y);
     assert_eq!(config.initial_presentation_delay_minus_one, None);
 
-    let (header, data) = ObuHeader::parse(&mut BitReader::from(config.config_obu)).unwrap();
+    let (header, data) = ObuHeader::parse(&mut BitReader::new_from_slice(config.config_obu)).unwrap();
 
     assert_eq!(header.obu_type, ObuType::SequenceHeader);
 

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use amf0::{Amf0Reader, Amf0Value, Amf0WriteError};
-use bytesio::bytes_writer::BytesWriter;
 
 use crate::chunk::{ChunkDecoder, ChunkEncodeError, ChunkEncoder};
 use crate::netstream::{NetStreamError, NetStreamWriter};
@@ -18,12 +17,12 @@ fn test_error_display() {
 #[test]
 fn test_netstream_write_on_status() {
     let encoder = ChunkEncoder::default();
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     NetStreamWriter::write_on_status(&encoder, &mut writer, 1.0, "status", "idk", "description").unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer.dispose());
+    decoder.extend_data(&writer);
 
     let chunk = decoder.read_chunk().unwrap().unwrap();
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x03);

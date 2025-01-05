@@ -1,7 +1,8 @@
 use std::collections::HashMap;
+use std::io;
 
 use amf0::{Amf0Value, Amf0Writer};
-use bytesio::bytes_writer::BytesWriter;
+use bytes::Bytes;
 
 use super::errors::NetStreamError;
 use crate::chunk::{Chunk, ChunkEncoder, DefinedChunkStreamID};
@@ -10,16 +11,16 @@ use crate::messages::MessageTypeID;
 pub struct NetStreamWriter {}
 
 impl NetStreamWriter {
-    fn write_chunk(
-        encoder: &ChunkEncoder,
-        amf0_writer: BytesWriter,
-        writer: &mut BytesWriter,
-    ) -> Result<(), NetStreamError> {
-        let data = amf0_writer.dispose();
-
+    fn write_chunk(encoder: &ChunkEncoder, amf0_writer: Bytes, writer: &mut impl io::Write) -> Result<(), NetStreamError> {
         encoder.write_chunk(
             writer,
-            Chunk::new(DefinedChunkStreamID::Command as u32, 0, MessageTypeID::CommandAMF0, 0, data),
+            Chunk::new(
+                DefinedChunkStreamID::Command as u32,
+                0,
+                MessageTypeID::CommandAMF0,
+                0,
+                amf0_writer,
+            ),
         )?;
 
         Ok(())
@@ -27,13 +28,13 @@ impl NetStreamWriter {
 
     pub fn write_on_status(
         encoder: &ChunkEncoder,
-        writer: &mut BytesWriter,
+        writer: &mut impl io::Write,
         transaction_id: f64,
         level: &str,
         code: &str,
         description: &str,
     ) -> Result<(), NetStreamError> {
-        let mut amf0_writer = BytesWriter::default();
+        let mut amf0_writer = Vec::new();
 
         Amf0Writer::write_string(&mut amf0_writer, "onStatus")?;
         Amf0Writer::write_number(&mut amf0_writer, transaction_id)?;
@@ -47,6 +48,6 @@ impl NetStreamWriter {
             ]),
         )?;
 
-        Self::write_chunk(encoder, amf0_writer, writer)
+        Self::write_chunk(encoder, Bytes::from(amf0_writer), writer)
     }
 }

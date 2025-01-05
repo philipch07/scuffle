@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use amf0::{Amf0Reader, Amf0Value, Amf0WriteError};
-use bytesio::bytes_writer::BytesWriter;
 
 use super::NetConnection;
 use crate::chunk::{ChunkDecoder, ChunkEncodeError, ChunkEncoder};
@@ -19,7 +18,7 @@ fn test_error_display() {
 #[test]
 fn test_netconnection_connect_response() {
     let encoder = ChunkEncoder::default();
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     NetConnection::write_connect_response(
         &encoder,
@@ -35,7 +34,7 @@ fn test_netconnection_connect_response() {
     .unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer.dispose());
+    decoder.extend_data(&writer);
 
     let chunk = decoder.read_chunk().unwrap().unwrap();
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x03);
@@ -69,12 +68,12 @@ fn test_netconnection_connect_response() {
 #[test]
 fn test_netconnection_create_stream_response() {
     let encoder = ChunkEncoder::default();
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     NetConnection::write_create_stream_response(&encoder, &mut writer, 1.0, 1.0).unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer.dispose());
+    decoder.extend_data(&writer);
 
     let chunk = decoder.read_chunk().unwrap().unwrap();
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x03);

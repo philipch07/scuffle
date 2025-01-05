@@ -1,7 +1,6 @@
-use std::io::Write;
+use std::io;
 
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
-use bytesio::bytes_writer::BytesWriter;
 
 use super::define::{Chunk, ChunkMessageHeader, ChunkType, INIT_CHUNK_SIZE};
 use super::errors::ChunkEncodeError;
@@ -24,7 +23,7 @@ impl ChunkEncoder {
     }
 
     /// Internal function to write the basic header.
-    fn write_basic_header(writer: &mut BytesWriter, fmt: ChunkType, csid: u32) -> Result<(), ChunkEncodeError> {
+    fn write_basic_header(writer: &mut impl io::Write, fmt: ChunkType, csid: u32) -> Result<(), ChunkEncodeError> {
         let fmt = fmt as u8;
 
         if csid >= 64 + 255 {
@@ -46,7 +45,10 @@ impl ChunkEncoder {
         Ok(())
     }
 
-    fn write_message_header(writer: &mut BytesWriter, message_header: &ChunkMessageHeader) -> Result<(), ChunkEncodeError> {
+    fn write_message_header(
+        writer: &mut impl io::Write,
+        message_header: &ChunkMessageHeader,
+    ) -> Result<(), ChunkEncodeError> {
         let timestamp = if message_header.timestamp >= 0xFFFFFF {
             0xFFFFFF
         } else {
@@ -65,13 +67,13 @@ impl ChunkEncoder {
         Ok(())
     }
 
-    fn write_extened_timestamp(writer: &mut BytesWriter, timestamp: u32) -> Result<(), ChunkEncodeError> {
+    fn write_extened_timestamp(writer: &mut impl io::Write, timestamp: u32) -> Result<(), ChunkEncodeError> {
         writer.write_u32::<BigEndian>(timestamp)?;
 
         Ok(())
     }
 
-    pub fn write_chunk(&self, writer: &mut BytesWriter, mut chunk_info: Chunk) -> Result<(), ChunkEncodeError> {
+    pub fn write_chunk(&self, writer: &mut impl io::Write, mut chunk_info: Chunk) -> Result<(), ChunkEncodeError> {
         Self::write_basic_header(writer, ChunkType::Type0, chunk_info.basic_header.chunk_stream_id)?;
 
         Self::write_message_header(writer, &chunk_info.message_header)?;

@@ -1,13 +1,16 @@
 [package]
-name = "aac"
+name = "scuffle-aac"
 version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
 
 [dependencies]
 bytes = "1.5"
 byteorder = "1.5"
 num-traits = "0.2"
 num-derive = "0.4"
-bytesio = { path = "../bytesio" }
 scuffle-workspace-hack.workspace = true
+scuffle-bitio = { workspace = true }

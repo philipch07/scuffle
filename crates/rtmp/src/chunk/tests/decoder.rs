@@ -1,7 +1,6 @@
 use std::io::Write;
 
 use byteorder::WriteBytesExt;
-use bytesio::bytes_writer::BytesWriter;
 
 use crate::chunk::{ChunkDecodeError, ChunkDecoder};
 
@@ -96,7 +95,7 @@ fn test_decoder_chunk_type0_double_sized() {
 
 #[test]
 fn test_decoder_chunk_mutli_streams() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     #[rustfmt::skip]
     writer
@@ -129,7 +128,8 @@ fn test_decoder_chunk_mutli_streams() {
     }
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
+    writer.clear();
 
     // We wrote 2 chunks but neither of them are complete
     assert!(unpacker.read_chunk().expect("read chunk").is_none());
@@ -145,7 +145,8 @@ fn test_decoder_chunk_mutli_streams() {
         writer.write_u8(3).unwrap();
     }
 
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
+    writer.clear();
 
     // Even though we wrote chunk 3 first, chunk 4 should be read first since it's a
     // different stream
@@ -175,7 +176,8 @@ fn test_decoder_chunk_mutli_streams() {
         writer.write_u8(3).unwrap();
     }
 
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
+    writer.clear();
 
     let chunk = unpacker.read_chunk().expect("read chunk").expect("chunk");
 
@@ -192,7 +194,8 @@ fn test_decoder_chunk_mutli_streams() {
 
 #[test]
 fn test_decoder_extended_timestamp() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
+
     #[rustfmt::skip]
     writer
         .write_all(&[
@@ -210,7 +213,7 @@ fn test_decoder_extended_timestamp() {
     }
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     // We should not have enough data to read the chunk
     // But the chunk is valid, so we should not get an error
@@ -255,7 +258,7 @@ fn test_decoder_extended_timestamp() {
         writer.write_u8(i as u8).unwrap();
     }
 
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let chunk = unpacker.read_chunk().expect("read chunk").expect("chunk");
 
@@ -269,7 +272,7 @@ fn test_decoder_extended_timestamp() {
 
 #[test]
 fn test_decoder_extended_timestamp_ext() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     #[rustfmt::skip]
     writer
@@ -288,7 +291,7 @@ fn test_decoder_extended_timestamp_ext() {
     }
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     // We should not have enough data to read the chunk
     // But the chunk is valid, so we should not get an error
@@ -306,7 +309,7 @@ fn test_decoder_extended_timestamp_ext() {
         writer.write_u8(i as u8).unwrap();
     }
 
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let chunk = unpacker.read_chunk().expect("read chunk").expect("chunk");
 
@@ -320,7 +323,7 @@ fn test_decoder_extended_timestamp_ext() {
 
 #[test]
 fn test_read_extended_csid() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     #[rustfmt::skip]
     writer
@@ -335,7 +338,7 @@ fn test_read_extended_csid() {
         .unwrap();
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let chunk = unpacker.read_chunk().expect("read chunk").expect("chunk");
 
@@ -344,7 +347,7 @@ fn test_read_extended_csid() {
 
 #[test]
 fn test_read_extended_csid_ext2() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     #[rustfmt::skip]
     writer
@@ -360,7 +363,7 @@ fn test_read_extended_csid_ext2() {
         .unwrap();
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let chunk = unpacker.read_chunk().expect("read chunk").expect("chunk");
 
@@ -369,7 +372,7 @@ fn test_read_extended_csid_ext2() {
 
 #[test]
 fn test_decoder_error_no_previous_chunk() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     // Write a chunk with type 3 but no previous chunk
     #[rustfmt::skip]
@@ -380,7 +383,7 @@ fn test_decoder_error_no_previous_chunk() {
         .unwrap();
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let err = unpacker.read_chunk().unwrap_err();
     match err {
@@ -391,7 +394,7 @@ fn test_decoder_error_no_previous_chunk() {
 
 #[test]
 fn test_decoder_error_partial_chunk_too_large() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     // Write a chunk that has a message size that is too large
     #[rustfmt::skip]
@@ -407,7 +410,7 @@ fn test_decoder_error_partial_chunk_too_large() {
         .unwrap();
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let err = unpacker.read_chunk().unwrap_err();
     match err {
@@ -418,7 +421,7 @@ fn test_decoder_error_partial_chunk_too_large() {
 
 #[test]
 fn test_decoder_error_invalid_message_type_id() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     // Write a chunk with an invalid message type id
     #[rustfmt::skip]
@@ -434,7 +437,7 @@ fn test_decoder_error_invalid_message_type_id() {
         .unwrap();
 
     let mut unpacker = ChunkDecoder::default();
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let err = unpacker.read_chunk().unwrap_err();
 
@@ -446,7 +449,7 @@ fn test_decoder_error_invalid_message_type_id() {
 
 #[test]
 fn test_decoder_error_too_many_partial_chunks() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     let mut unpacker = ChunkDecoder::default();
 
@@ -468,7 +471,8 @@ fn test_decoder_error_too_many_partial_chunks() {
             writer.write_u8(i as u8).unwrap();
         }
 
-        unpacker.extend_data(&writer.extract_current_bytes());
+        unpacker.extend_data(&writer);
+        writer.clear();
 
         // Read the chunk
         assert!(unpacker
@@ -494,8 +498,8 @@ fn test_decoder_error_too_many_partial_chunks() {
         writer.write_u8(i as u8).unwrap();
     }
 
-    unpacker.extend_data(&writer.extract_current_bytes());
-
+    unpacker.extend_data(&writer);
+    writer.clear();
     let err = unpacker.read_chunk().unwrap_err();
     match err {
         ChunkDecodeError::TooManyPartialChunks => {}
@@ -505,26 +509,20 @@ fn test_decoder_error_too_many_partial_chunks() {
 
 #[test]
 fn test_decoder_error_too_many_chunk_headers() {
-    let mut writer = BytesWriter::default();
-
     let mut unpacker = ChunkDecoder::default();
 
     for i in 0..100 {
         // Write another chunk with a different chunk stream id
         #[rustfmt::skip]
-        writer
-            .write_all(&[
-                (0 << 6), // chunk type 0 (partial), chunk stream id 0
-                i,        // chunk id
-                0xFF, 0xFF, 0xFF, // timestamp
-                0x00, 0x00, 0x00, // message length (max chunk size is set to 128)
-                0x09, // message type id (video)
-                0x00, 0x01, 0x00, 0x00, // message stream id
-                0x01, 0x00, 0x00, 0x00, // extended timestamp
-            ])
-            .unwrap();
-
-        unpacker.extend_data(&writer.extract_current_bytes());
+        unpacker.extend_data(&[
+            (0 << 6), // chunk type 0 (partial), chunk stream id 0
+            i,        // chunk id
+            0xFF, 0xFF, 0xFF, // timestamp
+            0x00, 0x00, 0x00, // message length (max chunk size is set to 128)
+            0x09, // message type id (video)
+            0x00, 0x01, 0x00, 0x00, // message stream id
+            0x01, 0x00, 0x00, 0x00, // extended timestamp
+        ]);
 
         // Read the chunk (should be a full chunk since the message length is 0)
         assert!(unpacker
@@ -535,18 +533,14 @@ fn test_decoder_error_too_many_chunk_headers() {
 
     // Write another chunk with a different chunk stream id
     #[rustfmt::skip]
-    writer
-        .write_all(&[
-            12, // chunk type 0, chunk stream id 6
-            0xFF, 0xFF, 0xFF, // timestamp
-            0x00, 0x00, 0x00, // message length (max chunk size is set to 128)
-            0x09, // message type id (video)
-            0x00, 0x01, 0x00, 0x00, // message stream id
-            0x01, 0x00, 0x00, 0x00, // extended timestamp
-        ])
-        .unwrap();
-
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&[
+        12, // chunk type 0, chunk stream id 6
+        0xFF, 0xFF, 0xFF, // timestamp
+        0x00, 0x00, 0x00, // message length (max chunk size is set to 128)
+        0x09, // message type id (video)
+        0x00, 0x01, 0x00, 0x00, // message stream id
+        0x01, 0x00, 0x00, 0x00, // extended timestamp
+    ]);
 
     let err = unpacker.read_chunk().unwrap_err();
     match err {
@@ -557,7 +551,7 @@ fn test_decoder_error_too_many_chunk_headers() {
 
 #[test]
 fn test_decoder_larger_chunk_size() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     // Write a chunk that has a message size that is too large
     #[rustfmt::skip]
@@ -578,7 +572,7 @@ fn test_decoder_larger_chunk_size() {
     let mut unpacker = ChunkDecoder::default();
     unpacker.update_max_chunk_size(4096);
 
-    unpacker.extend_data(&writer.extract_current_bytes());
+    unpacker.extend_data(&writer);
 
     let chunk = unpacker.read_chunk().expect("failed").expect("chunk");
     assert_eq!(chunk.basic_header.chunk_stream_id, 3);

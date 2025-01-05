@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use amf0::{Amf0ReadError, Amf0Value, Amf0Writer};
-use bytesio::bytes_writer::BytesWriter;
+use bytes::Bytes;
 
 use super::{MessageError, MessageParser, MessageTypeID, RtmpMessageData};
 use crate::chunk::{Chunk, ChunkEncodeError};
@@ -22,13 +22,15 @@ fn test_error_display() {
 
 #[test]
 fn test_parse_command() {
-    let mut amf0_writer = BytesWriter::default();
+    let mut amf0_writer = Vec::new();
 
     Amf0Writer::write_string(&mut amf0_writer, "connect").unwrap();
     Amf0Writer::write_number(&mut amf0_writer, 1.0).unwrap();
     Amf0Writer::write_null(&mut amf0_writer).unwrap();
 
-    let chunk = Chunk::new(0, 0, MessageTypeID::CommandAMF0, 0, amf0_writer.dispose());
+    let amf_data = Bytes::from(amf0_writer);
+
+    let chunk = Chunk::new(0, 0, MessageTypeID::CommandAMF0, 0, amf_data);
 
     let message = MessageParser::parse(chunk).expect("no errors").expect("message");
     match message {
@@ -88,7 +90,7 @@ fn test_parse_set_chunk_size() {
 
 #[test]
 fn test_parse_metadata() {
-    let mut amf0_writer = BytesWriter::default();
+    let mut amf0_writer = Vec::new();
 
     Amf0Writer::write_string(&mut amf0_writer, "onMetaData").unwrap();
     Amf0Writer::write_object(
@@ -97,8 +99,7 @@ fn test_parse_metadata() {
     )
     .unwrap();
 
-    let amf_data = amf0_writer.dispose();
-
+    let amf_data = Bytes::from(amf0_writer);
     let chunk = Chunk::new(0, 0, MessageTypeID::DataAMF0, 0, amf_data.clone());
 
     let message = MessageParser::parse(chunk).expect("no errors").expect("message");
