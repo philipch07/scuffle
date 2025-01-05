@@ -25,9 +25,9 @@ mod metrics_impl;
 /// # Module Example
 ///
 /// ```rust
-/// #[metrics]
+/// #[scuffle_metrics::metrics]
 /// mod example {
-///     use scuffle_metrics::{CounterU64, MetricEnum};
+///     use scuffle_metrics::{MetricEnum, collector::CounterU64};
 ///
 ///     #[derive(MetricEnum)]
 ///     pub enum Kind {
@@ -39,13 +39,19 @@ mod metrics_impl;
 ///     pub fn request(kind: Kind) -> CounterU64;
 /// }
 ///
-/// example::request(Kind::Http).incr();
+/// example::request(example::Kind::Http).incr();
 /// ```
 ///
 /// # Function Example
 ///
 /// ```rust
-/// #[metrics(unit = "requests")]
+/// # use scuffle_metrics::{MetricEnum, collector::CounterU64};
+/// # #[derive(MetricEnum)]
+/// # pub enum Kind {
+/// #     Http,
+/// #     Grpc,
+/// # }
+/// #[scuffle_metrics::metrics(unit = "requests")]
 /// pub fn request(kind: Kind) -> CounterU64;
 ///
 /// request(Kind::Http).incr();
