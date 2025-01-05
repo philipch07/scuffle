@@ -20,3 +20,4 @@ scuffle-workspace-hack.workspace = true
 
 [dev-dependencies]
 tokio = { version = "1.36", features = ["full"] }
+scuffle-future-ext = { path = "../future-ext" }

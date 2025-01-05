@@ -25,7 +25,7 @@ itoa = { version = "1" }
 smallvec = { version = "1" }
 spin = { version = "0.9" }
 async-trait = { version = "0.1" }
-
+scuffle-future-ext = { path = "../future-ext" }
 # For extra services features
 tower-service = { version = "0.3", optional = true }
 axum-core = { version = "0.4", optional = true }

@@ -6,6 +6,7 @@ use bytes::Bytes;
 use bytesio::bytes_writer::BytesWriter;
 use bytesio::bytesio::{AsyncReadWrite, BytesIO};
 use bytesio::bytesio_errors::BytesIOError;
+use scuffle_future_ext::FutureExt;
 use tokio::sync::oneshot;
 
 use super::define::RtmpCommand;
@@ -19,7 +20,6 @@ use crate::netstream::NetStreamWriter;
 use crate::protocol_control_messages::ProtocolControlMessagesWriter;
 use crate::user_control_messages::EventMessagesWriter;
 use crate::{handshake, PublishProducer};
-
 pub struct Session<S: AsyncReadWrite> {
     /// When you connect via rtmp, you specify the app name in the url
     /// For example: rtmp://localhost:1935/live/xyz
@@ -131,7 +131,10 @@ impl<S: AsyncReadWrite> Session<S> {
         let mut bytes_len = 0;
 
         while bytes_len < handshake::RTMP_HANDSHAKE_SIZE {
-            let buf = tokio::time::timeout(Duration::from_millis(2500), self.io.read())
+            let buf = self
+                .io
+                .read()
+                .with_timeout(Duration::from_millis(2500))
                 .await
                 .map_err(|_| SessionError::BytesIO(BytesIOError::ClientClosed))??;
             bytes_len += buf.len();
@@ -172,7 +175,10 @@ impl<S: AsyncReadWrite> Session<S> {
         if self.skip_read {
             self.skip_read = false;
         } else {
-            let data = tokio::time::timeout(Duration::from_millis(2500), self.io.read())
+            let data = self
+                .io
+                .read()
+                .with_timeout(Duration::from_millis(2500))
                 .await
                 .map_err(|_| SessionError::BytesIO(BytesIOError::ClientClosed))??;
             self.chunk_decoder.extend_data(&data[..]);
@@ -250,7 +256,7 @@ impl<S: AsyncReadWrite> Session<S> {
         };
 
         if matches!(
-            tokio::time::timeout(Duration::from_secs(2), self.data_producer.send(data)).await,
+            self.data_producer.send(data).with_timeout(Duration::from_secs(2)).await,
             Err(_) | Ok(Err(_))
         ) {
             tracing::debug!("Publisher dropped");
@@ -504,7 +510,9 @@ impl<S: AsyncReadWrite> Session<S> {
     /// This is to avoid writing empty bytes to the underlying connection.
     async fn write_data(&mut self, data: Bytes) -> Result<(), SessionError> {
         if !data.is_empty() {
-            tokio::time::timeout(Duration::from_secs(2), self.io.write(data))
+            self.io
+                .write(data)
+                .with_timeout(Duration::from_secs(2))
                 .await
                 .map_err(|_| SessionError::BytesIO(BytesIOError::ClientClosed))??;
         }
