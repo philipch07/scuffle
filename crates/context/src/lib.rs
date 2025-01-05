@@ -366,27 +366,21 @@ mod tests {
         );
         assert_eq!(handler.is_done(), true);
         assert_eq!(ctx.is_done(), true);
-        assert!(
-            tokio::time::timeout(std::time::Duration::from_millis(200), ctx.into_done())
-                .await
-                .is_ok()
-        );
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), ctx.into_done())
+            .await
+            .is_ok());
 
         assert!(
             tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown())
                 .await
                 .is_ok()
         );
-        assert!(
-            tokio::time::timeout(std::time::Duration::from_millis(200), handler.wait())
-                .await
-                .is_ok()
-        );
-        assert!(
-            tokio::time::timeout(std::time::Duration::from_millis(200), handler.done())
-                .await
-                .is_ok()
-        );
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.wait())
+            .await
+            .is_ok());
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.done())
+            .await
+            .is_ok());
         assert_eq!(handler.is_done(), true);
     }
 

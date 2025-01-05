@@ -160,6 +160,27 @@ impl<F: Stream> Stream for StreamWithContext<'_, F> {
 pub trait ContextStreamExt<Stream> {
     /// Wraps a stream with a context and stops the stream when the context is
     /// done.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use scuffle_context::{Context, ContextStreamExt};
+    /// # use futures_lite as futures;
+    /// # use futures_lite::StreamExt;
+    /// # tokio_test::block_on(async {
+    /// let (ctx, handler) = Context::new();
+    ///
+    /// tokio::spawn(async {
+    ///     futures::stream::iter(1..=10).then(|d| async move {
+    ///         // Do some work
+    ///         tokio::time::sleep(std::time::Duration::from_secs(d)).await;
+    ///     }).with_context(ctx);
+    /// });
+    ///
+    /// // Will stop the spawned task and cancel all associated streams.
+    /// handler.cancel();
+    /// # });
+    /// ```
     fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, Stream>
     where
         Self: Sized;
