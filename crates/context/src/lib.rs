@@ -44,12 +44,10 @@
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 
-use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
-use std::task::Poll;
 
-use tokio_util::sync::{CancellationToken, WaitForCancellationFuture, WaitForCancellationFutureOwned};
+use tokio_util::sync::CancellationToken;
 
 /// For extending types.
 mod ext;
@@ -300,51 +298,6 @@ impl Handler {
     }
 }
 
-pin_project_lite::pin_project! {
-    /// A reference to a context which implements [`Future`] and can be polled.
-    /// Can either be owned or borrowed.
-    ///
-    /// Create by using the [`From`] implementations.
-    #[project = ContextRefProj]
-    pub enum ContextRef<'a> {
-        Owned {
-            #[pin] fut: WaitForCancellationFutureOwned,
-            tracker: ContextTracker,
-        },
-        Ref {
-            #[pin] fut: WaitForCancellationFuture<'a>,
-        },
-    }
-}
-
-impl From<Context> for ContextRef<'_> {
-    fn from(ctx: Context) -> Self {
-        ContextRef::Owned {
-            fut: ctx.token.cancelled_owned(),
-            tracker: ctx.tracker,
-        }
-    }
-}
-
-impl<'a> From<&'a Context> for ContextRef<'a> {
-    fn from(ctx: &'a Context) -> Self {
-        ContextRef::Ref {
-            fut: ctx.token.cancelled(),
-        }
-    }
-}
-
-impl std::future::Future for ContextRef<'_> {
-    type Output = ();
-
-    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        match self.project() {
-            ContextRefProj::Owned { fut, .. } => fut.poll(cx),
-            ContextRefProj::Ref { fut } => fut.poll(cx),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::Context;
@@ -393,7 +346,6 @@ mod tests {
         assert_eq!(ctx.is_done(), false);
 
         // This is expected to timeout
-        // TODO: Is there a better solution to test if the future is pending?
         assert!(
             tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown())
                 .await

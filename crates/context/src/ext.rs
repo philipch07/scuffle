@@ -3,8 +3,63 @@ use std::pin::Pin;
 use std::task::Poll;
 
 use futures_lite::Stream;
+use tokio_util::sync::{WaitForCancellationFuture, WaitForCancellationFutureOwned};
 
-use crate::ContextRef;
+use crate::{Context, ContextTracker};
+
+/// This type is used to make the inner enum [`ContextRefInner`] private.
+pub struct ContextRef<'a> {
+    inner: ContextRefInner<'a>,
+}
+
+impl From<Context> for ContextRef<'_> {
+    fn from(ctx: Context) -> Self {
+        ContextRef {
+            inner: ContextRefInner::Owned {
+                fut: ctx.token.cancelled_owned(),
+                tracker: ctx.tracker,
+            },
+        }
+    }
+}
+
+impl<'a> From<&'a Context> for ContextRef<'a> {
+    fn from(ctx: &'a Context) -> Self {
+        ContextRef {
+            inner: ContextRefInner::Ref {
+                fut: ctx.token.cancelled(),
+            },
+        }
+    }
+}
+
+pin_project_lite::pin_project! {
+    /// A reference to a context which implements [`Future`] and can be polled.
+    /// Can either be owned or borrowed.
+    ///
+    /// Create by using the [`From`] implementations.
+    #[project = ContextRefInnerProj]
+    enum ContextRefInner<'a> {
+        Owned {
+            #[pin] fut: WaitForCancellationFutureOwned,
+            tracker: ContextTracker,
+        },
+        Ref {
+            #[pin] fut: WaitForCancellationFuture<'a>,
+        },
+    }
+}
+
+impl std::future::Future for ContextRefInner<'_> {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        match self.project() {
+            ContextRefInnerProj::Owned { fut, .. } => fut.poll(cx),
+            ContextRefInnerProj::Ref { fut } => fut.poll(cx),
+        }
+    }
+}
 
 pin_project_lite::pin_project! {
     /// A future with a context attached to it.
@@ -14,7 +69,7 @@ pin_project_lite::pin_project! {
         #[pin]
         future: F,
         #[pin]
-        ctx: ContextRef<'a>,
+        ctx: ContextRefInner<'a>,
         _marker: std::marker::PhantomData<&'a ()>,
     }
 }
@@ -65,7 +120,7 @@ impl<F: IntoFuture> ContextFutExt<F::IntoFuture> for F {
     {
         FutureWithContext {
             future: self.into_future(),
-            ctx: ctx.into(),
+            ctx: ctx.into().inner,
             _marker: std::marker::PhantomData,
         }
     }
@@ -79,7 +134,7 @@ pin_project_lite::pin_project! {
         #[pin]
         stream: F,
         #[pin]
-        ctx: ContextRef<'a>,
+        ctx: ContextRefInner<'a>,
         _marker: std::marker::PhantomData<&'a ()>,
     }
 }
@@ -114,7 +169,7 @@ impl<F: Stream> ContextStreamExt<F> for F {
     fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, F> {
         StreamWithContext {
             stream: self,
-            ctx: ctx.into(),
+            ctx: ctx.into().inner,
             _marker: std::marker::PhantomData,
         }
     }
