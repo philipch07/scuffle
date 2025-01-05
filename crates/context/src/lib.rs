@@ -43,23 +43,28 @@
 //! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
-use std::future::{Future, IntoFuture};
-use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
-use std::task::Poll;
 
-use futures_lite::Stream;
-use tokio_util::sync::{CancellationToken, WaitForCancellationFuture, WaitForCancellationFutureOwned};
+use tokio_util::sync::CancellationToken;
 
+/// For extending types.
+mod ext;
+
+pub use ext::*;
+
+/// Create by calling [`ContextTrackerInner::child`].
 #[derive(Debug)]
 struct ContextTracker(Arc<ContextTrackerInner>);
 
 impl Drop for ContextTracker {
     fn drop(&mut self) {
-        let remaining = self.0.active_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
-        if remaining == 1 && self.0.stopped.load(std::sync::atomic::Ordering::Relaxed) {
+        let prev_active_count = self.0.active_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        // If this was the last active `ContextTracker` and the context has been
+        // stopped, then notify the waiters
+        if prev_active_count == 1 && self.0.stopped.load(std::sync::atomic::Ordering::Relaxed) {
             self.0.notify.notify_waiters();
         }
     }
@@ -68,6 +73,8 @@ impl Drop for ContextTracker {
 #[derive(Debug)]
 struct ContextTrackerInner {
     stopped: AtomicBool,
+    /// This count keeps track of the number of `ContextTrackers` that exist for
+    /// this `ContextTrackerInner`.
     active_count: AtomicUsize,
     notify: tokio::sync::Notify,
 }
@@ -81,15 +88,19 @@ impl ContextTrackerInner {
         })
     }
 
+    /// Create a new `ContextTracker` from an `Arc<ContextTrackerInner>`.
     fn child(self: &Arc<Self>) -> ContextTracker {
         self.active_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        ContextTracker(self.clone())
+        ContextTracker(Arc::clone(self))
     }
 
+    /// Mark this `ContextTrackerInner` as stopped.
     fn stop(&self) {
         self.stopped.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
+    /// Wait for this `ContextTrackerInner` to be stopped and all associated
+    /// `ContextTracker`s to be dropped.
     async fn wait(&self) {
         let notify = self.notify.notified();
 
@@ -104,7 +115,8 @@ impl ContextTrackerInner {
 
 /// A context for cancelling futures and waiting for shutdown.
 ///
-/// A context can be created from a handler or another context so to have a
+/// A context can be created from a handler by calling [`Handler::context`] or
+/// from another context by calling [`Context::new_child`] so to have a
 /// hierarchy of contexts.
 ///
 /// Contexts can then be attached to futures or streams in order to
@@ -130,14 +142,14 @@ impl Clone for Context {
 impl Context {
     #[must_use]
     /// Create a new context using the global handler.
-    /// Returns a tuple and a child handler.
+    /// Returns a child context and child handler of the global handler.
     pub fn new() -> (Self, Handler) {
         Handler::global().new_child()
     }
 
     #[must_use]
     /// Create a new child context from this context.
-    /// Returns a tuple and a child handler.
+    /// Returns a new child context and child handler of this context.
     ///
     /// # Example
     ///
@@ -169,23 +181,25 @@ impl Context {
         Handler::global().context()
     }
 
-    /// Waits for the context to be done (the handler to be shutdown)
+    /// Wait for the context to be done (the handler to be shutdown).
     pub async fn done(&self) {
         self.token.cancelled().await;
     }
 
-    /// The same as done but takes ownership of the context
+    /// The same as [`Context::done`] but takes ownership of the context.
     pub async fn into_done(self) {
         self.done().await;
     }
 
-    /// Returns true if the context is done
+    /// Returns true if the context is done.
     #[must_use]
     pub fn is_done(&self) -> bool {
         self.token.is_cancelled()
     }
 }
 
+/// A wrapper type around [`CancellationToken`] that will cancel the token as
+/// soon as it is dropped.
 #[derive(Debug)]
 struct TokenDropGuard(CancellationToken);
 
@@ -248,7 +262,7 @@ impl Handler {
     /// Waits for the handler to be done (waiting for all contexts to be done).
     pub async fn done(&self) {
         self.token.0.cancelled().await;
-        self.tracker.wait().await;
+        self.wait().await;
     }
 
     /// Waits for the handler to be done (waiting for all contexts to be done).
@@ -285,153 +299,115 @@ impl Handler {
     }
 }
 
-pin_project_lite::pin_project! {
-    /// A reference to a context
-    /// Can either be owned or borrowed
-    pub struct ContextRef<'a> {
-        #[pin]
-        inner: ContextRefInner<'a>,
-    }
-}
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
+#[cfg(test)]
+mod tests {
+    use scuffle_future_ext::FutureExt;
 
-pin_project_lite::pin_project! {
-    #[project = ContextRefInnerProj]
-    enum ContextRefInner<'a> {
-        Owned {
-            #[pin] fut: WaitForCancellationFutureOwned,
-            tracker: ContextTracker,
-        },
-        Ref {
-            #[pin] fut: WaitForCancellationFuture<'a>,
-        },
-    }
-}
+    use crate::{Context, Handler};
 
-impl std::future::Future for ContextRef<'_> {
-    type Output = ();
+    #[tokio::test]
+    async fn new() {
+        let (ctx, handler) = Context::new();
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
 
-    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        match self.project().inner.project() {
-            ContextRefInnerProj::Owned { fut, .. } => fut.poll(cx),
-            ContextRefInnerProj::Ref { fut } => fut.poll(cx),
-        }
-    }
-}
-
-impl From<Context> for ContextRef<'_> {
-    fn from(ctx: Context) -> Self {
-        ContextRef {
-            inner: ContextRefInner::Owned {
-                fut: ctx.token.cancelled_owned(),
-                tracker: ctx.tracker,
-            },
-        }
-    }
-}
-
-impl<'a> From<&'a Context> for ContextRef<'a> {
-    fn from(ctx: &'a Context) -> Self {
-        ContextRef {
-            inner: ContextRefInner::Ref {
-                fut: ctx.token.cancelled(),
-            },
-        }
-    }
-}
-
-pub trait ContextFutExt<Fut> {
-    /// Wraps a future with a context, allowing the future to be cancelled when
-    /// the context is done
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> FutureWithContext<'a, Fut>
-    where
-        Self: Sized;
-}
-
-impl<F: IntoFuture> ContextFutExt<F::IntoFuture> for F {
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> FutureWithContext<'a, F::IntoFuture>
-    where
-        F: IntoFuture,
-    {
-        FutureWithContext {
-            future: self.into_future(),
-            ctx: ctx.into(),
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-pub trait ContextStreamExt<Stream> {
-    /// Wraps a stream with a context, allowing the stream to be stopped when
-    /// the context is done
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, Stream>
-    where
-        Self: Sized;
-}
-
-impl<F: Stream> ContextStreamExt<F> for F {
-    fn with_context<'a>(self, ctx: impl Into<ContextRef<'a>>) -> StreamWithContext<'a, F> {
-        StreamWithContext {
-            stream: self,
-            ctx: ctx.into(),
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-pin_project_lite::pin_project! {
-    /// A future with a context attached to it.
-    ///
-    /// This future will be cancelled when the context is done.
-    pub struct FutureWithContext<'a, F> {
-        #[pin]
-        future: F,
-        #[pin]
-        ctx: ContextRef<'a>,
-        _marker: std::marker::PhantomData<&'a ()>,
-    }
-}
-
-impl<F: Future> Future for FutureWithContext<'_, F> {
-    type Output = Option<F::Output>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
-        let this = self.project();
-
-        match (this.ctx.poll(cx), this.future.poll(cx)) {
-            (_, Poll::Ready(v)) => std::task::Poll::Ready(Some(v)),
-            (Poll::Ready(_), Poll::Pending) => std::task::Poll::Ready(None),
-            _ => std::task::Poll::Pending,
-        }
-    }
-}
-
-pin_project_lite::pin_project! {
-    /// A stream with a context attached to it.
-    ///
-    /// This stream will be cancelled when the context is done.
-    pub struct StreamWithContext<'a, F> {
-        #[pin]
-        stream: F,
-        #[pin]
-        ctx: ContextRef<'a>,
-        _marker: std::marker::PhantomData<&'a ()>,
-    }
-}
-
-impl<F: Stream> Stream for StreamWithContext<'_, F> {
-    type Item = F::Item;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.project();
-
-        match (this.ctx.poll(cx), this.stream.poll_next(cx)) {
-            (_, Poll::Ready(v)) => std::task::Poll::Ready(v),
-            (Poll::Ready(_), Poll::Pending) => std::task::Poll::Ready(None),
-            _ => std::task::Poll::Pending,
-        }
+        let handler = Handler::default();
+        assert_eq!(handler.is_done(), false);
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.stream.size_hint()
+    #[tokio::test]
+    async fn cancel() {
+        let (ctx, handler) = Context::new();
+        let (child_ctx, child_handler) = ctx.new_child();
+        let child_ctx2 = ctx.clone();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+        assert_eq!(child_handler.is_done(), false);
+        assert_eq!(child_ctx.is_done(), false);
+        assert_eq!(child_ctx2.is_done(), false);
+
+        handler.cancel();
+
+        assert_eq!(handler.is_done(), true);
+        assert_eq!(ctx.is_done(), true);
+        assert_eq!(child_handler.is_done(), true);
+        assert_eq!(child_ctx.is_done(), true);
+        assert_eq!(child_ctx2.is_done(), true);
+    }
+
+    #[tokio::test]
+    async fn cancel_child() {
+        let (ctx, handler) = Context::new();
+        let (child_ctx, child_handler) = ctx.new_child();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+        assert_eq!(child_handler.is_done(), false);
+        assert_eq!(child_ctx.is_done(), false);
+
+        child_handler.cancel();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+        assert_eq!(child_handler.is_done(), true);
+        assert_eq!(child_ctx.is_done(), true);
+    }
+
+    #[tokio::test]
+    async fn shutdown() {
+        let (ctx, handler) = Context::new();
+
+        assert_eq!(handler.is_done(), false);
+        assert_eq!(ctx.is_done(), false);
+
+        // This is expected to timeout
+        assert!(handler
+            .shutdown()
+            .with_timeout(std::time::Duration::from_millis(200))
+            .await
+            .is_err());
+        assert_eq!(handler.is_done(), true);
+        assert_eq!(ctx.is_done(), true);
+        assert!(ctx
+            .into_done()
+            .with_timeout(std::time::Duration::from_millis(200))
+            .await
+            .is_ok());
+
+        assert!(handler
+            .shutdown()
+            .with_timeout(std::time::Duration::from_millis(200))
+            .await
+            .is_ok());
+        assert!(handler
+            .wait()
+            .with_timeout(std::time::Duration::from_millis(200))
+            .await
+            .is_ok());
+        assert!(handler
+            .done()
+            .with_timeout(std::time::Duration::from_millis(200))
+            .await
+            .is_ok());
+        assert_eq!(handler.is_done(), true);
+    }
+
+    #[tokio::test]
+    async fn global_handler() {
+        let handler = Handler::global();
+
+        assert_eq!(handler.is_done(), false);
+
+        handler.cancel();
+
+        assert_eq!(handler.is_done(), true);
+        assert_eq!(Handler::global().is_done(), true);
+        assert_eq!(Context::global().is_done(), true);
+
+        let (child_ctx, child_handler) = Handler::global().new_child();
+        assert_eq!(child_handler.is_done(), true);
+        assert_eq!(child_ctx.is_done(), true);
     }
 }

@@ -2574,6 +2574,7 @@ version = "0.0.2"
 dependencies = [
  "futures-lite",
  "pin-project-lite",
+ "scuffle-future-ext",
  "scuffle-workspace-hack",
  "tokio",
  "tokio-test",
@@ -2596,7 +2597,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-future-ext"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "scuffle-workspace-hack",
  "tokio",
