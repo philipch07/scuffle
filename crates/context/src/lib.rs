@@ -7,11 +7,15 @@
 //!
 //! ---
 //!
-//! A crate designed to provide the ability to cancel futures using a context go-like approach, allowing for graceful shutdowns and cancellations.
+//! A crate designed to provide the ability to cancel futures using a context
+//! go-like approach, allowing for graceful shutdowns and cancellations.
 //!
 //! ## Why do we need this?
 //!
-//! Its often useful to wait for all the futures to shutdown or to cancel them when we no longer care about the results. This crate provides an interface to cancel all futures associated with a context or wait for them to finish before shutting down. Allowing for graceful shutdowns and cancellations.
+//! Its often useful to wait for all the futures to shutdown or to cancel them
+//! when we no longer care about the results. This crate provides an interface
+//! to cancel all futures associated with a context or wait for them to finish
+//! before shutting down. Allowing for graceful shutdowns and cancellations.
 //!
 //! ## Usage
 //!
@@ -34,8 +38,9 @@
 //!
 //! ## License
 //!
-//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
-//! You can choose between one of them if you use this work.
+//! This project is licensed under the [MIT](./LICENSE.MIT) or
+//! [Apache-2.0](./LICENSE.Apache-2.0) license. You can choose between one of
+//! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 

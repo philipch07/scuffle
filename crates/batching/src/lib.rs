@@ -11,17 +11,29 @@
 //!
 //! ## Why do we need this?
 //!
-//! Often when we are building applications we need to load multiple items from a database or some other external resource. It is often expensive to load each item individually, and this is typically why most drivers have some form of multi-item loading or executing. This crate provides an improved version of this functionality by combining multiple calls from different scopes into a single batched request.
+//! Often when we are building applications we need to load multiple items from
+//! a database or some other external resource. It is often expensive to load
+//! each item individually, and this is typically why most drivers have some
+//! form of multi-item loading or executing. This crate provides an improved
+//! version of this functionality by combining multiple calls from different
+//! scopes into a single batched request.
 //!
 //! ## Tradeoffs
 //!
-//! Because we are buffering requests for a short period of time we do see higher latencies when there are not many requests. This is because the overhead from just processing the requests is lower then the time we spend buffering.
+//! Because we are buffering requests for a short period of time we do see
+//! higher latencies when there are not many requests. This is because the
+//! overhead from just processing the requests is lower then the time we spend
+//! buffering.
 //!
-//! However, this is often negated when we have a large number of requests as we see on average lower latencies due to more efficient use of resources. Latency is also more consistent as we are doing fewer requests to the external resource.
+//! However, this is often negated when we have a large number of requests as we
+//! see on average lower latencies due to more efficient use of resources.
+//! Latency is also more consistent as we are doing fewer requests to the
+//! external resource.
 //!
 //! ## Usage
 //!
-//! Here is an example of how to use the `DataLoader` interface to batch multiple reads from a database.
+//! Here is an example of how to use the `DataLoader` interface to batch
+//! multiple reads from a database.
 //!
 //! ```rust
 //! # use std::collections::{HashSet, HashMap};
@@ -137,8 +149,9 @@
 //!
 //! ## License
 //!
-//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
-//! You can choose between one of them if you use this work.
+//! This project is licensed under the [MIT](./LICENSE.MIT) or
+//! [Apache-2.0](./LICENSE.Apache-2.0) license. You can choose between one of
+//! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 #![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
