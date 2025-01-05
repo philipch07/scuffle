@@ -195,3 +195,44 @@ impl<F: Stream> ContextStreamExt<F> for F {
         }
     }
 }
+
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
+#[cfg(test)]
+mod tests {
+    use futures_lite::StreamExt;
+
+    use super::{Context, ContextFutExt, ContextStreamExt};
+
+    #[tokio::test]
+    async fn future() {
+        let (ctx, handler) = Context::new();
+
+        tokio::spawn(
+            async {
+                // Do some work
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+            .with_context(ctx),
+        );
+
+        // Will stop the spawned task and cancel all associated futures.
+        handler.cancel();
+    }
+
+    #[tokio::test]
+    async fn stream() {
+        let (ctx, handler) = Context::new();
+
+        tokio::spawn(async {
+            futures_lite::stream::iter(1..=10)
+                .then(|d| async move {
+                    // Do some work
+                    tokio::time::sleep(std::time::Duration::from_secs(d)).await;
+                })
+                .with_context(ctx);
+        });
+
+        // Will stop the spawned task and cancel all associated streams.
+        handler.cancel();
+    }
+}
