@@ -83,7 +83,7 @@ impl<F: Future> Future for FutureWithContext<'_, F> {
         match (this.ctx.poll(cx), this.future.poll(cx)) {
             (_, Poll::Ready(v)) => std::task::Poll::Ready(Some(v)),
             (Poll::Ready(_), Poll::Pending) => std::task::Poll::Ready(None),
-            _ => std::task::Poll::Pending,
+            (Poll::Pending, Poll::Pending) => std::task::Poll::Pending,
         }
     }
 }
@@ -146,9 +146,9 @@ impl<F: Stream> Stream for StreamWithContext<'_, F> {
         let this = self.project();
 
         match (this.ctx.poll(cx), this.stream.poll_next(cx)) {
-            (_, Poll::Ready(v)) => std::task::Poll::Ready(v),
-            (Poll::Ready(_), Poll::Pending) => std::task::Poll::Ready(None),
-            _ => std::task::Poll::Pending,
+            (Poll::Ready(_), _) => std::task::Poll::Ready(None),
+            (Poll::Pending, Poll::Ready(v)) => std::task::Poll::Ready(v),
+            (Poll::Pending, Poll::Pending) => std::task::Poll::Pending,
         }
     }
 
@@ -199,7 +199,10 @@ impl<F: Stream> ContextStreamExt<F> for F {
 #[cfg_attr(all(coverage_nightly, test), coverage(off))]
 #[cfg(test)]
 mod tests {
-    use futures_lite::StreamExt;
+    use std::pin::pin;
+
+    use futures_lite::{Stream, StreamExt};
+    use scuffle_future_ext::FutureExt;
 
     use super::{Context, ContextFutExt, ContextStreamExt};
 
@@ -207,7 +210,7 @@ mod tests {
     async fn future() {
         let (ctx, handler) = Context::new();
 
-        tokio::spawn(
+        let task = tokio::spawn(
             async {
                 // Do some work
                 tokio::time::sleep(std::time::Duration::from_secs(10)).await;
@@ -215,24 +218,86 @@ mod tests {
             .with_context(ctx),
         );
 
+        // Sleep for a bit to make sure the future is polled at least once.
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+
         // Will stop the spawned task and cancel all associated futures.
-        handler.cancel();
+        handler.shutdown().await;
+
+        task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn future_result() {
+        let (ctx, handler) = Context::new();
+
+        let task = tokio::spawn(async { 1 }.with_context(ctx));
+
+        // Will stop the spawned task and cancel all associated futures.
+        handler.shutdown().await;
+
+        assert_eq!(task.await.unwrap(), Some(1));
+    }
+
+    #[tokio::test]
+    async fn future_ctx_by_ref() {
+        let (ctx, handler) = Context::new();
+
+        let task = tokio::spawn(async move {
+            async {
+                // Do some work
+                tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            }
+            .with_context(&ctx)
+            .await;
+
+            drop(ctx);
+        });
+
+        // Will stop the spawned task and cancel all associated futures.
+        handler.shutdown().await;
+
+        task.await.unwrap();
     }
 
     #[tokio::test]
     async fn stream() {
         let (ctx, handler) = Context::new();
 
-        tokio::spawn(async {
-            futures_lite::stream::iter(1..=10)
-                .then(|d| async move {
-                    // Do some work
-                    tokio::time::sleep(std::time::Duration::from_secs(d)).await;
-                })
-                .with_context(ctx);
-        });
+        {
+            let mut stream = pin!(futures_lite::stream::iter(0..10).with_context(ctx));
 
-        // Will stop the spawned task and cancel all associated streams.
-        handler.cancel();
+            assert_eq!(stream.size_hint(), (10, Some(10)));
+
+            assert_eq!(stream.next().await, Some(0));
+            assert_eq!(stream.next().await, Some(1));
+            assert_eq!(stream.next().await, Some(2));
+            assert_eq!(stream.next().await, Some(3));
+
+            // Will stop the spawned task and cancel all associated streams.
+            handler.cancel();
+
+            assert_eq!(stream.next().await, None);
+        }
+
+        handler.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn pending_stream() {
+        let (ctx, handler) = Context::new();
+
+        {
+            let mut stream = pin!(futures_lite::stream::pending::<()>().with_context(ctx));
+
+            // This is expected to timeout
+            assert!(stream
+                .next()
+                .with_timeout(std::time::Duration::from_millis(200))
+                .await
+                .is_err());
+        }
+
+        handler.shutdown().await;
     }
 }

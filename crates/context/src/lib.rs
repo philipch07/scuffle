@@ -262,7 +262,7 @@ impl Handler {
     /// Waits for the handler to be done (waiting for all contexts to be done).
     pub async fn done(&self) {
         self.token.0.cancelled().await;
-        self.tracker.wait().await;
+        self.wait().await;
     }
 
     /// Waits for the handler to be done (waiting for all contexts to be done).
