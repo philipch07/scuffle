@@ -300,6 +300,8 @@ impl Handler {
 
 #[cfg(test)]
 mod tests {
+    use scuffle_future_ext::FutureExt;
+
     use crate::{Context, Handler};
 
     #[tokio::test]
@@ -359,26 +361,32 @@ mod tests {
         assert_eq!(ctx.is_done(), false);
 
         // This is expected to timeout
-        assert!(
-            tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown())
-                .await
-                .is_err()
-        );
+        assert!(handler
+            .shutdown()
+            .with_timeout(std::time::Duration::from_millis(200))
+            .await
+            .is_err());
         assert_eq!(handler.is_done(), true);
         assert_eq!(ctx.is_done(), true);
-        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), ctx.into_done())
+        assert!(ctx
+            .into_done()
+            .with_timeout(std::time::Duration::from_millis(200))
             .await
             .is_ok());
 
-        assert!(
-            tokio::time::timeout(std::time::Duration::from_millis(200), handler.shutdown())
-                .await
-                .is_ok()
-        );
-        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.wait())
+        assert!(handler
+            .shutdown()
+            .with_timeout(std::time::Duration::from_millis(200))
             .await
             .is_ok());
-        assert!(tokio::time::timeout(std::time::Duration::from_millis(200), handler.done())
+        assert!(handler
+            .wait()
+            .with_timeout(std::time::Duration::from_millis(200))
+            .await
+            .is_ok());
+        assert!(handler
+            .done()
+            .with_timeout(std::time::Duration::from_millis(200))
             .await
             .is_ok());
         assert_eq!(handler.is_done(), true);

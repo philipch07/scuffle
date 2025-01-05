@@ -2574,6 +2574,7 @@ version = "0.0.2"
 dependencies = [
  "futures-lite",
  "pin-project-lite",
+ "scuffle-future-ext",
  "scuffle-workspace-hack",
  "tokio",
  "tokio-test",
