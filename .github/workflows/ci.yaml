@@ -125,8 +125,9 @@ jobs:
       # Perhaps we should consider it at some point.
       - name: Run tests
         run: |
-          cargo +nightly llvm-cov nextest --no-fail-fast --all-features --lcov --output-path ./lcov.info --profile ci
-          cargo +nightly llvm-cov test --all-features --doc --no-report
+          cargo +nightly llvm-cov nextest --no-fail-fast --all-features --profile ci --no-report
+          cargo +nightly llvm-cov test --all-features --doc --doctests --no-report
+          cargo +nightly llvm-cov report --doctests --lcov --output-path ./lcov.info
 
       - name: Codecov Override
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
