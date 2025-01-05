@@ -20,8 +20,9 @@ Here is an example of how to use the `Context` to cancel a spawned task.
 ```rust
 let (ctx, handler) = Context::new();
 
-tokio::spawn(async move {
+tokio::spawn(async {
     // Do some work
+    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 }.with_context(ctx));
 
 // Will stop the spawned task and cancel all associated futures.

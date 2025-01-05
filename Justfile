@@ -20,6 +20,7 @@ test *args:
 
     INSTA_FORCE_PASS=1 cargo llvm-cov clean --workspace
     INSTA_FORCE_PASS=1 cargo llvm-cov nextest --branch --include-build-script --no-report {{args}}
+    cargo test --doc {{args}}
 
     # Do not generate the coverage report on CI
     cargo insta review
