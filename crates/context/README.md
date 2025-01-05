@@ -18,8 +18,6 @@ Its often useful to wait for all the futures to shutdown or to cancel them when 
 Here is an example of how to use the `Context` to cancel a spawned task.
 
 ```rust
-# use scuffle_context::{Context, ContextFutExt};
-# tokio_test::block_on(async {
 let (ctx, handler) = Context::new();
 
 tokio::spawn(async {
@@ -29,7 +27,6 @@ tokio::spawn(async {
 
 // Will stop the spawned task and cancel all associated futures.
 handler.cancel();
-# });
 ```
 
 ## License
