@@ -10,6 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "Ergonomic async signal handling."
 keywords = ["signal", "async"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [dependencies]
 tokio = { version = "1", default-features = false, features = ["signal"] }
 scuffle-bootstrap = { workspace = true, optional = true }
@@ -19,6 +22,7 @@ scuffle-workspace-hack.workspace = true
 
 [dev-dependencies]
 tokio = { version = "1.41.1", features = ["macros", "rt", "time"] }
+tokio-test = "0.4.4"
 libc = "0.2"
 futures = "0.3"
 scuffle-future-ext = { path = "../future-ext" }

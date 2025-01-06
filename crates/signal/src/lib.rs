@@ -1,4 +1,69 @@
-#![doc = include_str!("../README.md")]
+//! # scuffle-signal
+//!
+//! > WARNING
+//! > This crate is under active development and may not be stable.
+//!
+//! [![crates.io](https://img.shields.io/crates/v/scuffle-signal.svg)](https://crates.io/crates/scuffle-signal) [![docs.rs](https://img.shields.io/docsrs/scuffle-signal)](https://docs.rs/scuffle-signal)
+//!
+//! ---
+//!
+//! A crate designed to provide a more user friendly interface to
+//! `tokio::signal`.
+//!
+//! ## Why do we need this?
+//!
+//! The `tokio::signal` module provides a way for us to wait for a signal to be
+//! received in a non-blocking way. This crate extends that with a more helpful
+//! interface allowing the ability to listen to multiple signals concurrently.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use scuffle_signal::SignalHandler;
+//! use tokio::signal::unix::SignalKind;
+//!
+//! # tokio_test::block_on(async {
+//! let mut handler = SignalHandler::new()
+//!     .with_signal(SignalKind::user_defined1())
+//!     .with_signal(SignalKind::user_defined2());
+//!
+//! # // Safety: This is a test, and we control the process.
+//! # unsafe {
+//! #    libc::raise(SignalKind::user_defined1().as_raw_value());
+//! # }
+//! // Wait for a signal to be received
+//! let signal = handler.await;
+//!
+//! // Handle the signal
+//! let user_defined1 = SignalKind::user_defined1();
+//! let user_defined2 = SignalKind::user_defined2();
+//! match signal {
+//!     user_defined1 => {
+//!         // Handle SIGUSR1
+//!         println!("received SIGUSR1");
+//!     },
+//!     user_defined2 => {
+//!         // Handle SIGUSR2
+//!         println!("received SIGUSR2");
+//!     },
+//! }
+//! # });
+//! ```
+//!
+//! ## Status
+//!
+//! This crate is currently under development and is not yet stable.
+//!
+//! Unit tests are not yet fully implemented. Use at your own risk.
+//!
+//! ## License
+//!
+//! This project is licensed under the [MIT](./LICENSE.MIT) or
+//! [Apache-2.0](./LICENSE.Apache-2.0) license. You can choose between one of
+//! them if you use this work.
+//!
+//! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -21,6 +86,40 @@ pub use bootstrap::{SignalConfig, SignalSvc};
 ///
 /// After a signal is received you can poll the handler again to wait for
 /// another signal. Dropping the handle will cancel the signal subscription
+///
+/// # Example
+///
+/// ```rust
+/// use scuffle_signal::SignalHandler;
+/// use tokio::signal::unix::SignalKind;
+///
+/// # tokio_test::block_on(async {
+/// let mut handler = SignalHandler::new()
+///     .with_signal(SignalKind::user_defined1())
+///     .with_signal(SignalKind::user_defined2());
+///
+/// # // Safety: This is a test, and we control the process.
+/// # unsafe {
+/// #    libc::raise(SignalKind::user_defined1().as_raw_value());
+/// # }
+/// // Wait for a signal to be received
+/// let signal = handler.await;
+///
+/// // Handle the signal
+/// let user_defined1 = SignalKind::user_defined1();
+/// let user_defined2 = SignalKind::user_defined2();
+/// match signal {
+///     user_defined1 => {
+///         // Handle SIGUSR1
+///         println!("received SIGUSR1");
+///     },
+///     user_defined2 => {
+///         // Handle SIGUSR2
+///         println!("received SIGUSR2");
+///     },
+/// }
+/// # });
+/// ```
 #[derive(Debug)]
 #[must_use = "signal handlers must be used to wait for signals"]
 pub struct SignalHandler {
@@ -88,7 +187,7 @@ impl SignalHandler {
     }
 
     /// Poll for a signal to be received.
-    /// Does not require Pinning the handler.
+    /// Does not require pinning the handler.
     pub fn poll_recv(&mut self, cx: &mut Context<'_>) -> Poll<SignalKind> {
         for (kind, signal) in self.signals.iter_mut() {
             if signal.poll_recv(cx).is_ready() {
@@ -108,6 +207,7 @@ impl std::future::Future for SignalHandler {
     }
 }
 
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
@@ -124,10 +224,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_signal_handler() {
-        let mut handler = SignalHandler::new()
-            .with_signal(SignalKind::user_defined1())
-            .with_signal(SignalKind::user_defined2());
+    async fn signal_handler() {
+        let mut handler = SignalHandler::with_signals([SignalKind::user_defined1()])
+            .with_signal(SignalKind::user_defined2())
+            .with_signal(SignalKind::user_defined1());
 
         raise_signal(SignalKind::user_defined1());
 
@@ -146,5 +246,35 @@ mod tests {
         let recv = (&mut handler).with_timeout(Duration::from_millis(5)).await.unwrap();
 
         assert_eq!(recv, SignalKind::user_defined2(), "expected SIGUSR2");
+    }
+
+    #[tokio::test]
+    async fn add_signal() {
+        let mut handler = SignalHandler::new();
+
+        handler
+            .add_signal(SignalKind::user_defined1())
+            .add_signal(SignalKind::user_defined2())
+            .add_signal(SignalKind::user_defined2());
+
+        raise_signal(SignalKind::user_defined1());
+
+        let recv = handler.recv().with_timeout(Duration::from_millis(5)).await.unwrap();
+
+        assert_eq!(recv, SignalKind::user_defined1(), "expected SIGUSR1");
+
+        raise_signal(SignalKind::user_defined2());
+
+        let recv = handler.recv().with_timeout(Duration::from_millis(5)).await.unwrap();
+
+        assert_eq!(recv, SignalKind::user_defined2(), "expected SIGUSR2");
+    }
+
+    #[tokio::test]
+    async fn no_signals() {
+        let mut handler = SignalHandler::default();
+
+        // Expected to timeout
+        assert!(handler.recv().with_timeout(Duration::from_millis(50)).await.is_err());
     }
 }
