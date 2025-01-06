@@ -1,14 +1,16 @@
 use std::io;
 
+/// A reader that reads individual bits from a stream
 #[derive(Debug)]
 #[must_use]
 pub struct BitReader<T> {
     data: T,
-    bit_pos: usize,
+    bit_pos: u8,
     current_byte: u8,
 }
 
 impl<T> BitReader<T> {
+    /// Create a new BitReader from a reader
     pub const fn new(data: T) -> Self {
         Self {
             data,
@@ -19,6 +21,7 @@ impl<T> BitReader<T> {
 }
 
 impl<T: io::Read> BitReader<T> {
+    /// Reads a single bit
     pub fn read_bit(&mut self) -> io::Result<bool> {
         if self.is_aligned() {
             let mut buf = [0];
@@ -28,12 +31,12 @@ impl<T: io::Read> BitReader<T> {
 
         let bit = (self.current_byte >> (7 - self.bit_pos)) & 1;
 
-        self.bit_pos += 1;
-        self.bit_pos %= 8;
+        self.bit_pos = (self.bit_pos + 1) % 8;
 
         Ok(bit == 1)
     }
 
+    /// Reads multiple bits
     pub fn read_bits(&mut self, count: u8) -> io::Result<u64> {
         let mut bits = 0;
         for _ in 0..count {
@@ -45,6 +48,7 @@ impl<T: io::Read> BitReader<T> {
         Ok(bits)
     }
 
+    /// Aligns the reader to the next byte boundary
     pub fn align(&mut self) -> io::Result<()> {
         let amount_to_read = 8 - self.bit_pos;
         self.read_bits(amount_to_read as u8)?;
@@ -53,18 +57,22 @@ impl<T: io::Read> BitReader<T> {
 }
 
 impl<T> BitReader<T> {
+    /// Returns the underlying reader
     pub fn into_inner(self) -> T {
         self.data
     }
 
+    /// Returns a reference to the underlying reader
     pub const fn get_ref(&self) -> &T {
         &self.data
     }
 
-    pub const fn bit_pos(&self) -> usize {
+    /// Returns the current bit position (0-7)
+    pub const fn bit_pos(&self) -> u8 {
         self.bit_pos
     }
 
+    /// Checks if the reader is aligned to the byte boundary
     pub const fn is_aligned(&self) -> bool {
         self.bit_pos == 0
     }
@@ -90,12 +98,14 @@ impl<T: io::Read> io::Read for BitReader<T> {
 }
 
 impl<B: AsRef<[u8]>> BitReader<std::io::Cursor<B>> {
+    /// Creates a new BitReader from a slice
     pub const fn new_from_slice(data: B) -> Self {
         Self::new(std::io::Cursor::new(data))
     }
 }
 
 impl<W: io::Seek + io::Read> BitReader<W> {
+    /// Seeks a number of bits forward or backward
     pub fn seek_bits(&mut self, count: i64) -> io::Result<()> {
         if count == 0 {
             return Ok(());

@@ -1,5 +1,8 @@
 use std::io;
 
+/// A writer that allows you to write bits to a stream, this writer will buffer
+/// the bits and flush the buffer to the underlying writer when the buffer is
+/// full or the writer is flushed. By default the buffer size is 64 bytes.
 #[derive(Debug)]
 #[must_use]
 pub struct BitWriter<W, const BUFFER_SIZE: usize = 64> {
@@ -19,6 +22,7 @@ impl<W: Default> Default for BitWriter<W> {
 }
 
 impl<W: io::Write, const BUFFER_SIZE: usize> BitWriter<W, BUFFER_SIZE> {
+    /// Writes a single bit to the stream
     pub fn write_bit(&mut self, bit: bool) -> io::Result<()> {
         let byte_index = self.bit_pos / 8;
         let bit_index = self.bit_pos % 8;
@@ -38,6 +42,8 @@ impl<W: io::Write, const BUFFER_SIZE: usize> BitWriter<W, BUFFER_SIZE> {
         Ok(())
     }
 
+    /// Writes a number of bits to the stream (the most significant bit is
+    /// written first)
     pub fn write_bits(&mut self, bits: u64, count: usize) -> io::Result<()> {
         for i in 0..count {
             let bit = (bits >> (count - i - 1)) & 1 == 1;
@@ -47,12 +53,15 @@ impl<W: io::Write, const BUFFER_SIZE: usize> BitWriter<W, BUFFER_SIZE> {
         Ok(())
     }
 
+    /// Flushes the buffer and returns the underlying writer
+    /// This will also align the writer to the byte boundary
     pub fn finish(mut self) -> io::Result<W> {
         self.align()?;
         self.flush_buffer()?;
         Ok(self.writer)
     }
 
+    /// Aligns the writer to the byte boundary
     pub fn align(&mut self) -> io::Result<()> {
         if !self.is_aligned() {
             self.write_bits(0, 8 - (self.bit_pos % 8))?;
@@ -80,6 +89,7 @@ impl<W, const BUFFER_SIZE: usize> BitWriter<W, BUFFER_SIZE> {
         assert!(BUFFER_SIZE > 0, "BUFFER_SIZE must be greater than 0");
     };
 
+    /// Creates a new BitWriter from a writer
     pub const fn new(writer: W) -> Self {
         let _: () = Self::_ASSERT_BUFFER_SIZE;
 
@@ -90,14 +100,17 @@ impl<W, const BUFFER_SIZE: usize> BitWriter<W, BUFFER_SIZE> {
         }
     }
 
-    pub const fn bit_pos(&self) -> usize {
-        self.bit_pos % 8
+    /// Returns the current bit position (0-7)
+    pub const fn bit_pos(&self) -> u8 {
+        (self.bit_pos % 8) as u8
     }
 
+    /// Checks if the writer is aligned to the byte boundary
     pub const fn is_aligned(&self) -> bool {
         self.bit_pos % 8 == 0
     }
 
+    /// Returns a reference to the underlying writer
     pub const fn get_ref(&self) -> &W {
         &self.writer
     }
