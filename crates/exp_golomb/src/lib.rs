@@ -67,7 +67,7 @@ mod tests {
         if reader.is_aligned() {
             remaining * 8
         } else {
-            remaining * 8 + 8 - reader.get_bit_pos()
+            remaining * 8 + 8 - reader.bit_pos()
         }
     }
 
