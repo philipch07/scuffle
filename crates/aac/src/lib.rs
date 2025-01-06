@@ -11,7 +11,8 @@ use scuffle_bitio::BitReader;
 ///
 /// This struct does not represent the full AudioSpecificConfig, it only
 /// represents the top few fields.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
 pub struct PartialAudioSpecificConfig {
     /// Audio Object Type
     pub audio_object_type: AudioObjectType,
@@ -23,15 +24,26 @@ pub struct PartialAudioSpecificConfig {
 
 /// SBR Audio Object Type
 /// ISO/IEC 14496-3:2020(E) - 1.5.1.2.6
-#[derive(Debug, Clone, PartialEq, Copy, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
 pub enum AudioObjectType {
     AacMain,
     AacLowComplexity,
     Unknown(u16),
 }
 
-impl From<u16> for AudioObjectType {
-    fn from(value: u16) -> Self {
+impl AudioObjectType {
+    /// Converts an AudioObjectType to a u16
+    pub const fn as_u16(&self) -> u16 {
+        match self {
+            AudioObjectType::AacMain => 1,
+            AudioObjectType::AacLowComplexity => 2,
+            AudioObjectType::Unknown(value) => *value,
+        }
+    }
+
+    /// Converts a u16 to an AudioObjectType
+    pub const fn from_u16(value: u16) -> Self {
         match value {
             1 => AudioObjectType::AacMain,
             2 => AudioObjectType::AacLowComplexity,
@@ -40,13 +52,15 @@ impl From<u16> for AudioObjectType {
     }
 }
 
+impl From<u16> for AudioObjectType {
+    fn from(value: u16) -> Self {
+        Self::from_u16(value)
+    }
+}
+
 impl From<AudioObjectType> for u16 {
     fn from(value: AudioObjectType) -> Self {
-        match value {
-            AudioObjectType::AacMain => 1,
-            AudioObjectType::AacLowComplexity => 2,
-            AudioObjectType::Unknown(value) => value,
-        }
+        value.as_u16()
     }
 }
 
@@ -59,6 +73,7 @@ impl From<AudioObjectType> for u16 {
 /// ISO/IEC 14496-3:2020(E) - 1.6.2.4 (Table 1.22)
 #[derive(FromPrimitive, Debug, Clone, PartialEq, Copy, Eq, PartialOrd, Ord)]
 #[repr(u8)]
+#[must_use]
 pub enum SampleFrequencyIndex {
     /// 96000 Hz
     Freq96000 = 0x0,
@@ -97,7 +112,7 @@ pub enum SampleFrequencyIndex {
 
 impl SampleFrequencyIndex {
     /// Convert the SampleFrequencyIndex to the actual frequency in Hz
-    pub fn to_freq(&self) -> Option<u32> {
+    pub const fn to_freq(&self) -> Option<u32> {
         match self {
             SampleFrequencyIndex::Freq96000 => Some(96000),
             SampleFrequencyIndex::Freq88200 => Some(88200),
