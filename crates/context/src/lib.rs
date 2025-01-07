@@ -309,11 +309,11 @@ mod tests {
     #[tokio::test]
     async fn new() {
         let (ctx, handler) = Context::new();
-        assert_eq!(handler.is_done(), false);
-        assert_eq!(ctx.is_done(), false);
+        assert!(!handler.is_done());
+        assert!(!ctx.is_done());
 
         let handler = Handler::default();
-        assert_eq!(handler.is_done(), false);
+        assert!(!handler.is_done());
     }
 
     #[tokio::test]
@@ -322,19 +322,19 @@ mod tests {
         let (child_ctx, child_handler) = ctx.new_child();
         let child_ctx2 = ctx.clone();
 
-        assert_eq!(handler.is_done(), false);
-        assert_eq!(ctx.is_done(), false);
-        assert_eq!(child_handler.is_done(), false);
-        assert_eq!(child_ctx.is_done(), false);
-        assert_eq!(child_ctx2.is_done(), false);
+        assert!(!handler.is_done());
+        assert!(!ctx.is_done());
+        assert!(!child_handler.is_done());
+        assert!(!child_ctx.is_done());
+        assert!(!child_ctx2.is_done());
 
         handler.cancel();
 
-        assert_eq!(handler.is_done(), true);
-        assert_eq!(ctx.is_done(), true);
-        assert_eq!(child_handler.is_done(), true);
-        assert_eq!(child_ctx.is_done(), true);
-        assert_eq!(child_ctx2.is_done(), true);
+        assert!(handler.is_done());
+        assert!(ctx.is_done());
+        assert!(child_handler.is_done());
+        assert!(child_ctx.is_done());
+        assert!(child_ctx2.is_done());
     }
 
     #[tokio::test]
@@ -342,25 +342,25 @@ mod tests {
         let (ctx, handler) = Context::new();
         let (child_ctx, child_handler) = ctx.new_child();
 
-        assert_eq!(handler.is_done(), false);
-        assert_eq!(ctx.is_done(), false);
-        assert_eq!(child_handler.is_done(), false);
-        assert_eq!(child_ctx.is_done(), false);
+        assert!(!handler.is_done());
+        assert!(!ctx.is_done());
+        assert!(!child_handler.is_done());
+        assert!(!child_ctx.is_done());
 
         child_handler.cancel();
 
-        assert_eq!(handler.is_done(), false);
-        assert_eq!(ctx.is_done(), false);
-        assert_eq!(child_handler.is_done(), true);
-        assert_eq!(child_ctx.is_done(), true);
+        assert!(!handler.is_done());
+        assert!(!ctx.is_done());
+        assert!(child_handler.is_done());
+        assert!(child_ctx.is_done());
     }
 
     #[tokio::test]
     async fn shutdown() {
         let (ctx, handler) = Context::new();
 
-        assert_eq!(handler.is_done(), false);
-        assert_eq!(ctx.is_done(), false);
+        assert!(!handler.is_done());
+        assert!(!ctx.is_done());
 
         // This is expected to timeout
         assert!(handler
@@ -368,8 +368,8 @@ mod tests {
             .with_timeout(std::time::Duration::from_millis(200))
             .await
             .is_err());
-        assert_eq!(handler.is_done(), true);
-        assert_eq!(ctx.is_done(), true);
+        assert!(handler.is_done());
+        assert!(ctx.is_done());
         assert!(ctx
             .into_done()
             .with_timeout(std::time::Duration::from_millis(200))
@@ -391,23 +391,23 @@ mod tests {
             .with_timeout(std::time::Duration::from_millis(200))
             .await
             .is_ok());
-        assert_eq!(handler.is_done(), true);
+        assert!(handler.is_done());
     }
 
     #[tokio::test]
     async fn global_handler() {
         let handler = Handler::global();
 
-        assert_eq!(handler.is_done(), false);
+        assert!(!handler.is_done());
 
         handler.cancel();
 
-        assert_eq!(handler.is_done(), true);
-        assert_eq!(Handler::global().is_done(), true);
-        assert_eq!(Context::global().is_done(), true);
+        assert!(handler.is_done());
+        assert!(Handler::global().is_done());
+        assert!(Context::global().is_done());
 
         let (child_ctx, child_handler) = Handler::global().new_child();
-        assert_eq!(child_handler.is_done(), true);
-        assert_eq!(child_ctx.is_done(), true);
+        assert!(child_handler.is_done());
+        assert!(child_ctx.is_done());
     }
 }
