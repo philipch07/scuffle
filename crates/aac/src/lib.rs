@@ -7,7 +7,7 @@ use num_traits::FromPrimitive;
 use scuffle_bitio::BitReader;
 
 /// A Partial Audio Specific Config
-/// ISO/IEC 14496-3:2020(E) - 1.6
+/// ISO/IEC 14496-3:2019(E) - 1.6
 ///
 /// This struct does not represent the full AudioSpecificConfig, it only
 /// represents the top few fields.
@@ -23,7 +23,7 @@ pub struct PartialAudioSpecificConfig {
 }
 
 /// SBR Audio Object Type
-/// ISO/IEC 14496-3:2020(E) - 1.5.1.2.6
+/// ISO/IEC 14496-3:2019(E) - 1.5.1.2.6
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub enum AudioObjectType {
@@ -70,7 +70,7 @@ impl From<AudioObjectType> for u16 {
 /// 4 bits to save space. These are the set of commonly used frequencies defined
 /// in the specification.
 ///
-/// ISO/IEC 14496-3:2020(E) - 1.6.2.4 (Table 1.22)
+/// ISO/IEC 14496-3:2019(E) - 1.6.2.4 (Table 1.22)
 #[derive(FromPrimitive, Debug, Clone, PartialEq, Copy, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 #[must_use]
@@ -136,7 +136,7 @@ impl SampleFrequencyIndex {
 
 impl PartialAudioSpecificConfig {
     /// Parse the Audio Specific Config from given bytes
-    /// The implementation is based on ISO/IEC 14496-3:2020(E) - 1.6.2.1 (Table
+    /// The implementation is based on ISO/IEC 14496-3:2019(E) - 1.6.2.1 (Table
     /// 1.19) This does not parse the entire AAC Data, it only parses the
     /// top few fields.
     /// - Audio Object Type
@@ -145,7 +145,7 @@ impl PartialAudioSpecificConfig {
     pub fn parse(data: &[u8]) -> io::Result<Self> {
         let mut bitreader = BitReader::new_from_slice(data);
 
-        // GetAudioObjectType() # ISO/IEC 14496-3:2020(E) - 1.6.2.1 (Table 1.20)
+        // GetAudioObjectType() # ISO/IEC 14496-3:2019(E) - 1.6.2.1 (Table 1.20)
         let mut audio_object_type = bitreader.read_bits(5)? as u16;
         if audio_object_type == 31 {
             audio_object_type = 32 + bitreader.read_bits(6)? as u16;
