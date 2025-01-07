@@ -21,23 +21,23 @@ use scuffle_signal::SignalHandler;
 use tokio::signal::unix::SignalKind;
 
 let mut handler = SignalHandler::new()
-    .with_signal(SignalKind::user_defined1())
-    .with_signal(SignalKind::user_defined2());
+    .with_signal(SignalKind::interrupt())
+    .with_signal(SignalKind::terminate());
 
 // Wait for a signal to be received
 let signal = handler.await;
 
 // Handle the signal
-let user_defined1 = SignalKind::user_defined1();
-let user_defined2 = SignalKind::user_defined2();
+let user_defined1 = SignalKind::interrupt();
+let terminate = SignalKind::terminate();
 match signal {
-    user_defined1 => {
-        // Handle SIGUSR1
-        println!("received SIGUSR1");
+    interrupt => {
+        // Handle SIGINT
+        println!("received SIGINT");
     },
-    user_defined2 => {
-        // Handle SIGUSR2
-        println!("received SIGUSR1");
+    terminate => {
+        // Handle SIGTERM
+        println!("received SIGTERM");
     },
 }
 ```
