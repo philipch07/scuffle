@@ -88,21 +88,25 @@ mod tests {
     use crate::tests::raise_signal;
     use crate::SignalHandler;
 
-    struct TestGlobal;
+    struct NoTimeoutTestGlobal;
 
-    impl GlobalWithoutConfig for TestGlobal {
+    impl GlobalWithoutConfig for NoTimeoutTestGlobal {
         fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
-            std::future::ready(Ok(Arc::new(TestGlobal)))
+            std::future::ready(Ok(Arc::new(NoTimeoutTestGlobal)))
         }
     }
 
-    impl SignalConfig for TestGlobal {}
+    impl SignalConfig for NoTimeoutTestGlobal {
+        fn timeout(&self) -> Option<std::time::Duration> {
+            None
+        }
+    }
 
     #[tokio::test]
-    async fn bootstrap_service() {
+    async fn bootstrap_service_no_timeout() {
         let (ctx, handler) = scuffle_context::Context::new();
         let svc = SignalSvc;
-        let global = TestGlobal::init().await.unwrap();
+        let global = NoTimeoutTestGlobal::init().await.unwrap();
 
         assert!(svc.enabled(&global).await.unwrap());
         let result = tokio::spawn(svc.run(global, ctx));
@@ -128,7 +132,7 @@ mod tests {
         let _global_ctx = scuffle_context::Context::global();
 
         let svc = SignalSvc;
-        let global = TestGlobal::init().await.unwrap();
+        let global = NoTimeoutTestGlobal::init().await.unwrap();
 
         assert!(svc.enabled(&global).await.unwrap());
         let result = tokio::spawn(svc.run(global, ctx));
@@ -203,15 +207,15 @@ mod tests {
             .is_ok());
     }
 
-    struct NoTimeoutTestGlobal;
+    struct SmallTimeoutTestGlobal;
 
-    impl GlobalWithoutConfig for NoTimeoutTestGlobal {
+    impl GlobalWithoutConfig for SmallTimeoutTestGlobal {
         fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
-            std::future::ready(Ok(Arc::new(NoTimeoutTestGlobal)))
+            std::future::ready(Ok(Arc::new(SmallTimeoutTestGlobal)))
         }
     }
 
-    impl SignalConfig for NoTimeoutTestGlobal {
+    impl SignalConfig for SmallTimeoutTestGlobal {
         fn timeout(&self) -> Option<std::time::Duration> {
             Some(std::time::Duration::from_millis(5))
         }
@@ -225,7 +229,7 @@ mod tests {
         let _global_ctx = scuffle_context::Context::global();
 
         let svc = SignalSvc;
-        let global = NoTimeoutTestGlobal::init().await.unwrap();
+        let global = SmallTimeoutTestGlobal::init().await.unwrap();
 
         assert!(svc.enabled(&global).await.unwrap());
         let result = tokio::spawn(svc.run(global, ctx));
