@@ -14,6 +14,34 @@ A crate designed to provide a more user friendly interface to `tokio::signal`.
 The `tokio::signal` module provides a way for us to wait for a signal to be received in a non-blocking way.
 This crate extends that with a more helpful interface allowing the ability to listen to multiple signals concurrently.
 
+## Example
+
+```rust
+use scuffle_signal::SignalHandler;
+use tokio::signal::unix::SignalKind;
+
+let mut handler = SignalHandler::new()
+    .with_signal(SignalKind::interrupt())
+    .with_signal(SignalKind::terminate());
+
+// Wait for a signal to be received
+let signal = handler.await;
+
+// Handle the signal
+let user_defined1 = SignalKind::interrupt();
+let terminate = SignalKind::terminate();
+match signal {
+    interrupt => {
+        // Handle SIGINT
+        println!("received SIGINT");
+    },
+    terminate => {
+        // Handle SIGTERM
+        println!("received SIGTERM");
+    },
+}
+```
+
 ## Status
 
 This crate is currently under development and is not yet stable.

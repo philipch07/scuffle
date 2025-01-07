@@ -2761,6 +2761,7 @@ dependencies = [
  "scuffle-future-ext",
  "scuffle-workspace-hack",
  "tokio",
+ "tokio-test",
 ]
 
 [[package]]
