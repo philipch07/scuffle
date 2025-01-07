@@ -2512,6 +2512,9 @@ dependencies = [
 [[package]]
 name = "scuffle-bitio"
 version = "0.0.1"
+dependencies = [
+ "scuffle-workspace-hack",
+]
 
 [[package]]
 name = "scuffle-bootstrap"

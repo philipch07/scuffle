@@ -203,7 +203,10 @@ mod tests {
         bit_writer.write(&[0b11111111, 0b00000000, 0b11111111, 0b00000000]).unwrap();
 
         // Since the writer was not aligned we should have buffered the writes
-        assert_eq!(bit_writer.get_ref().as_slice(), &[255, 1, 2, 3, 0b11010111, 0b11111000, 0b00000111, 0b11111000]);
+        assert_eq!(
+            bit_writer.get_ref().as_slice(),
+            &[255, 1, 2, 3, 0b11010111, 0b11111000, 0b00000111, 0b11111000]
+        );
 
         bit_writer.finish().unwrap();
 

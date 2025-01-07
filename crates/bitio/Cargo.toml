@@ -7,3 +7,4 @@ edition = "2021"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
 
 [dependencies]
+scuffle-workspace-hack.workspace = true
