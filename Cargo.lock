@@ -2558,10 +2558,13 @@ version = "0.0.2"
 dependencies = [
  "anyhow",
  "futures",
+ "insta",
  "pin-project-lite",
+ "postcompile",
  "scuffle-bootstrap-derive",
  "scuffle-context",
  "scuffle-future-ext",
+ "scuffle-signal",
  "scuffle-workspace-hack",
  "tokio",
 ]
@@ -2570,14 +2573,9 @@ dependencies = [
 name = "scuffle-bootstrap-derive"
 version = "0.0.2"
 dependencies = [
- "anyhow",
  "darling",
- "insta",
- "postcompile",
  "proc-macro2",
  "quote",
- "scuffle-bootstrap",
- "scuffle-signal",
  "scuffle-workspace-hack",
  "syn",
 ]

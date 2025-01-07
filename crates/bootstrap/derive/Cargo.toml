@@ -13,19 +13,9 @@ keywords = ["bootstrap", "derive", "macros"]
 [lib]
 proc-macro = true
 
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
-
 [dependencies]
 syn = "2"
 proc-macro2 = "1"
 quote = "1"
 darling = "0.20"
 scuffle-workspace-hack.workspace = true
-
-[dev-dependencies]
-insta = "1.42.0"
-anyhow = "1.0"
-scuffle-signal = { workspace = true, features = ["bootstrap"] }
-postcompile.workspace = true
-scuffle-bootstrap = { path = ".." }
