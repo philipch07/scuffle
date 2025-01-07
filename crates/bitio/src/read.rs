@@ -53,7 +53,7 @@ impl<T: io::Read> BitReader<T> {
     /// Aligns the reader to the next byte boundary
     pub fn align(&mut self) -> io::Result<()> {
         let amount_to_read = 8 - self.bit_pos;
-        self.read_bits(amount_to_read as u8)?;
+        self.read_bits(amount_to_read)?;
         Ok(())
     }
 }
@@ -227,13 +227,13 @@ mod tests {
 
         // Aligned read (calls the underlying read directly (very fast))
         let mut buf = [0; 1];
-        reader.read(&mut buf).unwrap();
+        reader.read_exact(&mut buf).unwrap();
         assert_eq!(buf, [0b10101010]);
 
         // Unaligned read
         assert_eq!(reader.read_bits(1).unwrap(), 0b1);
         let mut buf = [0; 1];
-        reader.read(&mut buf).unwrap();
+        reader.read_exact(&mut buf).unwrap();
         assert_eq!(buf, [0b10011001]);
     }
 

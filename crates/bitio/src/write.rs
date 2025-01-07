@@ -62,7 +62,7 @@ impl<W: io::Write> BitWriter<W> {
     /// Aligns the writer to the byte boundary
     pub fn align(&mut self) -> io::Result<()> {
         if self.bit_pos % 8 != 0 {
-            self.write_bits(0, 8 - (self.bit_pos % 8) as u8)?;
+            self.write_bits(0, 8 - (self.bit_pos % 8))?;
         }
 
         Ok(())
@@ -81,7 +81,7 @@ impl<W> BitWriter<W> {
 
     /// Returns the current bit position (0-7)
     pub const fn bit_pos(&self) -> u8 {
-        (self.bit_pos % 8) as u8
+        self.bit_pos % 8
     }
 
     /// Checks if the writer is aligned to the byte boundary
@@ -188,7 +188,7 @@ mod tests {
         // We should have buffered the write
         assert_eq!(bit_writer.get_ref().as_slice(), &[255]);
 
-        bit_writer.write(&[1, 2, 3]).unwrap();
+        bit_writer.write_all(&[1, 2, 3]).unwrap();
         assert_eq!(bit_writer.bit_pos(), 0);
         assert!(bit_writer.is_aligned());
         // since we did an io::Write on an aligned bit_writer
@@ -200,7 +200,7 @@ mod tests {
 
         bit_writer.write_bits(0b1010, 4).unwrap();
 
-        bit_writer.write(&[0b11111111, 0b00000000, 0b11111111, 0b00000000]).unwrap();
+        bit_writer.write_all(&[0b11111111, 0b00000000, 0b11111111, 0b00000000]).unwrap();
 
         // Since the writer was not aligned we should have buffered the writes
         assert_eq!(
