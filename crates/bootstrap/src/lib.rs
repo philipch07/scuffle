@@ -41,4 +41,39 @@ mod tests {
             }
         });
     }
+
+    #[test]
+    fn main_test_custom_service() {
+        insta::assert_snapshot!(postcompile::compile! {
+            use std::sync::Arc;
+
+            use scuffle_bootstrap::main;
+
+            struct TestGlobal;
+
+            impl scuffle_signal::SignalConfig for TestGlobal {}
+
+            impl scuffle_bootstrap::global::GlobalWithoutConfig for TestGlobal {
+                async fn init() -> anyhow::Result<Arc<Self>> {
+                    Ok(Arc::new(Self))
+                }
+            }
+
+            struct MySvc;
+
+            impl scuffle_bootstrap::service::Service<TestGlobal> for MySvc {
+                async fn run(self, _: Arc<TestGlobal>, _: scuffle_context::Context) -> anyhow::Result<()> {
+                    println!("running");
+                    Ok(())
+                }
+            }
+
+            main! {
+                TestGlobal {
+                    scuffle_signal::SignalSvc,
+                    MySvc,
+                }
+            }
+        });
+    }
 }
