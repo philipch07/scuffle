@@ -2525,6 +2525,7 @@ dependencies = [
  "pin-project-lite",
  "scuffle-bootstrap-derive",
  "scuffle-context",
+ "scuffle-future-ext",
  "scuffle-workspace-hack",
  "tokio",
 ]

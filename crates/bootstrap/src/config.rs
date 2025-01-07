@@ -17,3 +17,19 @@ impl ConfigParser for EmptyConfig {
         std::future::ready(Ok(EmptyConfig))
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use super::{ConfigParser, EmptyConfig};
+
+    #[tokio::test]
+    async fn unit_config() {
+        assert!(matches!(<()>::parse().await, Ok(())));
+    }
+
+    #[tokio::test]
+    async fn empty_config() {
+        assert!(matches!(EmptyConfig::parse().await, Ok(EmptyConfig)));
+    }
+}
