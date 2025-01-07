@@ -24,27 +24,27 @@
 //!
 //! # tokio_test::block_on(async {
 //! let mut handler = SignalHandler::new()
-//!     .with_signal(SignalKind::user_defined1())
-//!     .with_signal(SignalKind::user_defined2());
+//!     .with_signal(SignalKind::interrupt())
+//!     .with_signal(SignalKind::terminate());
 //!
 //! # // Safety: This is a test, and we control the process.
 //! # unsafe {
-//! #    libc::raise(SignalKind::user_defined1().as_raw_value());
+//! #    libc::raise(SignalKind::interrupt().as_raw_value());
 //! # }
 //! // Wait for a signal to be received
 //! let signal = handler.await;
 //!
 //! // Handle the signal
-//! let user_defined1 = SignalKind::user_defined1();
-//! let user_defined2 = SignalKind::user_defined2();
+//! let interrupt = SignalKind::interrupt();
+//! let terminate = SignalKind::terminate();
 //! match signal {
-//!     user_defined1 => {
-//!         // Handle SIGUSR1
-//!         println!("received SIGUSR1");
+//!     interrupt => {
+//!         // Handle SIGINT
+//!         println!("received SIGINT");
 //!     },
-//!     user_defined2 => {
-//!         // Handle SIGUSR2
-//!         println!("received SIGUSR2");
+//!     terminate => {
+//!         // Handle SIGTERM
+//!         println!("received SIGTERM");
 //!     },
 //! }
 //! # });
@@ -95,27 +95,27 @@ pub use bootstrap::{SignalConfig, SignalSvc};
 ///
 /// # tokio_test::block_on(async {
 /// let mut handler = SignalHandler::new()
-///     .with_signal(SignalKind::user_defined1())
-///     .with_signal(SignalKind::user_defined2());
+///     .with_signal(SignalKind::interrupt())
+///     .with_signal(SignalKind::terminate());
 ///
 /// # // Safety: This is a test, and we control the process.
 /// # unsafe {
-/// #    libc::raise(SignalKind::user_defined1().as_raw_value());
+/// #    libc::raise(SignalKind::interrupt().as_raw_value());
 /// # }
 /// // Wait for a signal to be received
 /// let signal = handler.await;
 ///
 /// // Handle the signal
-/// let user_defined1 = SignalKind::user_defined1();
-/// let user_defined2 = SignalKind::user_defined2();
+/// let interrupt = SignalKind::interrupt();
+/// let terminate = SignalKind::terminate();
 /// match signal {
-///     user_defined1 => {
-///         // Handle SIGUSR1
-///         println!("received SIGUSR1");
+///     interrupt => {
+///         // Handle SIGINT
+///         println!("received SIGINT");
 ///     },
-///     user_defined2 => {
-///         // Handle SIGUSR2
-///         println!("received SIGUSR2");
+///     terminate => {
+///         // Handle SIGTERM
+///         println!("received SIGTERM");
 ///     },
 /// }
 /// # });
@@ -216,7 +216,7 @@ mod tests {
 
     use super::*;
 
-    fn raise_signal(kind: SignalKind) {
+    pub fn raise_signal(kind: SignalKind) {
         // Safety: This is a test, and we control the process.
         unsafe {
             libc::raise(kind.as_raw_value());

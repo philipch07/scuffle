@@ -73,3 +73,176 @@ impl<Global: SignalConfig> Service<Global> for SignalSvc {
         Ok(())
     }
 }
+
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use scuffle_bootstrap::{global::GlobalWithoutConfig, Service};
+    use scuffle_future_ext::FutureExt;
+    use tokio::signal::unix::SignalKind;
+
+    use super::{SignalConfig, SignalSvc};
+    use crate::{tests::raise_signal, SignalHandler};
+
+    struct TestGlobal;
+
+    impl GlobalWithoutConfig for TestGlobal {
+        fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
+            std::future::ready(Ok(Arc::new(TestGlobal)))
+        }
+    }
+
+    impl SignalConfig for TestGlobal {}
+
+    #[tokio::test]
+    async fn bootstrap_service() {
+        let (ctx, handler) = scuffle_context::Context::new();
+        let svc = SignalSvc;
+        let global = TestGlobal::init().await.unwrap();
+
+        assert!(svc.enabled(&global).await.unwrap());
+        let result = tokio::spawn(svc.run(global, ctx));
+
+        // Wait for the service to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+
+        raise_signal(tokio::signal::unix::SignalKind::interrupt());
+        assert!(result.await.is_ok());
+
+        assert!(handler
+            .shutdown()
+            .with_timeout(tokio::time::Duration::from_millis(100))
+            .await
+            .is_ok());
+    }
+
+    #[tokio::test]
+    async fn bootstrap_service_force_shutdown() {
+        let (ctx, handler) = scuffle_context::Context::new();
+
+        // Block the global context
+        let _global_ctx = scuffle_context::Context::global();
+
+        let svc = SignalSvc;
+        let global = TestGlobal::init().await.unwrap();
+
+        assert!(svc.enabled(&global).await.unwrap());
+        let result = tokio::spawn(svc.run(global, ctx));
+
+        // Wait for the service to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        raise_signal(tokio::signal::unix::SignalKind::interrupt());
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+        raise_signal(tokio::signal::unix::SignalKind::interrupt());
+
+        match result.with_timeout(tokio::time::Duration::from_millis(100)).await {
+            Ok(Ok(Err(e))) => {
+                assert_eq!(e.to_string(), "received signal, shutting down immediately: SignalKind(2)");
+            }
+            _ => panic!("unexpected result"),
+        }
+
+        assert!(handler
+            .shutdown()
+            .with_timeout(tokio::time::Duration::from_millis(100))
+            .await
+            .is_ok());
+    }
+
+    struct NoSignalsTestGlobal;
+
+    impl GlobalWithoutConfig for NoSignalsTestGlobal {
+        fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
+            std::future::ready(Ok(Arc::new(NoSignalsTestGlobal)))
+        }
+    }
+
+    impl SignalConfig for NoSignalsTestGlobal {
+        fn signals(&self) -> Vec<tokio::signal::unix::SignalKind> {
+            vec![]
+        }
+
+        fn timeout(&self) -> Option<std::time::Duration> {
+            None
+        }
+    }
+
+    #[tokio::test]
+    async fn bootstrap_service_no_signals() {
+        let (ctx, handler) = scuffle_context::Context::new();
+        let svc = SignalSvc;
+        let global = NoSignalsTestGlobal::init().await.unwrap();
+
+        assert!(!svc.enabled(&global).await.unwrap());
+        let result = tokio::spawn(svc.run(global, ctx));
+
+        // Wait for the service to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        // Make a new handler to catch the raised signal as it is expected to not be caught by the service
+        let mut signal_handler = SignalHandler::new().with_signal(SignalKind::terminate());
+
+        raise_signal(tokio::signal::unix::SignalKind::terminate());
+
+        // Wait for a signal to be received
+        assert_eq!(signal_handler.recv().await, SignalKind::terminate());
+
+        // Expected to timeout
+        assert!(result.with_timeout(tokio::time::Duration::from_millis(100)).await.is_err());
+
+        assert!(handler
+            .shutdown()
+            .with_timeout(tokio::time::Duration::from_millis(100))
+            .await
+            .is_ok());
+    }
+
+    struct NoTimeoutTestGlobal;
+
+    impl GlobalWithoutConfig for NoTimeoutTestGlobal {
+        fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
+            std::future::ready(Ok(Arc::new(NoTimeoutTestGlobal)))
+        }
+    }
+
+    impl SignalConfig for NoTimeoutTestGlobal {
+        fn timeout(&self) -> Option<std::time::Duration> {
+            Some(std::time::Duration::from_millis(5))
+        }
+    }
+
+    #[tokio::test]
+    async fn bootstrap_service_timeout_force_shutdown() {
+        let (ctx, handler) = scuffle_context::Context::new();
+
+        // Block the global context
+        let _global_ctx = scuffle_context::Context::global();
+
+        let svc = SignalSvc;
+        let global = NoTimeoutTestGlobal::init().await.unwrap();
+
+        assert!(svc.enabled(&global).await.unwrap());
+        let result = tokio::spawn(svc.run(global, ctx));
+
+        // Wait for the service to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        raise_signal(tokio::signal::unix::SignalKind::terminate());
+
+        match result.with_timeout(tokio::time::Duration::from_millis(100)).await {
+            Ok(Ok(Err(e))) => {
+                assert_eq!(e.to_string(), "timeout reached, shutting down immediately");
+            }
+            _ => panic!("unexpected result"),
+        }
+
+        assert!(handler
+            .shutdown()
+            .with_timeout(tokio::time::Duration::from_millis(100))
+            .await
+            .is_ok());
+    }
+}
