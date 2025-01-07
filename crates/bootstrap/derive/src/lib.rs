@@ -1,3 +1,5 @@
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
+
 use proc_macro::TokenStream;
 
 mod main_impl;
@@ -17,5 +19,34 @@ fn handle_error(input: Result<proc_macro2::TokenStream, syn::Error>) -> TokenStr
     match input {
         Ok(value) => value.into(),
         Err(err) => err.to_compile_error().into(),
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    #[test]
+    fn main_test() {
+        insta::assert_snapshot!(postcompile::compile! {
+            use std::sync::Arc;
+
+            use scuffle_bootstrap::main;
+
+            struct TestGlobal;
+
+            impl scuffle_signal::SignalConfig for TestGlobal {}
+
+            impl scuffle_bootstrap::global::GlobalWithoutConfig for TestGlobal {
+                async fn init() -> anyhow::Result<Arc<Self>> {
+                    Ok(Arc::new(Self))
+                }
+            }
+
+            main! {
+                TestGlobal {
+                    scuffle_signal::SignalSvc,
+                }
+            }
+        });
     }
 }
