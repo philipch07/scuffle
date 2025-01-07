@@ -183,6 +183,11 @@ impl Sps {
             if bit_reader.read_bit()? {
                 let num_units_in_tick = bit_reader.read_u32::<BigEndian>()?;
                 let time_scale = bit_reader.read_u32::<BigEndian>()?;
+
+                if num_units_in_tick == 0 {
+                    return Err(io::Error::new(io::ErrorKind::InvalidData, "num_units_in_tick cannot be zero"));
+                }
+
                 frame_rate = time_scale as f64 / (2.0 * num_units_in_tick as f64);
             }
         }
