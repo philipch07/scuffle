@@ -79,12 +79,14 @@ impl<Global: SignalConfig> Service<Global> for SignalSvc {
 mod tests {
     use std::sync::Arc;
 
-    use scuffle_bootstrap::{global::GlobalWithoutConfig, Service};
+    use scuffle_bootstrap::global::GlobalWithoutConfig;
+    use scuffle_bootstrap::Service;
     use scuffle_future_ext::FutureExt;
     use tokio::signal::unix::SignalKind;
 
     use super::{SignalConfig, SignalSvc};
-    use crate::{tests::raise_signal, SignalHandler};
+    use crate::tests::raise_signal;
+    use crate::SignalHandler;
 
     struct TestGlobal;
 
@@ -182,7 +184,8 @@ mod tests {
         // Wait for the service to start
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
-        // Make a new handler to catch the raised signal as it is expected to not be caught by the service
+        // Make a new handler to catch the raised signal as it is expected to not be
+        // caught by the service
         let mut signal_handler = SignalHandler::new().with_signal(SignalKind::terminate());
 
         raise_signal(tokio::signal::unix::SignalKind::terminate());
