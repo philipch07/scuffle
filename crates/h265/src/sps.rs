@@ -2,8 +2,8 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 use bytes::Bytes;
-use bytesio::bit_reader::BitReader;
 use exp_golomb::{read_exp_golomb, read_signed_exp_golomb};
+use scuffle_bitio::BitReader;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Sequence parameter set
@@ -41,7 +41,7 @@ impl Sps {
             }
         }
 
-        let mut bit_reader = BitReader::from(vec);
+        let mut bit_reader = BitReader::new_from_slice(vec);
 
         let forbidden_zero_bit = bit_reader.read_bit()?;
         if forbidden_zero_bit {
@@ -66,15 +66,15 @@ impl Sps {
         bit_reader.seek_bits(1)?; // sps_temporal_id_nesting_flag
         {
             bit_reader.seek_bits(
-                2 // general_profile_space 
-                + 1 // general_tier_flag 
-                + 5 // general_profile_idc 
-                + 32 // general_profile_compatibility_flag 
-                + 1 // general_progressive_source_flag 
-                + 1 // general_interlaced_source_flag 
-                + 1 // general_non_packed_constraint_flag 
-                + 1 // general_frame_only_constraint_flag 
-                + 43 // general_reserved_zero_43bits 
+                2 // general_profile_space
+                + 1 // general_tier_flag
+                + 5 // general_profile_idc
+                + 32 // general_profile_compatibility_flag
+                + 1 // general_progressive_source_flag
+                + 1 // general_interlaced_source_flag
+                + 1 // general_non_packed_constraint_flag
+                + 1 // general_frame_only_constraint_flag
+                + 43 // general_reserved_zero_43bits
                 + 1 // general_reserved_zero_bit
                 + 8, // general_level_idc
             )?;

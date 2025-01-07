@@ -12,11 +12,12 @@ bytesio = { path = "../bytesio" }
 h264 = { path = "../h264" }
 h265 = { path = "../h265" }
 av1 = { path = "../av1" }
-aac = { path = "../aac" }
+scuffle-aac = { path = "../aac" }
 amf0 = { path = "../amf0" }
 flv = { path = "../flv" }
 mp4 = { path = "../mp4" }
 scuffle-workspace-hack.workspace = true
+scuffle-bitio = { workspace = true }
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }

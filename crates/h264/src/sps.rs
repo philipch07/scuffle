@@ -2,8 +2,8 @@ use std::io;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
-use bytesio::bit_reader::BitReader;
 use exp_golomb::{read_exp_golomb, read_signed_exp_golomb};
+use scuffle_bitio::BitReader;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Sequence parameter set
@@ -46,7 +46,7 @@ impl Sps {
             }
         }
 
-        let mut bit_reader = BitReader::from(vec);
+        let mut bit_reader = BitReader::new_from_slice(vec);
 
         let forbidden_zero_bit = bit_reader.read_bit()?;
         if forbidden_zero_bit {
@@ -209,15 +209,15 @@ pub struct SpsExtended {
 }
 
 impl SpsExtended {
-    pub fn parse(reader: &mut BitReader) -> io::Result<Self> {
+    pub fn parse<T: io::Read>(reader: &mut BitReader<T>) -> io::Result<Self> {
         let chroma_format_idc = read_exp_golomb(reader)?;
         if chroma_format_idc == 3 {
-            reader.seek_bits(1)?;
+            reader.read_bit()?;
         }
 
         let bit_depth_luma_minus8 = read_exp_golomb(reader)?;
         let bit_depth_chroma_minus8 = read_exp_golomb(reader)?;
-        reader.seek_bits(1)?; // qpprime_y_zero_transform_bypass_flag
+        reader.read_bit()?; // qpprime_y_zero_transform_bypass_flag
 
         if reader.read_bit()? {
             // seq_scaling_matrix_present_flag

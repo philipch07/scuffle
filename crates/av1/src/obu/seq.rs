@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
-use bytesio::bit_reader::BitReader;
+use scuffle_bitio::BitReader;
 
 use super::ObuHeader;
 use crate::obu::read_uvlc;
@@ -99,7 +99,7 @@ impl SequenceHeaderObu {
     }
 
     pub fn parse(header: ObuHeader, data: Bytes) -> io::Result<Self> {
-        let mut bit_reader = BitReader::from(data);
+        let mut bit_reader = BitReader::new_from_slice(data);
 
         let seq_profile = bit_reader.read_bits(3)? as u8;
         let still_picture = bit_reader.read_bit()?;

@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use bytesio::bytes_writer::BytesWriter;
 
 use crate::chunk::{ChunkDecoder, ChunkEncodeError, ChunkEncoder};
 use crate::user_control_messages::{EventMessagesError, EventMessagesWriter};
@@ -12,13 +11,13 @@ fn test_error_display() {
 
 #[test]
 fn test_write_stream_begin() {
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
     let encoder = ChunkEncoder::default();
 
     EventMessagesWriter::write_stream_begin(&encoder, &mut writer, 1).unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer.dispose());
+    decoder.extend_data(&writer);
 
     let chunk = decoder.read_chunk().unwrap().unwrap();
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x02);

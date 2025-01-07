@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use std::io::Write;
+use std::io;
 
 use byteorder::{BigEndian, WriteBytesExt};
-use bytesio::bytes_writer::BytesWriter;
 
 use super::define::Amf0Marker;
 use super::{Amf0Value, Amf0WriteError};
@@ -10,7 +9,7 @@ use super::{Amf0Value, Amf0WriteError};
 pub struct Amf0Writer;
 
 impl Amf0Writer {
-    pub fn write_any(writer: &mut BytesWriter, value: &Amf0Value) -> Result<(), Amf0WriteError> {
+    pub fn write_any(writer: &mut impl io::Write, value: &Amf0Value) -> Result<(), Amf0WriteError> {
         match value {
             Amf0Value::Boolean(val) => Self::write_bool(writer, *val),
             Amf0Value::Null => Self::write_null(writer),
@@ -21,24 +20,24 @@ impl Amf0Writer {
         }
     }
 
-    fn write_object_eof(writer: &mut BytesWriter) -> Result<(), Amf0WriteError> {
+    fn write_object_eof(writer: &mut impl io::Write) -> Result<(), Amf0WriteError> {
         writer.write_u24::<BigEndian>(Amf0Marker::ObjectEnd as u32)?;
         Ok(())
     }
 
-    pub fn write_number(writer: &mut BytesWriter, value: f64) -> Result<(), Amf0WriteError> {
+    pub fn write_number(writer: &mut impl io::Write, value: f64) -> Result<(), Amf0WriteError> {
         writer.write_u8(Amf0Marker::Number as u8)?;
         writer.write_f64::<BigEndian>(value)?;
         Ok(())
     }
 
-    pub fn write_bool(writer: &mut BytesWriter, value: bool) -> Result<(), Amf0WriteError> {
+    pub fn write_bool(writer: &mut impl io::Write, value: bool) -> Result<(), Amf0WriteError> {
         writer.write_u8(Amf0Marker::Boolean as u8)?;
         writer.write_u8(value as u8)?;
         Ok(())
     }
 
-    pub fn write_string(writer: &mut BytesWriter, value: &str) -> Result<(), Amf0WriteError> {
+    pub fn write_string(writer: &mut impl io::Write, value: &str) -> Result<(), Amf0WriteError> {
         if value.len() > (u16::MAX as usize) {
             return Err(Amf0WriteError::NormalStringTooLong);
         }
@@ -48,12 +47,12 @@ impl Amf0Writer {
         Ok(())
     }
 
-    pub fn write_null(writer: &mut BytesWriter) -> Result<(), Amf0WriteError> {
+    pub fn write_null(writer: &mut impl io::Write) -> Result<(), Amf0WriteError> {
         writer.write_u8(Amf0Marker::Null as u8)?;
         Ok(())
     }
 
-    pub fn write_object(writer: &mut BytesWriter, properties: &HashMap<String, Amf0Value>) -> Result<(), Amf0WriteError> {
+    pub fn write_object(writer: &mut impl io::Write, properties: &HashMap<String, Amf0Value>) -> Result<(), Amf0WriteError> {
         writer.write_u8(Amf0Marker::Object as u8)?;
         for (key, value) in properties {
             writer.write_u16::<BigEndian>(key.len() as u16)?;

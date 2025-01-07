@@ -1,4 +1,3 @@
-use aac::AudioSpecificConfig;
 use bytes::Bytes;
 use flv::{SoundSize, SoundType};
 use mp4::types::esds::descriptor::header::DescriptorHeader;
@@ -11,6 +10,7 @@ use mp4::types::mp4a::Mp4a;
 use mp4::types::stsd::{AudioSampleEntry, SampleEntry};
 use mp4::types::trun::{TrunSample, TrunSampleFlag};
 use mp4::DynBox;
+use scuffle_aac::PartialAudioSpecificConfig;
 
 use crate::TransmuxError;
 
@@ -18,8 +18,8 @@ pub fn stsd_entry(
     sound_size: SoundSize,
     sound_type: SoundType,
     data: Bytes,
-) -> Result<(DynBox, AudioSpecificConfig), TransmuxError> {
-    let aac_config = aac::AudioSpecificConfig::parse(data)?;
+) -> Result<(DynBox, PartialAudioSpecificConfig), TransmuxError> {
+    let aac_config = scuffle_aac::PartialAudioSpecificConfig::parse(&data)?;
 
     Ok((
         Mp4a::new(
@@ -47,7 +47,7 @@ pub fn stsd_entry(
                     0,    // avg bitrate
                     Some(DecoderSpecificInfoDescriptor {
                         header: DescriptorHeader::new(DecoderSpecificInfoDescriptor::TAG),
-                        data: aac_config.data.clone(),
+                        data,
                     }),
                 )),
                 None,

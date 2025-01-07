@@ -1,7 +1,6 @@
 use av1::seq::SequenceHeaderObu;
 use av1::{AV1CodecConfigurationRecord, ObuHeader, ObuType};
 use bytes::Bytes;
-use bytesio::bit_reader::BitReader;
 use flv::FrameType;
 use mp4::types::av01::Av01;
 use mp4::types::av1c::Av1C;
@@ -9,11 +8,12 @@ use mp4::types::colr::{ColorType, Colr};
 use mp4::types::stsd::{SampleEntry, VisualSampleEntry};
 use mp4::types::trun::{TrunSample, TrunSampleFlag};
 use mp4::DynBox;
+use scuffle_bitio::BitReader;
 
 use crate::TransmuxError;
 
 pub fn stsd_entry(config: AV1CodecConfigurationRecord) -> Result<(DynBox, SequenceHeaderObu), TransmuxError> {
-    let (header, data) = ObuHeader::parse(&mut BitReader::from(config.config_obu.clone()))?;
+    let (header, data) = ObuHeader::parse(&mut BitReader::new_from_slice(&config.config_obu))?;
 
     if header.obu_type != ObuType::SequenceHeader {
         return Err(TransmuxError::InvalidAv1DecoderConfigurationRecord);

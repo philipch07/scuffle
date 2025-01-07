@@ -1,12 +1,12 @@
 use std::io;
 use std::path::PathBuf;
 
-use aac::{AudioObjectType, AudioSpecificConfig};
 use av1::seq::SequenceHeaderObu;
 use av1::ObuHeader;
 use bytes::Bytes;
-use bytesio::bit_reader::BitReader;
 use h264::{Sps, SpsExtended};
+use scuffle_aac::{AudioObjectType, PartialAudioSpecificConfig};
+use scuffle_bitio::BitReader;
 
 use crate::{
     AacPacket, Av1Packet, AvcPacket, EnhancedPacket, Flv, FlvTagAudioData, FlvTagData, FlvTagVideoData, FrameType,
@@ -239,7 +239,7 @@ fn test_demux_flv_avc_aac() {
         // The aac sequence header should be able to be decoded into an aac decoder
         // configuration record
         let aac_decoder_configuration_record =
-            AudioSpecificConfig::parse(data).expect("expected aac decoder configuration record");
+            PartialAudioSpecificConfig::parse(&data).expect("expected aac decoder configuration record");
 
         assert_eq!(
             aac_decoder_configuration_record.audio_object_type,
@@ -448,7 +448,7 @@ fn test_demux_flv_av1_aac() {
         // The aac sequence header should be able to be decoded into an aac decoder
         // configuration record
         let aac_decoder_configuration_record =
-            AudioSpecificConfig::parse(data).expect("expected aac decoder configuration record");
+            PartialAudioSpecificConfig::parse(&data).expect("expected aac decoder configuration record");
 
         assert_eq!(
             aac_decoder_configuration_record.audio_object_type,
@@ -486,7 +486,7 @@ fn test_demux_flv_av1_aac() {
         assert!(!config.twelve_bit);
 
         let (header, data) =
-            ObuHeader::parse(&mut BitReader::new(io::Cursor::new(&config.config_obu))).expect("expected obu header");
+            ObuHeader::parse(&mut BitReader::new_from_slice(&config.config_obu)).expect("expected obu header");
 
         let seq_obu = SequenceHeaderObu::parse(header, data).expect("expected sequence obu");
 
@@ -697,7 +697,7 @@ fn test_demux_flv_hevc_aac() {
         // The aac sequence header should be able to be decoded into an aac decoder
         // configuration record
         let aac_decoder_configuration_record =
-            AudioSpecificConfig::parse(data).expect("expected aac decoder configuration record");
+            PartialAudioSpecificConfig::parse(&data).expect("expected aac decoder configuration record");
 
         assert_eq!(
             aac_decoder_configuration_record.audio_object_type,

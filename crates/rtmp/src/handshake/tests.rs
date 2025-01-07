@@ -1,9 +1,7 @@
-use std::io::{Cursor, Write};
+use std::io::{Cursor, Read, Write};
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use bytesio::bytes_reader::BytesCursor;
-use bytesio::bytes_writer::BytesWriter;
 
 use super::{HandshakeError, HandshakeServer};
 use crate::handshake::define::{
@@ -31,22 +29,24 @@ fn test_simple_handshake() {
 
     handshake_server.extend_data(&c0c1.into_inner());
 
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
     handshake_server.handshake(&mut writer).unwrap();
 
-    let mut reader = Cursor::new(writer.dispose());
+    let mut reader = Cursor::new(writer);
     assert_eq!(reader.read_u8().unwrap(), 3); // version
     let timestamp = reader.read_u32::<BigEndian>().unwrap(); // timestamp
     assert_eq!(reader.read_u32::<BigEndian>().unwrap(), 0); // zero
 
-    let server_random = reader.read_slice(1528).unwrap();
+    let mut server_random = vec![0; 1528];
+    reader.read_exact(&mut server_random).unwrap();
 
     assert_eq!(reader.read_u32::<BigEndian>().unwrap(), 123); // our timestamp
     let timestamp2 = reader.read_u32::<BigEndian>().unwrap(); // server timestamp
 
     assert!(timestamp2 >= timestamp);
 
-    let read_client_random = reader.read_slice(1528).unwrap();
+    let mut read_client_random = vec![0; 1528];
+    reader.read_exact(&mut read_client_random).unwrap();
 
     assert_eq!(&write_client_random, &read_client_random);
 
@@ -57,7 +57,7 @@ fn test_simple_handshake() {
 
     handshake_server.extend_data(&c2.into_inner());
 
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
     handshake_server.handshake(&mut writer).unwrap();
 
     assert_eq!(handshake_server.state(), ServerHandshakeState::Finish)
@@ -90,20 +90,21 @@ fn test_complex_handshake() {
     handshake_server.extend_data(&second);
     handshake_server.extend_data(&third);
 
-    let mut writer = BytesWriter::default();
-    handshake_server.handshake(&mut writer).unwrap();
+    let mut bytes = Vec::new();
+    handshake_server.handshake(&mut bytes).unwrap();
 
-    let bytes = writer.dispose();
-
-    let s0 = bytes.slice(0..1);
-    let s1 = bytes.slice(1..1537);
-    let s2 = bytes.slice(1537..3073);
+    let s0 = &bytes[0..1];
+    let s1 = &bytes[1..1537];
+    let s2 = &bytes[1537..3073];
 
     assert_eq!(s0[0], 3); // version
     assert_ne!((&s1[..4]).read_u32::<BigEndian>().unwrap(), 0); // timestamp should not be zero
     assert_eq!((&s1[4..8]).read_u32::<BigEndian>().unwrap(), define::RTMP_SERVER_VERSION); // RTMP version
 
-    let data_digest = DigestProcessor::new(s1, Bytes::from_static(define::RTMP_SERVER_KEY_FIRST_HALF.as_bytes()));
+    let data_digest = DigestProcessor::new(
+        Bytes::copy_from_slice(s1),
+        Bytes::from_static(define::RTMP_SERVER_KEY_FIRST_HALF.as_bytes()),
+    );
 
     let (digest, schema) = data_digest.read_digest().unwrap();
     assert_eq!(schema, SchemaVersion::Schema1);
@@ -115,7 +116,7 @@ fn test_complex_handshake() {
 
     let data_digest = DigestProcessor::new(Bytes::new(), key_digest.make_digest(&second, &[]).unwrap());
 
-    assert_eq!(data_digest.make_digest(&s2[..1504], &[]).unwrap(), s2.slice(1504..));
+    assert_eq!(data_digest.make_digest(&s2[..1504], &[]).unwrap(), s2[1504..]);
 
     let data_digest = DigestProcessor::new(Bytes::new(), key_digest.make_digest(&digest, &[]).unwrap());
 
@@ -129,7 +130,7 @@ fn test_complex_handshake() {
     handshake_server.extend_data(&c2);
     handshake_server.extend_data(&digest);
 
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
     handshake_server.handshake(&mut writer).unwrap();
 
     assert_eq!(handshake_server.state(), ServerHandshakeState::Finish)

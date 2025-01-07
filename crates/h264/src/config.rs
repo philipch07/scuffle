@@ -4,8 +4,8 @@ use std::io::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::{Buf, Bytes};
-use bytesio::bit_writer::BitWriter;
 use bytesio::bytes_reader::BytesCursor;
+use scuffle_bitio::BitWriter;
 
 #[derive(Debug, Clone, PartialEq)]
 /// AVC (H.264) Decoder Configuration Record
@@ -132,7 +132,7 @@ impl AVCDecoderConfigurationRecord {
     }
 
     pub fn mux<T: io::Write>(&self, writer: &mut T) -> io::Result<()> {
-        let mut bit_writer = BitWriter::default();
+        let mut bit_writer = BitWriter::new(writer);
 
         bit_writer.write_u8(self.configuration_version)?;
         bit_writer.write_u8(self.profile_indication)?;
@@ -169,7 +169,7 @@ impl AVCDecoderConfigurationRecord {
             }
         }
 
-        writer.write_all(&bit_writer.into_inner())?;
+        bit_writer.finish()?;
 
         Ok(())
     }

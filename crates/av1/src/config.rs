@@ -1,9 +1,8 @@
 use std::io;
 
 use bytes::Bytes;
-use bytesio::bit_reader::BitReader;
-use bytesio::bit_writer::BitWriter;
 use bytesio::bytes_reader::BytesCursor;
+use scuffle_bitio::{BitReader, BitWriter};
 
 #[derive(Debug, Clone, PartialEq)]
 /// AV1 Codec Configuration Record
@@ -83,7 +82,7 @@ impl AV1CodecConfigurationRecord {
     }
 
     pub fn mux<T: io::Write>(&self, writer: &mut T) -> io::Result<()> {
-        let mut bit_writer = BitWriter::default();
+        let mut bit_writer = BitWriter::new(writer);
 
         bit_writer.write_bit(self.marker)?;
         bit_writer.write_bits(self.version as u64, 7)?;
@@ -109,8 +108,7 @@ impl AV1CodecConfigurationRecord {
             bit_writer.write_bits(0, 4)?; // reserved 4 bits
         }
 
-        writer.write_all(&bit_writer.into_inner())?;
-        writer.write_all(&self.config_obu)?;
+        bit_writer.finish()?.write_all(&self.config_obu)?;
 
         Ok(())
     }

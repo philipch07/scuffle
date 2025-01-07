@@ -1,5 +1,3 @@
-use bytesio::bytes_writer::BytesWriter;
-
 use crate::chunk::{ChunkDecoder, ChunkEncodeError, ChunkEncoder};
 use crate::protocol_control_messages::{
     ProtocolControlMessageError, ProtocolControlMessageReader, ProtocolControlMessagesWriter,
@@ -24,12 +22,12 @@ fn test_reader_read_set_chunk_size() {
 #[test]
 fn test_writer_write_set_chunk_size() {
     let encoder = ChunkEncoder::default();
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     ProtocolControlMessagesWriter::write_set_chunk_size(&encoder, &mut writer, 1).unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer.dispose());
+    decoder.extend_data(&writer);
 
     let chunk = decoder.read_chunk().unwrap().unwrap();
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x02);
@@ -41,12 +39,12 @@ fn test_writer_write_set_chunk_size() {
 #[test]
 fn test_writer_window_acknowledgement_size() {
     let encoder = ChunkEncoder::default();
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     ProtocolControlMessagesWriter::write_window_acknowledgement_size(&encoder, &mut writer, 1).unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer.dispose());
+    decoder.extend_data(&writer);
 
     let chunk = decoder.read_chunk().unwrap().unwrap();
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x02);
@@ -58,12 +56,12 @@ fn test_writer_window_acknowledgement_size() {
 #[test]
 fn test_writer_set_peer_bandwidth() {
     let encoder = ChunkEncoder::default();
-    let mut writer = BytesWriter::default();
+    let mut writer = Vec::new();
 
     ProtocolControlMessagesWriter::write_set_peer_bandwidth(&encoder, &mut writer, 1, 2).unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer.dispose());
+    decoder.extend_data(&writer);
 
     let chunk = decoder.read_chunk().unwrap().unwrap();
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x02);

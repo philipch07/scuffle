@@ -4,8 +4,7 @@ use std::io::{
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use bytesio::bit_reader::BitReader;
-use bytesio::bit_writer::BitWriter;
+use scuffle_bitio::{BitReader, BitWriter};
 
 #[derive(Debug, Clone, PartialEq)]
 /// HEVC Decoder Configuration Record
@@ -180,7 +179,7 @@ impl HEVCDecoderConfigurationRecord {
     }
 
     pub fn mux<T: io::Write>(&self, writer: &mut T) -> io::Result<()> {
-        let mut bit_writer = BitWriter::default();
+        let mut bit_writer = BitWriter::new(writer);
 
         bit_writer.write_u8(self.configuration_version)?;
         bit_writer.write_bits(self.general_profile_space as u64, 2)?;
@@ -226,7 +225,7 @@ impl HEVCDecoderConfigurationRecord {
             }
         }
 
-        writer.write_all(&bit_writer.into_inner())?;
+        bit_writer.finish()?;
 
         Ok(())
     }

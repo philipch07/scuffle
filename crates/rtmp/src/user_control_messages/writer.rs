@@ -1,5 +1,6 @@
+use std::io;
+
 use byteorder::{BigEndian, WriteBytesExt};
-use bytesio::bytes_writer::BytesWriter;
 
 use super::define;
 use super::errors::EventMessagesError;
@@ -11,7 +12,7 @@ pub struct EventMessagesWriter;
 impl EventMessagesWriter {
     pub fn write_stream_begin(
         encoder: &ChunkEncoder,
-        writer: &mut BytesWriter,
+        writer: &mut impl io::Write,
         stream_id: u32,
     ) -> Result<(), EventMessagesError> {
         let mut data = Vec::new();

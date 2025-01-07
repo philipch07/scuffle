@@ -41,7 +41,7 @@ impl Mp4a {
             .as_ref()
             .and_then(|c| c.decoder_specific_info.as_ref().map(|c| c.data.clone()))
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing decoder specific info"))?;
-        let aac_config = aac::AudioSpecificConfig::parse(info)?;
+        let aac_config = scuffle_aac::PartialAudioSpecificConfig::parse(&info)?;
 
         Ok(AudioCodec::Aac {
             object_type: aac_config.audio_object_type,

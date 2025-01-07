@@ -3,7 +3,6 @@ use std::time::Duration;
 
 use amf0::Amf0Value;
 use bytes::Bytes;
-use bytesio::bytes_writer::BytesWriter;
 use bytesio::bytesio::{AsyncReadWrite, BytesIO};
 use bytesio::bytesio_errors::BytesIOError;
 use scuffle_future_ext::FutureExt;
@@ -141,9 +140,9 @@ impl<S: AsyncReadWrite> Session<S> {
             handshaker.extend_data(&buf[..]);
         }
 
-        let mut writer = BytesWriter::default();
+        let mut writer = Vec::new();
         handshaker.handshake(&mut writer)?;
-        self.write_data(writer.dispose()).await?;
+        self.write_data(Bytes::from(writer)).await?;
 
         if handshaker.state() == ServerHandshakeState::Finish {
             let over_read = handshaker.extract_remaining_bytes();
@@ -239,10 +238,10 @@ impl<S: AsyncReadWrite> Session<S> {
 
     /// Set the server chunk size to the client
     async fn send_set_chunk_size(&mut self) -> Result<(), SessionError> {
-        let mut writer = BytesWriter::default();
+        let mut writer = Vec::new();
         ProtocolControlMessagesWriter::write_set_chunk_size(&self.chunk_encoder, &mut writer, CHUNK_SIZE as u32)?;
         self.chunk_encoder.set_chunk_size(CHUNK_SIZE);
-        self.write_data(writer.dispose()).await?;
+        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }
@@ -336,7 +335,7 @@ impl<S: AsyncReadWrite> Session<S> {
         command_obj: HashMap<String, Amf0Value>,
         _others: Vec<Amf0Value>,
     ) -> Result<(), SessionError> {
-        let mut writer = BytesWriter::default();
+        let mut writer = Vec::new();
 
         ProtocolControlMessagesWriter::write_window_acknowledgement_size(
             &self.chunk_encoder,
@@ -382,7 +381,7 @@ impl<S: AsyncReadWrite> Session<S> {
             0.0,
         )?;
 
-        self.write_data(writer.dispose()).await?;
+        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }
@@ -398,10 +397,10 @@ impl<S: AsyncReadWrite> Session<S> {
         _command_obj: HashMap<String, Amf0Value>,
         _others: Vec<Amf0Value>,
     ) -> Result<(), SessionError> {
-        let mut writer = BytesWriter::default();
+        let mut writer = Vec::new();
         // 1.0 is the Stream ID of the stream we are creating
         NetConnection::write_create_stream_response(&self.chunk_encoder, &mut writer, transaction_id, 1.0)?;
-        self.write_data(writer.dispose()).await?;
+        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }
@@ -417,7 +416,7 @@ impl<S: AsyncReadWrite> Session<S> {
         _command_obj: HashMap<String, Amf0Value>,
         others: Vec<Amf0Value>,
     ) -> Result<(), SessionError> {
-        let mut writer = BytesWriter::default();
+        let mut writer = Vec::new();
 
         let stream_id = match others.first() {
             Some(Amf0Value::Number(stream_id)) => *stream_id,
@@ -438,7 +437,7 @@ impl<S: AsyncReadWrite> Session<S> {
             "",
         )?;
 
-        self.write_data(writer.dispose()).await?;
+        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }
@@ -488,7 +487,7 @@ impl<S: AsyncReadWrite> Session<S> {
         self.is_publishing = true;
         self.stream_id = stream_id;
 
-        let mut writer = BytesWriter::default();
+        let mut writer = Vec::new();
         EventMessagesWriter::write_stream_begin(&self.chunk_encoder, &mut writer, stream_id)?;
 
         NetStreamWriter::write_on_status(
@@ -500,7 +499,7 @@ impl<S: AsyncReadWrite> Session<S> {
             "",
         )?;
 
-        self.write_data(writer.dispose()).await?;
+        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }

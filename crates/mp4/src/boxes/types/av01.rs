@@ -3,7 +3,7 @@ use std::io;
 use av1::seq::SequenceHeaderObu;
 use av1::{ObuHeader, ObuType};
 use bytes::{Buf, Bytes};
-use bytesio::bit_reader::BitReader;
+use scuffle_bitio::BitReader;
 
 use super::av1c::Av1C;
 use super::btrt::Btrt;
@@ -36,7 +36,7 @@ impl Av01 {
     }
 
     pub fn codec(&self) -> io::Result<VideoCodec> {
-        let (header, data) = ObuHeader::parse(&mut BitReader::from(self.av1c.av1_config.config_obu.clone()))?;
+        let (header, data) = ObuHeader::parse(&mut BitReader::new_from_slice(&self.av1c.av1_config.config_obu))?;
 
         if header.obu_type != ObuType::SequenceHeader {
             return Err(io::Error::new(
