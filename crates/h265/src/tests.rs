@@ -96,3 +96,19 @@ fn test_config_mux() {
 
     assert_eq!(buf, data.to_vec());
 }
+
+#[test]
+fn test_parse_sps_with_zero_vui_num_units_in_tick() {
+    let sps = Bytes::from(b"B\x01\x01\x01@\0\0\x03\0\x90\0\0\x03\0\0\x03\0\x99\xa0\x01@ \x05\xa1e\x95R\x90\x84d_\xf8\xc0Z\x80\0\x80\x82\0\0\x03\0\0\0\0\0\x01 \xc0\x0b\xbc\xa2\0\x02bX\0\x011-\x08".to_vec());
+    let sps = Sps::parse(sps);
+
+    match sps {
+        Ok(_) => panic!("Expected error for vui_num_units_in_tick = 0, but got Ok"),
+        Err(e) => assert_eq!(
+            e.kind(),
+            std::io::ErrorKind::InvalidData,
+            "Expected InvalidData error, got {:?}",
+            e
+        ),
+    }
+}
