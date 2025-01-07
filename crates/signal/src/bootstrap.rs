@@ -88,11 +88,42 @@ mod tests {
     use crate::tests::raise_signal;
     use crate::SignalHandler;
 
+    struct TestGlobal;
+
+    impl GlobalWithoutConfig for TestGlobal {
+        fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
+            std::future::ready(Ok(Arc::new(Self)))
+        }
+    }
+
+    impl SignalConfig for TestGlobal {}
+
+    #[tokio::test]
+    async fn default_bootstrap_service() {
+        let (ctx, handler) = scuffle_context::Context::new();
+        let svc = SignalSvc;
+        let global = NoTimeoutTestGlobal::init().await.unwrap();
+
+        assert!(svc.enabled(&global).await.unwrap());
+        let result = tokio::spawn(svc.run(global, ctx));
+
+        // Wait for the service to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+
+        raise_signal(tokio::signal::unix::SignalKind::interrupt());
+        assert!(result.await.is_ok());
+
+        assert!(handler
+            .shutdown()
+            .with_timeout(tokio::time::Duration::from_millis(100))
+            .await
+            .is_ok());
+    }
     struct NoTimeoutTestGlobal;
 
     impl GlobalWithoutConfig for NoTimeoutTestGlobal {
         fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
-            std::future::ready(Ok(Arc::new(NoTimeoutTestGlobal)))
+            std::future::ready(Ok(Arc::new(Self)))
         }
     }
 
@@ -162,7 +193,7 @@ mod tests {
 
     impl GlobalWithoutConfig for NoSignalsTestGlobal {
         fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
-            std::future::ready(Ok(Arc::new(NoSignalsTestGlobal)))
+            std::future::ready(Ok(Arc::new(Self)))
         }
     }
 
@@ -211,7 +242,7 @@ mod tests {
 
     impl GlobalWithoutConfig for SmallTimeoutTestGlobal {
         fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send {
-            std::future::ready(Ok(Arc::new(SmallTimeoutTestGlobal)))
+            std::future::ready(Ok(Arc::new(Self)))
         }
     }
 
