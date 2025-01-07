@@ -38,11 +38,13 @@ impl<T: io::Read> BitReader<T> {
 
     /// Reads multiple bits
     pub fn read_bits(&mut self, count: u8) -> io::Result<u64> {
+        let count = count.min(64);
+
         let mut bits = 0;
         for _ in 0..count {
             let bit = self.read_bit()?;
             bits <<= 1;
-            bits |= bit as u64;
+            bits |= if bit { 1 } else { 0 };
         }
 
         Ok(bits)

@@ -82,7 +82,7 @@ impl AV1CodecConfigurationRecord {
     }
 
     pub fn mux<T: io::Write>(&self, writer: &mut T) -> io::Result<()> {
-        let mut bit_writer = BitWriter::<_, 64>::new(writer);
+        let mut bit_writer = BitWriter::new(writer);
 
         bit_writer.write_bit(self.marker)?;
         bit_writer.write_bits(self.version as u64, 7)?;
