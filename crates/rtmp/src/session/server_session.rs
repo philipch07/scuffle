@@ -128,9 +128,6 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
             self.flush().await?;
         }
 
-        println!("write_buf: cap: {}; len: {}", self.write_buf.capacity(), self.write_buf.len());
-        println!("read_buf: cap: {}; len: {}", self.read_buf.capacity(), self.read_buf.len());
-
         // We should technically check the stream_map here
         // However most clients just disconnect without cleanly stopping the subscrition
         // streams (play streams) So we just check that all publishers have disconnected
