@@ -16,7 +16,9 @@ test *args:
     set -euo pipefail
 
     # We use the nightly toolchain for coverage since it supports branch & no-coverage flags.
-    export RUSTUP_TOOLCHAIN=nightly
+    if [ -z ${RUST_TOOLCHAIN+x} ]; then
+        export RUSTUP_TOOLCHAIN=nightly
+    fi
 
     INSTA_FORCE_PASS=1 cargo llvm-cov clean --workspace
     INSTA_FORCE_PASS=1 cargo llvm-cov nextest --include-build-script --no-report -- {{args}}
