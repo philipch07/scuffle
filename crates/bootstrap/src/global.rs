@@ -69,78 +69,54 @@ fn default_runtime_builder() -> tokio::runtime::Builder {
     builder
 }
 
+/// This trait is implemented for the global type of your application.
+/// It is intended to be used to store any global state of your application.
+/// When using the [`main!`](crate::main) macro, one instance of this type will
+/// be made available to all services.
+///
+/// # See Also
+///
+/// - [`Service`](crate::Service)
+/// - [`main`](crate::main)
 pub trait Global: Send + Sync + 'static {
     type Config: ConfigParser + Send + 'static;
 
-    /// Builds the tokio runtime for the application.
-    #[inline(always)]
-    fn tokio_runtime() -> tokio::runtime::Runtime {
-        default_runtime_builder().build().expect("runtime build")
-    }
-
-    /// Called before loading the config.
+    /// Pre-initialization.
+    /// Called before initializing the tokio runtime and loading the config.
+    /// Returning an error from this function will cause the process to
+    /// immediately exit without calling [`on_exit`](Global::on_exit) first.
     #[inline(always)]
     fn pre_init() -> anyhow::Result<()> {
         Ok(())
     }
 
-    /// Initialize the global.
-    fn init(config: Self::Config) -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send;
-
-    /// Called when all services have been started.
-    #[inline(always)]
-    fn on_services_start(self: &Arc<Self>) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
-        std::future::ready(Ok(()))
-    }
-
-    /// Called when the shutdown process is complete, right before exiting the
-    /// process.
-    #[inline(always)]
-    fn on_exit(
-        self: &Arc<Self>,
-        result: anyhow::Result<()>,
-    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
-        std::future::ready(result)
-    }
-
-    /// Called when a service exits.
-    #[inline(always)]
-    fn on_service_exit(
-        self: &Arc<Self>,
-        name: &'static str,
-        result: anyhow::Result<()>,
-    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
-        let _ = name;
-        std::future::ready(result)
-    }
-}
-
-pub trait GlobalWithoutConfig: Send + Sync + 'static {
+    /// Builds the tokio runtime for the process.
     #[inline(always)]
     fn tokio_runtime() -> tokio::runtime::Runtime {
         default_runtime_builder().build().expect("runtime build")
     }
 
     /// Initialize the global.
-    fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send;
+    /// Called to initialize the global.
+    /// Returning an error from this function will cause the process to
+    /// immediately exit without calling [`on_exit`](Global::on_exit) first.
+    fn init(config: Self::Config) -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send;
 
-    /// Called when all services have been started.
+    /// Called right before all services start.
+    /// Returning an error from this function will prevent any service from
+    /// starting and [`on_exit`](Global::on_exit) will be called with the result
+    /// of this function.
     #[inline(always)]
     fn on_services_start(self: &Arc<Self>) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
         std::future::ready(Ok(()))
     }
 
-    /// Called when the shutdown process is complete, right before exiting the
-    /// process.
-    #[inline(always)]
-    fn on_exit(
-        self: &Arc<Self>,
-        result: anyhow::Result<()>,
-    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
-        std::future::ready(result)
-    }
-
-    /// Called when a service exits.
+    /// Called after a service exits.
+    ///
+    /// `name` is the name of the service that exited and `result` is the result
+    /// the service exited with. Returning an error from this function will
+    /// stop all currently running services and [`on_exit`](Global::on_exit)
+    /// will be called with the result of this function.
     #[inline(always)]
     fn on_service_exit(
         self: &Arc<Self>,
@@ -148,6 +124,77 @@ pub trait GlobalWithoutConfig: Send + Sync + 'static {
         result: anyhow::Result<()>,
     ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
         let _ = name;
+        std::future::ready(result)
+    }
+
+    /// Called after the shutdown is complete, right before exiting the
+    /// process.
+    ///
+    /// `result` is [`Err`](anyhow::Result) when the process exits due to an
+    /// error in one of the services or handler functions, otherwise `Ok(())`.
+    #[inline(always)]
+    fn on_exit(
+        self: &Arc<Self>,
+        result: anyhow::Result<()>,
+    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
+        std::future::ready(result)
+    }
+}
+
+/// Simplified version of [`Global`].
+/// Implementing this trait will automatically implement [`Global`] for your
+/// type. This trait is intended to be used when you don't need a config for
+/// your global.
+///
+/// Refer to [`Global`] for details.
+pub trait GlobalWithoutConfig: Send + Sync + 'static {
+    /// Builds the tokio runtime for the process.
+    #[inline(always)]
+    fn tokio_runtime() -> tokio::runtime::Runtime {
+        default_runtime_builder().build().expect("runtime build")
+    }
+
+    /// Initialize the global.
+    /// Called to initialize the global.
+    /// Returning an error from this function will cause the process to
+    /// immediately exit without calling [`on_exit`](Global::on_exit) first.
+    fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send;
+
+    /// Called right before all services start.
+    /// Returning an error from this function will prevent any service from
+    /// starting and [`on_exit`](Global::on_exit) will be called with the result
+    /// of this function.
+    #[inline(always)]
+    fn on_services_start(self: &Arc<Self>) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
+        std::future::ready(Ok(()))
+    }
+
+    /// Called after a service exits.
+    ///
+    /// `name` is the name of the service that exited and `result` is the result
+    /// the service exited with. Returning an error from this function will
+    /// stop all currently running services and [`on_exit`](Global::on_exit)
+    /// will be called with the result of this function.
+    #[inline(always)]
+    fn on_service_exit(
+        self: &Arc<Self>,
+        name: &'static str,
+        result: anyhow::Result<()>,
+    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
+        let _ = name;
+        std::future::ready(result)
+    }
+
+    /// Called after the shutdown is complete, right before exiting the
+    /// process.
+    ///
+    /// `result` is [`Err`](anyhow::Result) when the process exits due to an
+    /// error in one of the services or handler functions, otherwise `Ok(())`.
+    #[inline(always)]
+    fn on_exit(
+        self: &Arc<Self>,
+        result: anyhow::Result<()>,
+    ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
         std::future::ready(result)
     }
 }
@@ -166,17 +213,17 @@ impl<T: GlobalWithoutConfig> Global for T {
     }
 
     #[inline(always)]
+    fn on_services_start(self: &Arc<Self>) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
+        <T as GlobalWithoutConfig>::on_services_start(self)
+    }
+
+    #[inline(always)]
     fn on_service_exit(
         self: &Arc<Self>,
         name: &'static str,
         result: anyhow::Result<()>,
     ) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
         <T as GlobalWithoutConfig>::on_service_exit(self, name, result)
-    }
-
-    #[inline(always)]
-    fn on_services_start(self: &Arc<Self>) -> impl std::future::Future<Output = anyhow::Result<()>> + Send {
-        <T as GlobalWithoutConfig>::on_services_start(self)
     }
 
     #[inline(always)]

@@ -7,7 +7,10 @@ use tokio_util::sync::{WaitForCancellationFuture, WaitForCancellationFutureOwned
 
 use crate::{Context, ContextTracker};
 
-/// This type is used to make the inner enum [`ContextRefInner`] private.
+/// A reference to a context which implements [`Future`] and can be polled.
+/// Can either be owned or borrowed.
+///
+/// Create by using the [`From`] implementations.
 pub struct ContextRef<'a> {
     inner: ContextRefInner<'a>,
 }
@@ -34,10 +37,6 @@ impl<'a> From<&'a Context> for ContextRef<'a> {
 }
 
 pin_project_lite::pin_project! {
-    /// A reference to a context which implements [`Future`] and can be polled.
-    /// Can either be owned or borrowed.
-    ///
-    /// Create by using the [`From`] implementations.
     #[project = ContextRefInnerProj]
     enum ContextRefInner<'a> {
         Owned {

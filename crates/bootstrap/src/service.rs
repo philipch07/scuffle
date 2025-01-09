@@ -2,7 +2,17 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{ready, Context, Poll};
 
+/// A service that can be run.
+///
+/// This trait is used to define a service that can be run in parallel to other
+/// services.
+///
+/// # See Also
+///
+/// - [`Global`](crate::Global)
+/// - [`main`](crate::main)
 pub trait Service<Global>: Send + Sync + 'static + Sized {
+    /// Returns the name of the service, if any.
     fn name(&self) -> Option<&'static str> {
         None
     }
@@ -14,6 +24,20 @@ pub trait Service<Global>: Send + Sync + 'static + Sized {
         std::future::ready(Ok(true))
     }
 
+    /// Run the service.
+    /// This function should return a future that is pending as long as the
+    /// service is running. When the service finishes without any errors,
+    /// the future should resolve to `Ok(())`. As a best practice, the
+    /// service should stop as soon as the provided context is done.
+    ///
+    /// Note: Adding the `scuffle_signal::SignalSvc` service to the list of
+    /// services when calling [`main`](crate::main) will cancel the context as
+    /// soon as a shutdown signal is received.
+    ///
+    /// # See Also
+    ///
+    /// - [`Context`](scuffle_context::Context)
+    /// - `scuffle_signal::SignalSvc`
     fn run(
         self,
         global: Arc<Global>,
