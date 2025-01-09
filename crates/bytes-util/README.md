@@ -1,13 +1,13 @@
-# scuffle-bitio
+# scuffle-bytes-util
 
 > [!WARNING]  
 > This crate is under active development and may not be stable.
 
-[![crates.io](https://img.shields.io/crates/v/scuffle-bitio.svg)](https://crates.io/crates/scuffle-bitio) [![docs.rs](https://img.shields.io/docsrs/scuffle-bitio)](https://docs.rs/scuffle-bitio)
+[![crates.io](https://img.shields.io/crates/v/scuffle-bytes-util.svg)](https://crates.io/crates/scuffle-bytes-util) [![docs.rs](https://img.shields.io/docsrs/scuffle-bytes-util)](https://docs.rs/scuffle-bytes-util)
 
 ---
 
-Adds a simple interface for writing and reading bits to and from a stream.
+Adds some helpful utilities for working with bits and bytes.
 
 ## License
 

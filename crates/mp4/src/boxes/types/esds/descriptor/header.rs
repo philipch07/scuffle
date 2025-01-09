@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 use bytes::Bytes;
-use bytesio::bytes_reader::BytesCursor;
+use scuffle_bytes_util::BytesCursor;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DescriptorHeader {
@@ -26,7 +26,7 @@ impl DescriptorHeader {
             }
         }
 
-        let data = reader.read_slice(size as usize)?;
+        let data = reader.extract_bytes(size as usize)?;
 
         Ok((Self { tag }, data))
     }

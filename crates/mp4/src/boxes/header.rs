@@ -5,7 +5,7 @@ use std::io::{
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use bytesio::bytes_reader::BytesCursor;
+use scuffle_bytes_util::BytesCursor;
 
 #[derive(Clone, PartialEq)]
 pub struct BoxHeader {
@@ -46,7 +46,7 @@ impl BoxHeader {
             reader.extract_remaining()
         } else {
             // We already read 8 bytes, so we need to subtract that from the size.
-            reader.read_slice((size - offset) as usize)?
+            reader.extract_bytes((size - offset) as usize)?
         };
 
         Ok((Self { box_type }, data))

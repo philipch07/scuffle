@@ -15,22 +15,21 @@ use crate::handshake::ServerHandshakeState;
 fn test_simple_handshake() {
     let mut handshake_server = HandshakeServer::default();
 
-    let mut c0c1 = Cursor::new(Vec::new());
+    let mut c0c1 = Vec::with_capacity(1528 + 8);
     c0c1.write_u8(3).unwrap(); // version
     c0c1.write_u32::<BigEndian>(123).unwrap(); // timestamp
     c0c1.write_u32::<BigEndian>(0).unwrap(); // zero
 
-    let mut write_client_random = vec![0; 1528];
-    for (i, v) in write_client_random.iter_mut().enumerate() {
-        *v = (i % 256) as u8;
+    for i in 0..1528 {
+        c0c1.write_u8((i % 256) as u8).unwrap();
     }
 
-    c0c1.write_all(&write_client_random).unwrap();
-
-    handshake_server.extend_data(&c0c1.into_inner());
+    let c0c1 = Bytes::from(c0c1);
 
     let mut writer = Vec::new();
-    handshake_server.handshake(&mut writer).unwrap();
+    handshake_server
+        .handshake(&mut std::io::Cursor::new(c0c1.clone()), &mut writer)
+        .unwrap();
 
     let mut reader = Cursor::new(writer);
     assert_eq!(reader.read_u8().unwrap(), 3); // version
@@ -48,17 +47,17 @@ fn test_simple_handshake() {
     let mut read_client_random = vec![0; 1528];
     reader.read_exact(&mut read_client_random).unwrap();
 
-    assert_eq!(&write_client_random, &read_client_random);
+    assert_eq!(&c0c1[9..], &read_client_random);
 
-    let mut c2 = Cursor::new(Vec::new());
+    let mut c2 = Vec::with_capacity(1528 + 8);
     c2.write_u32::<BigEndian>(timestamp).unwrap(); // timestamp
     c2.write_u32::<BigEndian>(124).unwrap(); // our timestamp
     c2.write_all(&server_random).unwrap();
 
-    handshake_server.extend_data(&c2.into_inner());
-
     let mut writer = Vec::new();
-    handshake_server.handshake(&mut writer).unwrap();
+    handshake_server
+        .handshake(&mut std::io::Cursor::new(Bytes::from(c2)), &mut writer)
+        .unwrap();
 
     assert_eq!(handshake_server.state(), ServerHandshakeState::Finish)
 }
@@ -67,9 +66,10 @@ fn test_simple_handshake() {
 fn test_complex_handshake() {
     let mut handshake_server = HandshakeServer::default();
 
-    handshake_server.extend_data(&[3]); // version
+    let mut writer = Vec::with_capacity(3073);
+    writer.write_u8(3).unwrap(); // version
 
-    let mut c0c1 = Cursor::new(Vec::new());
+    let mut c0c1 = Vec::with_capacity(1528 + 8);
     c0c1.write_u32::<BigEndian>(123).unwrap(); // timestamp
     c0c1.write_u32::<BigEndian>(100).unwrap(); // client version
 
@@ -77,21 +77,18 @@ fn test_complex_handshake() {
         c0c1.write_u8((i % 256) as u8).unwrap();
     }
 
-    let data_digest = DigestProcessor::new(
-        Bytes::from(c0c1.into_inner()),
-        Bytes::from_static(define::RTMP_CLIENT_KEY_FIRST_HALF.as_bytes()),
-    );
+    let data_digest = DigestProcessor::new(Bytes::from(c0c1), define::RTMP_CLIENT_KEY_FIRST_HALF);
 
     let (first, second, third) = data_digest.generate_and_fill_digest(SchemaVersion::Schema1).unwrap();
 
-    // We need to create the digest of the client random
-
-    handshake_server.extend_data(&first);
-    handshake_server.extend_data(&second);
-    handshake_server.extend_data(&third);
+    writer.extend_from_slice(&first);
+    writer.extend_from_slice(&second);
+    writer.extend_from_slice(&third);
 
     let mut bytes = Vec::new();
-    handshake_server.handshake(&mut bytes).unwrap();
+    handshake_server
+        .handshake(&mut std::io::Cursor::new(Bytes::from(writer)), &mut bytes)
+        .unwrap();
 
     let s0 = &bytes[0..1];
     let s1 = &bytes[1..1537];
@@ -101,10 +98,7 @@ fn test_complex_handshake() {
     assert_ne!((&s1[..4]).read_u32::<BigEndian>().unwrap(), 0); // timestamp should not be zero
     assert_eq!((&s1[4..8]).read_u32::<BigEndian>().unwrap(), define::RTMP_SERVER_VERSION); // RTMP version
 
-    let data_digest = DigestProcessor::new(
-        Bytes::copy_from_slice(s1),
-        Bytes::from_static(define::RTMP_SERVER_KEY_FIRST_HALF.as_bytes()),
-    );
+    let data_digest = DigestProcessor::new(Bytes::copy_from_slice(s1), define::RTMP_SERVER_KEY_FIRST_HALF);
 
     let (digest, schema) = data_digest.read_digest().unwrap();
     assert_eq!(schema, SchemaVersion::Schema1);
@@ -112,13 +106,15 @@ fn test_complex_handshake() {
     assert_ne!((&s2[..4]).read_u32::<BigEndian>().unwrap(), 0); // timestamp should not be zero
     assert_eq!((&s2[4..8]).read_u32::<BigEndian>().unwrap(), 123); // our timestamp
 
-    let key_digest = DigestProcessor::new(Bytes::new(), Bytes::from_static(&define::RTMP_SERVER_KEY));
+    let key_digest = DigestProcessor::new(Bytes::new(), define::RTMP_SERVER_KEY);
 
-    let data_digest = DigestProcessor::new(Bytes::new(), key_digest.make_digest(&second, &[]).unwrap());
+    let key = key_digest.make_digest(&second, &[]).unwrap();
+    let data_digest = DigestProcessor::new(Bytes::new(), &key);
 
     assert_eq!(data_digest.make_digest(&s2[..1504], &[]).unwrap(), s2[1504..]);
 
-    let data_digest = DigestProcessor::new(Bytes::new(), key_digest.make_digest(&digest, &[]).unwrap());
+    let key = key_digest.make_digest(&digest, &[]).unwrap();
+    let data_digest = DigestProcessor::new(Bytes::new(), &key);
 
     let mut c2 = Vec::new();
     for i in 0..1528 {
@@ -127,11 +123,15 @@ fn test_complex_handshake() {
 
     let digest = data_digest.make_digest(&c2, &[]).unwrap();
 
-    handshake_server.extend_data(&c2);
-    handshake_server.extend_data(&digest);
+    let mut c2 = Vec::with_capacity(1528 + 8);
+    c2.write_u32::<BigEndian>(123).unwrap(); // timestamp
+    c2.write_u32::<BigEndian>(124).unwrap(); // our timestamp
+    c2.write_all(&digest).unwrap();
 
     let mut writer = Vec::new();
-    handshake_server.handshake(&mut writer).unwrap();
+    handshake_server
+        .handshake(&mut std::io::Cursor::new(Bytes::from(c2)), &mut writer)
+        .unwrap();
 
     assert_eq!(handshake_server.state(), ServerHandshakeState::Finish)
 }

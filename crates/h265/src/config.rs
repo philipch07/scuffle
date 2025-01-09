@@ -4,7 +4,7 @@ use std::io::{
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use scuffle_bitio::{BitReader, BitWriter};
+use scuffle_bytes_util::{BitReader, BitWriter};
 
 #[derive(Debug, Clone, PartialEq)]
 /// HEVC Decoder Configuration Record

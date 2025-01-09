@@ -1,8 +1,7 @@
 use std::io;
 
 use bytes::Bytes;
-use bytesio::bytes_reader::BytesCursor;
-use scuffle_bitio::{BitReader, BitWriter};
+use scuffle_bytes_util::{BitReader, BitWriter, BytesCursor};
 
 #[derive(Debug, Clone, PartialEq)]
 /// AV1 Codec Configuration Record

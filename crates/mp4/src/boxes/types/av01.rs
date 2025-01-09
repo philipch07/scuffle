@@ -3,7 +3,7 @@ use std::io;
 use av1::seq::SequenceHeaderObu;
 use av1::{ObuHeader, ObuType};
 use bytes::{Buf, Bytes};
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 use super::av1c::Av1C;
 use super::btrt::Btrt;

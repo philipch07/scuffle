@@ -1,5 +1,5 @@
 [package]
-name = "scuffle-bitio"
+name = "scuffle-bytes-util"
 version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -8,4 +8,5 @@ license = "MIT OR Apache-2.0"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
 
 [dependencies]
+bytes = "1.5"
 scuffle-workspace-hack.workspace = true

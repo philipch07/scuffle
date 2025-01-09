@@ -4,7 +4,7 @@ use std::io;
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 /// A Partial Audio Specific Config
 /// ISO/IEC 14496-3:2019(E) - 1.6

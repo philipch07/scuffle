@@ -1,9 +1,9 @@
-use std::io;
+use std::io::{self, Seek, Write};
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use bytes::{Bytes, BytesMut};
-use bytesio::bytes_reader::BytesReader;
+use bytes::Bytes;
 use rand::Rng;
+use scuffle_bytes_util::BytesCursor;
 
 use super::define::{RtmpVersion, SchemaVersion, ServerHandshakeState};
 use super::digest::DigestProcessor;
@@ -16,8 +16,6 @@ pub struct SimpleHandshakeServer {
     version: RtmpVersion,
     requested_version: RtmpVersion,
 
-    reader: BytesReader,
-
     state: ServerHandshakeState,
 
     c1_bytes: Bytes,
@@ -27,7 +25,6 @@ pub struct SimpleHandshakeServer {
 impl Default for SimpleHandshakeServer {
     fn default() -> Self {
         Self {
-            reader: BytesReader::new(BytesMut::default()),
             state: ServerHandshakeState::ReadC0C1,
             c1_bytes: Bytes::new(),
             c1_timestamp: 0,
@@ -44,8 +41,6 @@ pub struct ComplexHandshakeServer {
     version: RtmpVersion,
     requested_version: RtmpVersion,
 
-    reader: BytesReader,
-
     state: ServerHandshakeState,
     schema_version: SchemaVersion,
 
@@ -57,7 +52,6 @@ pub struct ComplexHandshakeServer {
 impl Default for ComplexHandshakeServer {
     fn default() -> Self {
         Self {
-            reader: BytesReader::new(BytesMut::default()),
             state: ServerHandshakeState::ReadC0C1,
             c1_digest: Bytes::default(),
             c1_timestamp: 0,
@@ -70,27 +64,23 @@ impl Default for ComplexHandshakeServer {
 }
 
 impl SimpleHandshakeServer {
-    pub fn extend_data(&mut self, data: &[u8]) {
-        self.reader.extend_from_slice(data);
-    }
-
-    pub fn handshake(&mut self, writer: &mut impl io::Write) -> Result<(), HandshakeError> {
+    pub fn handshake(&mut self, input: &mut io::Cursor<Bytes>, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
         loop {
             match self.state {
                 ServerHandshakeState::ReadC0C1 => {
-                    self.read_c0()?;
-                    self.read_c1()?;
+                    self.read_c0(input)?;
+                    self.read_c1(input)?;
                     self.state = ServerHandshakeState::WriteS0S1S2;
                 }
                 ServerHandshakeState::WriteS0S1S2 => {
-                    self.write_s0(writer)?;
-                    self.write_s1(writer)?;
-                    self.write_s2(writer)?;
+                    self.write_s0(output)?;
+                    self.write_s1(output)?;
+                    self.write_s2(output)?;
                     self.state = ServerHandshakeState::ReadC2;
                     break;
                 }
                 ServerHandshakeState::ReadC2 => {
-                    self.read_c2()?;
+                    self.read_c2(input)?;
                     self.state = ServerHandshakeState::Finish;
                 }
                 ServerHandshakeState::Finish => {
@@ -102,10 +92,10 @@ impl SimpleHandshakeServer {
         Ok(())
     }
 
-    fn read_c0(&mut self) -> Result<(), HandshakeError> {
+    fn read_c0(&mut self, input: &mut io::Cursor<Bytes>) -> Result<(), HandshakeError> {
         // Version (8 bits): In C0, this field identifies the RTMP version
         //  requested by the client.
-        let requested_version = self.reader.read_u8()?;
+        let requested_version = input.read_u8()?;
         self.requested_version = match requested_version {
             3 => RtmpVersion::Version3,
             _ => RtmpVersion::Unknown,
@@ -118,16 +108,16 @@ impl SimpleHandshakeServer {
         Ok(())
     }
 
-    fn read_c1(&mut self) -> Result<(), HandshakeError> {
+    fn read_c1(&mut self, input: &mut io::Cursor<Bytes>) -> Result<(), HandshakeError> {
         // Time (4 bytes): This field contains a timestamp, which SHOULD be
         //  used as the epoch for all future chunks sent from this endpoint.
         //  This may be 0, or some arbitrary value. To synchronize multiple
         //  chunkstreams, the endpoint may wish to send the current value of
         //  the other chunkstream’s timestamp.
-        self.c1_timestamp = self.reader.read_u32::<BigEndian>()?;
+        self.c1_timestamp = input.read_u32::<BigEndian>()?;
 
         // Zero (4 bytes): This field MUST be all 0s.
-        self.reader.read_u32::<BigEndian>()?;
+        input.read_u32::<BigEndian>()?;
 
         // Random data (1528 bytes): This field can contain any arbitrary
         //  values. Since each endpoint has to distinguish between the
@@ -135,12 +125,12 @@ impl SimpleHandshakeServer {
         //  initiated by its peer,this data SHOULD send something sufficiently
         //  random. But there is no need for cryptographically-secure
         //  randomness, or even dynamic values.
-        self.c1_bytes = self.reader.read_bytes(1528)?.freeze();
+        self.c1_bytes = input.extract_bytes(define::RTMP_HANDSHAKE_SIZE - define::TIME_VERSION_LENGTH)?;
 
         Ok(())
     }
 
-    fn read_c2(&mut self) -> Result<(), HandshakeError> {
+    fn read_c2(&mut self, input: &mut io::Cursor<Bytes>) -> Result<(), HandshakeError> {
         // We don't care too much about the data in C2, so we just read it
         //  and discard it.
         // We should technically check that the timestamp is the same as
@@ -148,34 +138,34 @@ impl SimpleHandshakeServer {
         //  data is the same as the one we sent in S2, but we don't care.
         //  Some clients are not strict to spec and send different data.
         // We can just ignore it and not be super strict.
-        self.reader.read_bytes(define::RTMP_HANDSHAKE_SIZE)?;
+        input.seek_relative(define::RTMP_HANDSHAKE_SIZE as i64)?;
 
         Ok(())
     }
 
     /// Defined in RTMP Specification 1.0 - 5.2.2
-    fn write_s0(&self, writer: &mut impl io::Write) -> Result<(), HandshakeError> {
+    fn write_s0(&mut self, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
         // Version (8 bits): In S0, this field identifies the RTMP
         //  version selected by the server. The version defined by this
         //  specification is 3. A server that does not recognize the
         //  client’s requested version SHOULD respond with 3. The client MAY
         //  choose to degrade to version 3, or to abandon the handshake.
-        writer.write_u8(self.version as u8)?;
+        output.write_u8(self.version as u8)?;
 
         Ok(())
     }
 
     /// Defined in RTMP Specification 1.0 - 5.2.3
-    fn write_s1(&self, writer: &mut impl io::Write) -> Result<(), HandshakeError> {
+    fn write_s1(&mut self, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
         // Time (4 bytes): This field contains a timestamp, which SHOULD be
         //  used as the epoch for all future chunks sent from this endpoint.
         //  This may be 0, or some arbitrary value. To synchronize multiple
         //  chunkstreams, the endpoint may wish to send the current value of
         //  the other chunkstream’s timestamp.
-        writer.write_u32::<BigEndian>(utils::current_time())?;
+        output.write_u32::<BigEndian>(utils::current_time())?;
 
         // Zero(4 bytes): This field MUST be all 0s.
-        writer.write_u32::<BigEndian>(0)?;
+        output.write_u32::<BigEndian>(0)?;
 
         // Random data (1528 bytes): This field can contain any arbitrary
         //  values. Since each endpoint has to distinguish between the
@@ -185,54 +175,50 @@ impl SimpleHandshakeServer {
         //  randomness, or even dynamic values.
         let mut rng = rand::thread_rng();
         for _ in 0..1528 {
-            writer.write_u8(rng.gen())?;
+            output.write_u8(rng.gen())?;
         }
 
         Ok(())
     }
 
-    fn write_s2(&self, writer: &mut impl io::Write) -> Result<(), HandshakeError> {
+    fn write_s2(&mut self, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
         // Time (4 bytes): This field MUST contain the timestamp sent by the C1 (for
         // S2).
-        writer.write_u32::<BigEndian>(self.c1_timestamp)?;
+        output.write_u32::<BigEndian>(self.c1_timestamp)?;
 
         // Time2 (4 bytes): This field MUST contain the timestamp at which the
         //  previous packet(s1 or c1) sent by the peer was read.
-        writer.write_u32::<BigEndian>(utils::current_time())?;
+        output.write_u32::<BigEndian>(utils::current_time())?;
 
         // Random echo (1528 bytes): This field MUST contain the random data
         //  field sent by the peer in S1 (for C2) or S2 (for C1). Either peer
         //  can use the time and time2 fields together with the current
         //  timestamp as a quick estimate of the bandwidth and/or latency of
         //  the connection, but this is unlikely to be useful.
-        writer.write_all(&self.c1_bytes[..])?;
+        output.write_all(&self.c1_bytes[..])?;
 
         Ok(())
     }
 }
 
 impl ComplexHandshakeServer {
-    pub fn extend_data(&mut self, data: &[u8]) {
-        self.reader.extend_from_slice(data);
-    }
-
-    pub fn handshake(&mut self, writer: &mut impl io::Write) -> Result<(), HandshakeError> {
+    pub fn handshake(&mut self, input: &mut io::Cursor<Bytes>, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
         loop {
             match self.state {
                 ServerHandshakeState::ReadC0C1 => {
-                    self.read_c0()?;
-                    self.read_c1()?;
+                    self.read_c0(input)?;
+                    self.read_c1(input)?;
                     self.state = ServerHandshakeState::WriteS0S1S2;
                 }
                 ServerHandshakeState::WriteS0S1S2 => {
-                    self.write_s0(writer)?;
-                    self.write_s1(writer)?;
-                    self.write_s2(writer)?;
+                    self.write_s0(output)?;
+                    self.write_s1(output)?;
+                    self.write_s2(output)?;
                     self.state = ServerHandshakeState::ReadC2;
                     break;
                 }
                 ServerHandshakeState::ReadC2 => {
-                    self.read_c2()?;
+                    self.read_c2(input)?;
                     self.state = ServerHandshakeState::Finish;
                 }
                 ServerHandshakeState::Finish => {
@@ -244,10 +230,10 @@ impl ComplexHandshakeServer {
         Ok(())
     }
 
-    fn read_c0(&mut self) -> Result<(), HandshakeError> {
+    fn read_c0(&mut self, input: &mut io::Cursor<Bytes>) -> Result<(), HandshakeError> {
         // Version (8 bits): In C0, this field identifies the RTMP version
         //  requested by the client.
-        let requested_version = self.reader.read_u8()?;
+        let requested_version = input.read_u8()?;
         self.requested_version = match requested_version {
             3 => RtmpVersion::Version3,
             _ => RtmpVersion::Unknown,
@@ -260,8 +246,8 @@ impl ComplexHandshakeServer {
         Ok(())
     }
 
-    fn read_c1(&mut self) -> Result<(), HandshakeError> {
-        let c1_bytes = self.reader.read_bytes(define::RTMP_HANDSHAKE_SIZE)?.freeze();
+    fn read_c1(&mut self, input: &mut io::Cursor<Bytes>) -> Result<(), HandshakeError> {
+        let c1_bytes = input.extract_bytes(define::RTMP_HANDSHAKE_SIZE)?;
 
         //  The first 4 bytes of C1 are the timestamp.
         self.c1_timestamp = (&c1_bytes[0..4]).read_u32::<BigEndian>()?;
@@ -270,7 +256,7 @@ impl ComplexHandshakeServer {
         self.c1_version = (&c1_bytes[4..8]).read_u32::<BigEndian>()?;
 
         // The following 764 bytes are either the digest or the key.
-        let data_digest = DigestProcessor::new(c1_bytes, Bytes::from_static(define::RTMP_CLIENT_KEY_FIRST_HALF.as_bytes()));
+        let data_digest = DigestProcessor::new(c1_bytes, define::RTMP_CLIENT_KEY_FIRST_HALF);
 
         let (c1_digest_data, schema_version) = data_digest.read_digest()?;
 
@@ -280,23 +266,23 @@ impl ComplexHandshakeServer {
         Ok(())
     }
 
-    fn read_c2(&mut self) -> Result<(), HandshakeError> {
+    fn read_c2(&mut self, input: &mut io::Cursor<Bytes>) -> Result<(), HandshakeError> {
         // We don't care too much about the data in C2, so we just read it
         //  and discard it.
-        self.reader.read_bytes(define::RTMP_HANDSHAKE_SIZE)?;
+        input.seek_relative(define::RTMP_HANDSHAKE_SIZE as i64)?;
 
         Ok(())
     }
 
-    fn write_s0(&self, writer: &mut impl io::Write) -> Result<(), HandshakeError> {
+    fn write_s0(&mut self, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
         // The version of the protocol used in the handshake.
         // This server is using version 3 of the protocol.
-        writer.write_u8(self.version as u8)?; // 8 bits version
+        output.write_u8(self.version as u8)?; // 8 bits version
 
         Ok(())
     }
 
-    fn write_s1(&self, main_writer: &mut impl io::Write) -> Result<(), HandshakeError> {
+    fn write_s1(&self, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
         let mut writer = Vec::new();
         // The first 4 bytes of S1 are the timestamp.
         writer.write_u32::<BigEndian>(utils::current_time())?;
@@ -312,10 +298,7 @@ impl ComplexHandshakeServer {
         }
 
         // The digest is loaded with the data that we just generated.
-        let data_digest = DigestProcessor::new(
-            Bytes::from(writer),
-            Bytes::from_static(define::RTMP_SERVER_KEY_FIRST_HALF.as_bytes()),
-        );
+        let data_digest = DigestProcessor::new(Bytes::from(writer), define::RTMP_SERVER_KEY_FIRST_HALF);
 
         // We use the same schema version as the client.
         let (first, second, third) = data_digest.generate_and_fill_digest(self.schema_version)?;
@@ -323,21 +306,21 @@ impl ComplexHandshakeServer {
         // We then write the parts of the digest to the main writer.
         // Note: this is not a security issue since we do not flush the buffer until we
         // are done  with the handshake.
-        main_writer.write_all(&first)?;
-        main_writer.write_all(&second)?;
-        main_writer.write_all(&third)?;
+        output.write_all(&first)?;
+        output.write_all(&second)?;
+        output.write_all(&third)?;
 
         Ok(())
     }
 
-    fn write_s2(&self, main_writer: &mut impl io::Write) -> Result<(), HandshakeError> {
-        let mut writer = Vec::new();
+    fn write_s2(&self, output: &mut Vec<u8>) -> Result<(), HandshakeError> {
+        let start = output.len();
 
         // We write the current time to the first 4 bytes.
-        writer.write_u32::<BigEndian>(utils::current_time())?;
+        output.write_u32::<BigEndian>(utils::current_time())?;
 
         // We write the timestamp from C1 to the next 4 bytes.
-        writer.write_u32::<BigEndian>(self.c1_timestamp)?;
+        output.write_u32::<BigEndian>(self.c1_timestamp)?;
 
         // We then write 1528 bytes of random data. (764 bytes for digest, 764 bytes for
         // key)
@@ -345,31 +328,31 @@ impl ComplexHandshakeServer {
 
         // define::RTMP_HANDSHAKE_SIZE - define::TIME_VERSION_LENGTH because we already
         // wrote 8 bytes. (timestamp and c1 timestamp)
-        for _ in 0..define::RTMP_HANDSHAKE_SIZE - define::TIME_VERSION_LENGTH {
-            writer.write_u8(rng.gen())?;
+        for _ in 0..define::RTMP_HANDSHAKE_SIZE - define::RTMP_DIGEST_LENGTH - define::TIME_VERSION_LENGTH {
+            output.write_u8(rng.gen())?;
         }
 
         // The digest is loaded with the data that we just generated.
         // This digest is used to generate the key. (digest of c1)
-        let key_digest = DigestProcessor::new(Bytes::new(), Bytes::from_static(&define::RTMP_SERVER_KEY));
-
-        // We then extract the first 1504 bytes of the data.
-        // define::RTMP_HANDSHAKE_SIZE - 32 = 1504
-        // 32 is the size of the digest. for C2S2
-        let data = &writer[..define::RTMP_HANDSHAKE_SIZE - define::RTMP_DIGEST_LENGTH];
+        let key_digest = DigestProcessor::new(Bytes::new(), define::RTMP_SERVER_KEY);
 
         // Create a digest of the random data using a key generated from the digest of
         // C1.
-        let data_digest = DigestProcessor::new(Bytes::new(), key_digest.make_digest(&self.c1_digest, &[])?);
+        let key = key_digest.make_digest(&self.c1_digest, &[])?;
+        let data_digest = DigestProcessor::new(Bytes::new(), &key);
 
         // We then generate a digest using the key and the random data
-        let digest = data_digest.make_digest(data, &[])?;
+        // We then extract the first 1504 bytes of the data.
+        // define::RTMP_HANDSHAKE_SIZE - 32 = 1504
+        // 32 is the size of the digest. for C2S2
+        let digest = data_digest.make_digest(
+            &output[start..start + define::RTMP_HANDSHAKE_SIZE - define::RTMP_DIGEST_LENGTH],
+            &[],
+        )?;
 
         // Write the random data  to the main writer.
-        main_writer.write_all(data)?; // 1504 bytes of random data
-        main_writer.write_all(&digest)?; // 32 bytes of digest
-
         // Total Write = 1536 bytes (1504 + 32)
+        output.write_all(&digest)?; // 32 bytes of digest
 
         Ok(())
     }
@@ -382,72 +365,44 @@ impl ComplexHandshakeServer {
 // Client <- S1 <- Server
 // Client <- S2 <- Server
 // Client -> C2 -> Server
-pub struct HandshakeServer {
-    simple_handshaker: SimpleHandshakeServer,
-    complex_handshaker: ComplexHandshakeServer,
-    is_complex: bool,
-    saved_data: BytesMut,
+pub enum HandshakeServer {
+    Simple(SimpleHandshakeServer),
+    Complex(ComplexHandshakeServer),
 }
 
 impl Default for HandshakeServer {
     fn default() -> Self {
-        Self {
-            simple_handshaker: SimpleHandshakeServer::default(),
-            complex_handshaker: ComplexHandshakeServer::default(),
-            // We attempt to do a complex handshake by default. If the client does not support it,
-            // we fallback to simple.
-            is_complex: true,
-            saved_data: BytesMut::default(),
-        }
+        Self::Complex(ComplexHandshakeServer::default())
     }
 }
 
 impl HandshakeServer {
-    pub fn extend_data(&mut self, data: &[u8]) {
-        if self.is_complex {
-            self.complex_handshaker.extend_data(data);
-
-            // We same the data in case we need to switch to simple handshake.
-            self.saved_data.extend_from_slice(data);
-        } else {
-            self.simple_handshaker.extend_data(data);
-        }
-    }
-
     pub fn state(&mut self) -> ServerHandshakeState {
-        if self.is_complex {
-            self.complex_handshaker.state
-        } else {
-            self.simple_handshaker.state
+        match self {
+            HandshakeServer::Simple(handshaker) => handshaker.state,
+            HandshakeServer::Complex(handshaker) => handshaker.state,
         }
     }
 
-    pub fn extract_remaining_bytes(&mut self) -> BytesMut {
-        if self.is_complex {
-            self.complex_handshaker.reader.extract_remaining_bytes()
-        } else {
-            self.simple_handshaker.reader.extract_remaining_bytes()
-        }
-    }
+    pub fn handshake(&mut self, input: &mut io::Cursor<Bytes>, writer: &mut Vec<u8>) -> Result<(), HandshakeError> {
+        match self {
+            HandshakeServer::Complex(handshaker) => {
+                let position = input.position();
+                let result = handshaker.handshake(input, writer);
+                if result.is_err() {
+                    // Complex handshake failed, switch to simple handshake.
+                    let mut simple = SimpleHandshakeServer::default();
 
-    pub fn handshake(&mut self, writer: &mut impl io::Write) -> Result<(), HandshakeError> {
-        if self.is_complex {
-            let result = self.complex_handshaker.handshake(writer);
-            if result.is_err() {
-                // Complex handshake failed, switch to simple handshake.
-                self.is_complex = false;
+                    input.seek(io::SeekFrom::Start(position))?;
 
-                // Get the data that was saved in case we need to switch to simple handshake.
-                let data = self.saved_data.clone();
-
-                // We then extend the data to the simple handshaker.
-                self.extend_data(&data[..]);
-
-                // We then perform the handshake.
-                self.simple_handshaker.handshake(writer)?;
+                    // We then perform the handshake.
+                    simple.handshake(input, writer)?;
+                    *self = HandshakeServer::Simple(simple);
+                }
             }
-        } else {
-            self.simple_handshaker.handshake(writer)?;
+            HandshakeServer::Simple(handshaker) => {
+                handshaker.handshake(input, writer)?;
+            }
         }
 
         Ok(())

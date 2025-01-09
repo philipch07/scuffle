@@ -4,8 +4,7 @@ use std::io::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::{Buf, Bytes};
-use bytesio::bytes_reader::BytesCursor;
-use scuffle_bitio::BitWriter;
+use scuffle_bytes_util::{BitWriter, BytesCursor};
 
 #[derive(Debug, Clone, PartialEq)]
 /// AVC (H.264) Decoder Configuration Record
@@ -43,7 +42,7 @@ impl AVCDecoderConfigurationRecord {
         let mut sps = Vec::with_capacity(num_of_sequence_parameter_sets as usize);
         for _ in 0..num_of_sequence_parameter_sets {
             let sps_length = reader.read_u16::<BigEndian>()?;
-            let sps_data = reader.read_slice(sps_length as usize)?;
+            let sps_data = reader.extract_bytes(sps_length as usize)?;
             sps.push(sps_data);
         }
 
@@ -51,7 +50,7 @@ impl AVCDecoderConfigurationRecord {
         let mut pps = Vec::with_capacity(num_of_picture_parameter_sets as usize);
         for _ in 0..num_of_picture_parameter_sets {
             let pps_length = reader.read_u16::<BigEndian>()?;
-            let pps_data = reader.read_slice(pps_length as usize)?;
+            let pps_data = reader.extract_bytes(pps_length as usize)?;
             pps.push(pps_data);
         }
 
@@ -70,7 +69,7 @@ impl AVCDecoderConfigurationRecord {
                     let mut sequence_parameter_set_ext = Vec::with_capacity(number_of_sequence_parameter_set_ext as usize);
                     for _ in 0..number_of_sequence_parameter_set_ext {
                         let sps_ext_length = reader.read_u16::<BigEndian>()?;
-                        let sps_ext_data = reader.read_slice(sps_ext_length as usize)?;
+                        let sps_ext_data = reader.extract_bytes(sps_ext_length as usize)?;
                         sequence_parameter_set_ext.push(sps_ext_data);
                     }
 

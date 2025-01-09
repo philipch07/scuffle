@@ -55,16 +55,16 @@ pub const CHUNK_LENGTH: usize = (RTMP_HANDSHAKE_SIZE - TIME_VERSION_LENGTH) / 2;
 
 /// This is the first half of the server key.
 /// Defined https://blog.csdn.net/win_lin/article/details/13006803
-pub const RTMP_SERVER_KEY_FIRST_HALF: &str = "Genuine Adobe Flash Media Server 001";
+pub const RTMP_SERVER_KEY_FIRST_HALF: &[u8] = b"Genuine Adobe Flash Media Server 001";
 
 /// This is the first half of the client key.
 /// Defined https://blog.csdn.net/win_lin/article/details/13006803
-pub const RTMP_CLIENT_KEY_FIRST_HALF: &str = "Genuine Adobe Flash Player 001";
+pub const RTMP_CLIENT_KEY_FIRST_HALF: &[u8] = b"Genuine Adobe Flash Player 001";
 
 /// This is the second half of the server/client key.
 /// Used for the complex handshake.
 /// Defined https://blog.csdn.net/win_lin/article/details/13006803
-pub const RTMP_SERVER_KEY: [u8; 68] = [
+pub const RTMP_SERVER_KEY: &[u8] = &[
     0x47, 0x65, 0x6e, 0x75, 0x69, 0x6e, 0x65, 0x20, 0x41, 0x64, 0x6f, 0x62, 0x65, 0x20, 0x46, 0x6c, 0x61, 0x73, 0x68, 0x20,
     0x4d, 0x65, 0x64, 0x69, 0x61, 0x20, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x20, 0x30, 0x30, 0x31, 0xf0, 0xee, 0xc2, 0x4a,
     0x80, 0x68, 0xbe, 0xe8, 0x2e, 0x00, 0xd0, 0xd1, 0x02, 0x9e, 0x7e, 0x57, 0x6e, 0xec, 0x5d, 0x2d, 0x29, 0x80, 0x6f, 0xab,

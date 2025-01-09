@@ -1,5 +1,3 @@
-use bytesio::bytesio_errors::BytesIOError;
-
 use crate::chunk::{ChunkDecodeError, ChunkEncodeError};
 use crate::handshake::{DigestError, HandshakeError};
 use crate::messages::MessageError;
@@ -11,8 +9,8 @@ use crate::{SessionError, UniqueID};
 
 #[test]
 fn test_error_display() {
-    let error = SessionError::BytesIO(BytesIOError::ClientClosed);
-    assert_eq!(error.to_string(), "bytesio error: client closed");
+    let error = SessionError::Io(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "client closed"));
+    assert_eq!(error.to_string(), "io error: client closed");
 
     let error = SessionError::Handshake(HandshakeError::Digest(DigestError::NotEnoughData));
     assert_eq!(error.to_string(), "handshake error: digest error: not enough data");
