@@ -62,7 +62,7 @@ impl<W: io::Write> BitWriter<W> {
     /// Aligns the writer to the byte boundary
     pub fn align(&mut self) -> io::Result<()> {
         if !self.is_aligned() {
-            self.write_bits(0, 8 - (self.bit_pos % 8))?;
+            self.write_bits(0, 8 - self.bit_pos())?;
         }
 
         Ok(())
