@@ -215,7 +215,7 @@ pub fn impl_main(input: TokenStream) -> Result<TokenStream, syn::Error> {
 
                 #(#services)*
 
-                #entry_as_global::on_services_start().await?;
+                #entry_as_global::on_services_start(&#global_ident).await?;
 
                 macro_rules! handle_service_exit {
                     ($remaining:ident) => {{
