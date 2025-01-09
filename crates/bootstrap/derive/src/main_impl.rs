@@ -215,6 +215,8 @@ pub fn impl_main(input: TokenStream) -> Result<TokenStream, syn::Error> {
 
                 #(#services)*
 
+                #entry_as_global::on_services_start().await?;
+
                 macro_rules! handle_service_exit {
                     ($remaining:ident) => {{
                         let ((name, result), _, remaining) = #crate_path::prelude::futures::future::select_all($remaining).await;
