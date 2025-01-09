@@ -12,6 +12,8 @@ A utility crate for creating binaries.
 ## Usage
 
 ```rust
+use std::sync::Arc;
+
 /// Our global state
 struct Global;
 
@@ -28,7 +30,7 @@ impl scuffle_bootstrap::global::GlobalWithoutConfig for Global {
 struct MySvc;
 
 impl scuffle_bootstrap::service::Service<Global> for MySvc {
-    async fn run(self, _: Arc<Global>, _: scuffle_context::Context) -> anyhow::Result<()> {
+    async fn run(self, global: Arc<Global>, ctx: scuffle_context::Context) -> anyhow::Result<()> {
         println!("running");
 
         // Do some work here
@@ -40,7 +42,7 @@ impl scuffle_bootstrap::service::Service<Global> for MySvc {
 }
 
 // This generates the main function which runs all the services
-main! {
+scuffle_bootstrap::main! {
     Global {
         scuffle_signal::SignalSvc,
         MySvc,

@@ -1,17 +1,12 @@
 //! # scuffle-bootstrap
 //!
-//! > WARNING
-//! > This crate is under active development and may not be stable.
-//!
-//! [![crates.io](https://img.shields.io/crates/v/scuffle-bootstrap.svg)](https://crates.io/crates/scuffle-bootstrap) [![docs.rs](https://img.shields.io/docsrs/scuffle-bootstrap)](https://docs.rs/scuffle-bootstrap)
-//!
-//! ---
-//!
 //! A utility crate for creating binaries.
 //!
 //! ## Usage
 //!
-//! ```rust,ignore
+//! ```rust,no_run
+//! use std::sync::Arc;
+//!
 //! /// Our global state
 //! struct Global;
 //!
@@ -28,7 +23,8 @@
 //! struct MySvc;
 //!
 //! impl scuffle_bootstrap::service::Service<Global> for MySvc {
-//!     async fn run(self, _: Arc<Global>, _: scuffle_context::Context) -> anyhow::Result<()> {
+//!     async fn run(self, global: Arc<Global>, ctx: scuffle_context::Context) -> anyhow::Result<()> {
+//!         # let _ = global;
 //!         println!("running");
 //!
 //!         // Do some work here
@@ -40,7 +36,7 @@
 //! }
 //!
 //! // This generates the main function which runs all the services
-//! main! {
+//! scuffle_bootstrap::main! {
 //!     Global {
 //!         scuffle_signal::SignalSvc,
 //!         MySvc,

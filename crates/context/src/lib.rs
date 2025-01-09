@@ -1,12 +1,5 @@
 //! # scuffle-context
 //!
-//! > WARNING
-//! > This crate is under active development and may not be stable.
-//!
-//!  [![crates.io](https://img.shields.io/crates/v/scuffle-context.svg)](https://crates.io/crates/scuffle-context) [![docs.rs](https://img.shields.io/docsrs/scuffle-context)](https://docs.rs/scuffle-context)
-//!
-//! ---
-//!
 //! A crate designed to provide the ability to cancel futures using a context
 //! go-like approach, allowing for graceful shutdowns and cancellations.
 //!
