@@ -1,39 +1,37 @@
 mod? local
 
-# An alias for cargo +nightly xtask check
-powerset *args:
-    cargo +nightly xtask powerset {{args}}
+# By default we use the nightly toolchain, however you can override this by setting the RUST_TOOLCHAIN environment variable.
+export RUST_TOOLCHAIN := env_var_or_default('RUST_TOOLCHAIN', 'nightly')
 
-# An alias for cargo +nightly fmt --all
+# An alias for cargo xtask check
+powerset *args:
+    cargo +{{RUST_TOOLCHAIN}} xtask powerset {{args}}
+
+# An alias for cargo fmt --all
 fmt *args:
-    cargo +nightly fmt --all {{args}}
+    cargo +{{RUST_TOOLCHAIN}} fmt --all {{args}}
 
 lint *args:
-    cargo +nightly clippy --fix --allow-dirty --all-targets --allow-staged {{args}}
+    cargo +{{RUST_TOOLCHAIN}} clippy --fix --allow-dirty --all-targets --allow-staged {{args}}
 
 test *args:
     #!/bin/bash
     set -euo pipefail
 
-    # We use the nightly toolchain for coverage since it supports branch & no-coverage flags.
-    if [ -z ${RUST_TOOLCHAIN+x} ]; then
-        export RUSTUP_TOOLCHAIN=nightly
-    fi
-
-    INSTA_FORCE_PASS=1 cargo llvm-cov clean --workspace
-    INSTA_FORCE_PASS=1 cargo llvm-cov nextest --include-build-script --no-report -- {{args}}
+    INSTA_FORCE_PASS=1 cargo +{{RUST_TOOLCHAIN}} llvm-cov clean --workspace
+    INSTA_FORCE_PASS=1 cargo +{{RUST_TOOLCHAIN}} llvm-cov nextest --include-build-script --no-report -- {{args}}
     # Coverage for doctests is currently broken in llvm-cov.
     # Once it fully works we can add the `--doctests` flag to the test and report command again.
-    cargo llvm-cov test --doc --no-report -- {{args}}
+    cargo +{{RUST_TOOLCHAIN}} llvm-cov test --doc --no-report -- {{args}}
 
     # Do not generate the coverage report on CI
     cargo insta review
-    cargo llvm-cov report --lcov --output-path ./lcov.info
-    cargo llvm-cov report --html
+    cargo +{{RUST_TOOLCHAIN}} llvm-cov report --lcov --output-path ./lcov.info
+    cargo +{{RUST_TOOLCHAIN}} llvm-cov report --html
 
 deny *args:
-    cargo deny {{args}} --all-features check
+    cargo +{{RUST_TOOLCHAIN}} deny {{args}} --all-features check
 
 workspace-hack:
-    cargo hakari manage-deps
-    cargo hakari generate
+    cargo +{{RUST_TOOLCHAIN}} hakari manage-deps
+    cargo +{{RUST_TOOLCHAIN}} hakari generate

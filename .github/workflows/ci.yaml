@@ -39,7 +39,7 @@ jobs:
           shared-key: clippy
 
       - name: Make sure code is linted
-        run: cargo clippy
+        run: cargo +${{ env.RUST_TOOLCHAIN }} clippy
 
   fmt:
     name: Fmt
@@ -56,7 +56,7 @@ jobs:
           components: rustfmt
 
       - name: Make sure code is formatted
-        run: cargo fmt --check
+        run: cargo +${{ env.RUST_TOOLCHAIN }} fmt --check
 
   hakari:
     name: Hakari
@@ -77,9 +77,9 @@ jobs:
         run: |
           set -xeo pipefail
 
-          cargo hakari manage-deps --dry-run
-          cargo hakari generate --diff
-          cargo hakari verify
+          cargo +${{ env.RUST_TOOLCHAIN }} hakari manage-deps --dry-run
+          cargo +${{ env.RUST_TOOLCHAIN }} hakari generate --diff
+          cargo +${{ env.RUST_TOOLCHAIN }} hakari verify
 
   test:
     name: Test
@@ -131,9 +131,9 @@ jobs:
       # Once it fully works we can add the `--doctests` flag to the test and report command again.
       - name: Run tests
         run: |
-          cargo llvm-cov nextest --no-fail-fast --all-features --profile ci --no-report
-          cargo llvm-cov test --all-features --doc --no-report
-          cargo llvm-cov report --lcov --output-path ./lcov.info
+          cargo +${{ env.RUST_TOOLCHAIN }} llvm-cov nextest --no-fail-fast --all-features --profile ci --no-report
+          cargo +${{ env.RUST_TOOLCHAIN }} llvm-cov test --all-features --doc --no-report
+          cargo +${{ env.RUST_TOOLCHAIN }} llvm-cov report --lcov --output-path ./lcov.info
 
       - name: Codecov Override
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
