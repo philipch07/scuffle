@@ -1,6 +1,6 @@
 //! # scuffle-bootstrap
 //!
-//! > [!WARNING]
+//! > WARNING
 //! > This crate is under active development and may not be stable.
 //!
 //! [![crates.io](https://img.shields.io/crates/v/scuffle-bootstrap.svg)](https://crates.io/crates/scuffle-bootstrap) [![docs.rs](https://img.shields.io/docsrs/scuffle-bootstrap)](https://docs.rs/scuffle-bootstrap)
