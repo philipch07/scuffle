@@ -8,7 +8,7 @@ mod main_impl;
 // 	handle_error(service_impl::impl_service(args.into(), input.into()))
 // }
 
-/// This macro is used to generate the main function for the given global type
+/// This macro is used to generate the main function for a given global type
 /// and service types. It will run all the services in parallel and wait for
 /// them to finish before exiting.
 ///
@@ -23,6 +23,11 @@ mod main_impl;
 ///     }
 /// }
 /// ```
+///
+/// # See Also
+///
+/// - `scuffle_bootstrap::Service`
+/// - `scuffle_bootstrap::Global`
 #[proc_macro]
 pub fn main(input: TokenStream) -> TokenStream {
     handle_error(main_impl::impl_main(input.into()))

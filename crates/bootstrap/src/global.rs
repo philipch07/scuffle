@@ -82,6 +82,7 @@ pub trait Global: Send + Sync + 'static {
     type Config: ConfigParser + Send + 'static;
 
     /// Pre-initialization.
+    ///
     /// Called before initializing the tokio runtime and loading the config.
     /// Returning an error from this function will cause the process to
     /// immediately exit without calling [`on_exit`](Global::on_exit) first.
@@ -97,12 +98,14 @@ pub trait Global: Send + Sync + 'static {
     }
 
     /// Initialize the global.
+    ///
     /// Called to initialize the global.
     /// Returning an error from this function will cause the process to
     /// immediately exit without calling [`on_exit`](Global::on_exit) first.
     fn init(config: Self::Config) -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send;
 
     /// Called right before all services start.
+    ///
     /// Returning an error from this function will prevent any service from
     /// starting and [`on_exit`](Global::on_exit) will be called with the result
     /// of this function.
@@ -142,6 +145,7 @@ pub trait Global: Send + Sync + 'static {
 }
 
 /// Simplified version of [`Global`].
+///
 /// Implementing this trait will automatically implement [`Global`] for your
 /// type. This trait is intended to be used when you don't need a config for
 /// your global.
@@ -155,12 +159,14 @@ pub trait GlobalWithoutConfig: Send + Sync + 'static {
     }
 
     /// Initialize the global.
+    ///
     /// Called to initialize the global.
     /// Returning an error from this function will cause the process to
     /// immediately exit without calling [`on_exit`](Global::on_exit) first.
     fn init() -> impl std::future::Future<Output = anyhow::Result<Arc<Self>>> + Send;
 
     /// Called right before all services start.
+    ///
     /// Returning an error from this function will prevent any service from
     /// starting and [`on_exit`](Global::on_exit) will be called with the result
     /// of this function.
