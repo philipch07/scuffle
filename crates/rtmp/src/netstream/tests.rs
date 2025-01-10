@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
-use amf0::{Amf0Reader, Amf0Value, Amf0WriteError};
 use bytes::{BufMut, BytesMut};
+use scuffle_amf0::{Amf0Decoder, Amf0Value, Amf0WriteError};
 
 use crate::chunk::{ChunkDecoder, ChunkEncodeError, ChunkEncoder};
 use crate::netstream::{NetStreamError, NetStreamWriter};
@@ -29,19 +27,22 @@ fn test_netstream_write_on_status() {
     assert_eq!(chunk.message_header.msg_type_id as u8, 0x14);
     assert_eq!(chunk.message_header.msg_stream_id, 0);
 
-    let mut amf0_reader = Amf0Reader::new(chunk.payload);
-    let values = amf0_reader.read_all().unwrap();
+    let mut amf0_reader = Amf0Decoder::new(&chunk.payload);
+    let values = amf0_reader.decode_all().unwrap();
 
     assert_eq!(values.len(), 4);
-    assert_eq!(values[0], Amf0Value::String("onStatus".to_string())); // command name
+    assert_eq!(values[0], Amf0Value::String("onStatus".into())); // command name
     assert_eq!(values[1], Amf0Value::Number(1.0)); // transaction id
     assert_eq!(values[2], Amf0Value::Null); // command object
     assert_eq!(
         values[3],
-        Amf0Value::Object(HashMap::from([
-            ("code".to_string(), Amf0Value::String("idk".to_string())),
-            ("level".to_string(), Amf0Value::String("status".to_string())),
-            ("description".to_string(), Amf0Value::String("description".to_string())),
-        ]))
+        Amf0Value::Object(
+            vec![
+                ("level".into(), Amf0Value::String("status".into())),
+                ("code".into(), Amf0Value::String("idk".into())),
+                ("description".into(), Amf0Value::String("description".into())),
+            ]
+            .into()
+        )
     ); // info object
 }

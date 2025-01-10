@@ -8,7 +8,7 @@ fn test_error_display() {
     let error = FlvDemuxerError::IO(std::io::Error::new(std::io::ErrorKind::Other, "test"));
     assert_eq!(error.to_string(), "io error: test");
 
-    let error = FlvDemuxerError::Amf0Read(amf0::Amf0ReadError::UnknownMarker(0));
+    let error = FlvDemuxerError::Amf0Read(scuffle_amf0::Amf0ReadError::UnknownMarker(0));
     assert_eq!(error.to_string(), "amf0 read error: unknown marker: 0");
 
     let error = FlvDemuxerError::InvalidFlvHeader;

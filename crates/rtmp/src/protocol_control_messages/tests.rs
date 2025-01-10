@@ -17,7 +17,7 @@ fn test_error_display() {
 #[test]
 fn test_reader_read_set_chunk_size() {
     let data = vec![0x00, 0x00, 0x00, 0x01];
-    let chunk_size = ProtocolControlMessageReader::read_set_chunk_size(data.into()).unwrap();
+    let chunk_size = ProtocolControlMessageReader::read_set_chunk_size(&data).unwrap();
     assert_eq!(chunk_size, 1);
 }
 

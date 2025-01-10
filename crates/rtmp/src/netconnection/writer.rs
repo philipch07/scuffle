@@ -1,8 +1,7 @@
-use std::collections::HashMap;
 use std::io;
 
-use amf0::{Amf0Value, Amf0Writer};
 use bytes::Bytes;
+use scuffle_amf0::{Amf0Encoder, Amf0Value};
 
 use super::errors::NetConnectionError;
 use crate::chunk::{Chunk, ChunkEncoder, DefinedChunkStreamID};
@@ -34,23 +33,23 @@ impl NetConnection {
     ) -> Result<(), NetConnectionError> {
         let mut amf0_writer = Vec::new();
 
-        Amf0Writer::write_string(&mut amf0_writer, "_result")?;
-        Amf0Writer::write_number(&mut amf0_writer, transaction_id)?;
-        Amf0Writer::write_object(
+        Amf0Encoder::encode_string(&mut amf0_writer, "_result")?;
+        Amf0Encoder::encode_number(&mut amf0_writer, transaction_id)?;
+        Amf0Encoder::encode_object(
             &mut amf0_writer,
-            &HashMap::from([
-                ("fmsVer".to_string(), Amf0Value::String(fmsver.to_string())),
-                ("capabilities".to_string(), Amf0Value::Number(capabilities)),
-            ]),
+            &[
+                ("fmsVer".into(), Amf0Value::String(fmsver.into())),
+                ("capabilities".into(), Amf0Value::Number(capabilities)),
+            ],
         )?;
-        Amf0Writer::write_object(
+        Amf0Encoder::encode_object(
             &mut amf0_writer,
-            &HashMap::from([
-                ("level".to_string(), Amf0Value::String(level.to_string())),
-                ("code".to_string(), Amf0Value::String(code.to_string())),
-                ("description".to_string(), Amf0Value::String(description.to_string())),
-                ("objectEncoding".to_string(), Amf0Value::Number(encoding)),
-            ]),
+            &[
+                ("level".into(), Amf0Value::String(level.into())),
+                ("code".into(), Amf0Value::String(code.into())),
+                ("description".into(), Amf0Value::String(description.into())),
+                ("objectEncoding".into(), Amf0Value::Number(encoding)),
+            ],
         )?;
 
         Self::write_chunk(encoder, Bytes::from(amf0_writer), writer)
@@ -64,10 +63,10 @@ impl NetConnection {
     ) -> Result<(), NetConnectionError> {
         let mut amf0_writer = Vec::new();
 
-        Amf0Writer::write_string(&mut amf0_writer, "_result")?;
-        Amf0Writer::write_number(&mut amf0_writer, transaction_id)?;
-        Amf0Writer::write_null(&mut amf0_writer)?;
-        Amf0Writer::write_number(&mut amf0_writer, stream_id)?;
+        Amf0Encoder::encode_string(&mut amf0_writer, "_result")?;
+        Amf0Encoder::encode_number(&mut amf0_writer, transaction_id)?;
+        Amf0Encoder::encode_null(&mut amf0_writer)?;
+        Amf0Encoder::encode_number(&mut amf0_writer, stream_id)?;
 
         Self::write_chunk(encoder, Bytes::from(amf0_writer), writer)
     }
