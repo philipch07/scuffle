@@ -14,6 +14,7 @@ pub use scuffle_signal::SignalSvc;
 /// # See Also
 ///
 /// - [`Global`](crate::Global)
+/// - [`GlobalWithoutConfig`](crate::GlobalWithoutConfig)
 /// - [`main`](crate::main)
 pub trait Service<Global>: Send + Sync + 'static + Sized {
     /// Returns the name of the service, if any.

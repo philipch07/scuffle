@@ -1,3 +1,13 @@
+//! Global state for the application.
+//!
+//! # [`Global`] vs. [`GlobalWithoutConfig`]
+//!
+//! [`Global`] has a set of functions that are called at different stages of the
+//! application lifecycle. To use [`Global`], your application is expected to
+//! have a config type implementing [`ConfigParser`]. If your application does
+//! not have a config, consider using the [`GlobalWithoutConfig`] trait which is
+//! a simplified version of [`Global`].
+
 use std::sync::Arc;
 
 use crate::config::{ConfigParser, EmptyConfig};
@@ -73,6 +83,10 @@ fn default_runtime_builder() -> tokio::runtime::Builder {
 /// It is intended to be used to store any global state of your application.
 /// When using the [`main!`](crate::main) macro, one instance of this type will
 /// be made available to all services.
+///
+/// Using this trait requires a config type implementing [`ConfigParser`].
+/// If your application does not have a config, consider using the
+/// [`GlobalWithoutConfig`] trait.
 ///
 /// # See Also
 ///

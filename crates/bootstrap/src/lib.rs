@@ -60,7 +60,7 @@ pub mod global;
 pub mod service;
 
 pub use config::{ConfigParser, EmptyConfig};
-pub use global::Global;
+pub use global::{Global, GlobalWithoutConfig};
 pub use service::Service;
 
 #[doc(hidden)]

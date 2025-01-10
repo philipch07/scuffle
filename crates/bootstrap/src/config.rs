@@ -1,3 +1,8 @@
+/// This trait is used to parse a configuration for the application.
+///
+/// # See Also
+///
+/// - [`Global`](crate::Global)
 pub trait ConfigParser: Sized {
     fn parse() -> impl std::future::Future<Output = anyhow::Result<Self>>;
 }
