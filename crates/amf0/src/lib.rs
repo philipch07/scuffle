@@ -1,5 +1,3 @@
-#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
-
 //! A pure-rust implementation of AMF0 encoder and decoder.
 //!
 //! This crate provides a simple interface for encoding and decoding AMF0 data.
@@ -27,6 +25,7 @@
 //! # }
 //! # test().expect("test failed");
 //! ```
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
 mod decode;
 mod define;
