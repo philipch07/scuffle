@@ -112,3 +112,83 @@ impl AV1CodecConfigurationRecord {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_config_demux() {
+        let data = b"\x81\r\x0c\0\n\x0f\0\0\0j\xef\xbf\xe1\xbc\x02\x19\x90\x10\x10\x10@".to_vec();
+
+        let config = AV1CodecConfigurationRecord::demux(&mut io::Cursor::new(data.into())).unwrap();
+
+        insta::assert_debug_snapshot!(config, @r#"
+        AV1CodecConfigurationRecord {
+            marker: true,
+            version: 1,
+            seq_profile: 0,
+            seq_level_idx_0: 13,
+            seq_tier_0: false,
+            high_bitdepth: false,
+            twelve_bit: false,
+            monochrome: false,
+            chroma_subsampling_x: true,
+            chroma_subsampling_y: true,
+            chroma_sample_position: 0,
+            initial_presentation_delay_minus_one: None,
+            config_obu: b"\n\x0f\0\0\0j\xef\xbf\xe1\xbc\x02\x19\x90\x10\x10\x10@",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_config_mux() {
+        let config = AV1CodecConfigurationRecord {
+            marker: true,
+            version: 1,
+            seq_profile: 0,
+            seq_level_idx_0: 0,
+            seq_tier_0: false,
+            high_bitdepth: false,
+            twelve_bit: false,
+            monochrome: false,
+            chroma_subsampling_x: false,
+            chroma_subsampling_y: false,
+            chroma_sample_position: 0,
+            initial_presentation_delay_minus_one: None,
+            config_obu: Bytes::from_static(b"HELLO FROM THE OBU"),
+        };
+
+        let mut buf = Vec::new();
+        config.mux(&mut buf).unwrap();
+
+        insta::assert_snapshot!(format!("{:?}", Bytes::from(buf)), @r#"b"\x81\0\0\0HELLO FROM THE OBU""#);
+    }
+
+    #[test]
+    fn test_config_mux_with_delay() {
+        let config = AV1CodecConfigurationRecord {
+            marker: true,
+            version: 1,
+            seq_profile: 0,
+            seq_level_idx_0: 0,
+            seq_tier_0: false,
+            high_bitdepth: false,
+            twelve_bit: false,
+            monochrome: false,
+            chroma_subsampling_x: false,
+            chroma_subsampling_y: false,
+            chroma_sample_position: 0,
+            initial_presentation_delay_minus_one: Some(0),
+            config_obu: Bytes::from_static(b"HELLO FROM THE OBU"),
+        };
+
+        let mut buf = Vec::new();
+        config.mux(&mut buf).unwrap();
+
+        insta::assert_snapshot!(format!("{:?}", Bytes::from(buf)), @r#"b"\x81\0\0\x10HELLO FROM THE OBU""#);
+    }
+}

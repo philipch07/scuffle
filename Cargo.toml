@@ -62,6 +62,7 @@ scuffle-future-ext = { path = "crates/future-ext", version = "0.0.1" }
 scuffle-bytes-util = { path = "crates/bytes-util", version = "0.0.1" }
 scuffle-expgolomb = { path = "crates/expgolomb", version = "0.0.1" }
 scuffle-amf0 = { path = "crates/amf0", version = "0.0.1" }
+scuffle-av1 = { path = "crates/av1", version = "0.0.1" }
 
 [profile.release-debug]
 inherits = "release"

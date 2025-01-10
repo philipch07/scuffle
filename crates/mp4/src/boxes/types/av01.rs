@@ -1,9 +1,9 @@
 use std::io;
 
-use av1::seq::SequenceHeaderObu;
-use av1::{ObuHeader, ObuType};
 use bytes::{Buf, Bytes};
-use scuffle_bytes_util::BitReader;
+use scuffle_av1::seq::SequenceHeaderObu;
+use scuffle_av1::{ObuHeader, ObuType};
+use scuffle_bytes_util::BytesCursorExt;
 
 use super::av1c::Av1C;
 use super::btrt::Btrt;
@@ -36,7 +36,10 @@ impl Av01 {
     }
 
     pub fn codec(&self) -> io::Result<VideoCodec> {
-        let (header, data) = ObuHeader::parse(&mut BitReader::new_from_slice(&self.av1c.av1_config.config_obu))?;
+        let mut cursor = io::Cursor::new(self.av1c.av1_config.config_obu.clone());
+        let header = ObuHeader::parse(&mut cursor)?;
+
+        let data = cursor.extract_bytes(header.size.unwrap_or(cursor.remaining() as u64) as usize)?;
 
         if header.obu_type != ObuType::SequenceHeader {
             return Err(io::Error::new(
@@ -45,7 +48,7 @@ impl Av01 {
             ));
         }
 
-        let seq_obu = SequenceHeaderObu::parse(header, data)?;
+        let seq_obu = SequenceHeaderObu::parse(header, &mut io::Cursor::new(data))?;
         let op_point = &seq_obu.operating_points[0];
 
         Ok(VideoCodec::Av1 {

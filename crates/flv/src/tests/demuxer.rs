@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 
-use av1::seq::SequenceHeaderObu;
-use av1::ObuHeader;
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use h264::{Sps, SpsExtended};
 use scuffle_aac::{AudioObjectType, PartialAudioSpecificConfig};
-use scuffle_bytes_util::BitReader;
+use scuffle_av1::seq::SequenceHeaderObu;
+use scuffle_av1::ObuHeader;
+use scuffle_bytes_util::BytesCursorExt;
 
 use crate::{
     AacPacket, Av1Packet, AvcPacket, EnhancedPacket, Flv, FlvTagAudioData, FlvTagData, FlvTagVideoData, FrameType,
@@ -490,10 +490,14 @@ fn test_demux_flv_av1_aac() {
         assert!(!config.high_bitdepth);
         assert!(!config.twelve_bit);
 
-        let (header, data) =
-            ObuHeader::parse(&mut BitReader::new_from_slice(&config.config_obu)).expect("expected obu header");
+        let mut cursor = std::io::Cursor::new(config.config_obu.clone());
+        let header = ObuHeader::parse(&mut cursor).expect("expected obu header");
 
-        let seq_obu = SequenceHeaderObu::parse(header, data).expect("expected sequence obu");
+        let data = cursor
+            .extract_bytes(header.size.unwrap_or(cursor.remaining() as u64) as usize)
+            .expect("expected data");
+
+        let seq_obu = SequenceHeaderObu::parse(header, &mut std::io::Cursor::new(data)).expect("expected sequence obu");
 
         assert_eq!(seq_obu.max_frame_height, 1440);
         assert_eq!(seq_obu.max_frame_width, 2560);
