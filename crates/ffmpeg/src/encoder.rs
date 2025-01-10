@@ -426,8 +426,12 @@ impl Encoder {
 
         encoder_mut.time_base = incoming_time_base;
 
-        let codec_options = settings
+        let mut codec_options = settings
             .codec_specific_options()
+            .cloned();
+
+        let codec_options_ptr = codec_options
+            .as_mut()
             .map(|options| options.as_mut_ptr_ref() as *mut *mut _)
             .unwrap_or(std::ptr::null_mut());
 
@@ -440,8 +444,8 @@ impl Encoder {
         }
 
         // Safety: `avcodec_open2` is safe to call, 'encoder' and 'codec' and
-        // 'codec_options' are a valid pointers.
-        let res = unsafe { avcodec_open2(encoder_mut, codec.as_ptr(), codec_options) };
+        // 'codec_options_ptr' are a valid pointers.
+        let res = unsafe { avcodec_open2(encoder_mut, codec.as_ptr(), codec_options_ptr) };
         if res < 0 {
             return Err(FfmpegError::Code(res.into()));
         }
