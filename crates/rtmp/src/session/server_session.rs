@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-use std::io;
+use std::borrow::Cow;
 use std::time::Duration;
 
-use amf0::Amf0Value;
 use bytes::BytesMut;
+use scuffle_amf0::Amf0Value;
 use scuffle_bytes_util::BytesCursorExt;
 use scuffle_future_ext::FutureExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -154,7 +153,7 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
             bytes_read += n;
         }
 
-        let mut cursor = io::Cursor::new(self.read_buf.split().freeze());
+        let mut cursor = std::io::Cursor::new(self.read_buf.split().freeze());
 
         handshaker.handshake(&mut cursor, &mut self.write_buf)?;
 
@@ -212,7 +211,7 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
             let timestamp = chunk.message_header.timestamp;
             let msg_stream_id = chunk.message_header.msg_stream_id;
 
-            if let Some(msg) = MessageParser::parse(chunk)? {
+            if let Some(msg) = MessageParser::parse(&chunk)? {
                 self.process_messages(msg, msg_stream_id, timestamp).await?;
             }
         }
@@ -223,7 +222,7 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
     /// Process rtmp messages
     async fn process_messages(
         &mut self,
-        rtmp_msg: RtmpMessageData,
+        rtmp_msg: RtmpMessageData<'_>,
         stream_id: u32,
         timestamp: u32,
     ) -> Result<(), SessionError> {
@@ -286,10 +285,10 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
     async fn on_amf0_command_message(
         &mut self,
         stream_id: u32,
-        command_name: Amf0Value,
-        transaction_id: Amf0Value,
-        command_object: Amf0Value,
-        others: Vec<Amf0Value>,
+        command_name: Amf0Value<'_>,
+        transaction_id: Amf0Value<'_>,
+        command_object: Amf0Value<'_>,
+        others: Vec<Amf0Value<'_>>,
     ) -> Result<(), SessionError> {
         let cmd = RtmpCommand::from(match command_name {
             Amf0Value::String(ref s) => s,
@@ -303,24 +302,24 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
 
         let obj = match command_object {
             Amf0Value::Object(obj) => obj,
-            _ => HashMap::new(),
+            _ => Cow::Owned(Vec::new()),
         };
 
         match cmd {
             RtmpCommand::Connect => {
-                self.on_command_connect(transaction_id, stream_id, obj, others).await?;
+                self.on_command_connect(transaction_id, stream_id, &obj, others).await?;
             }
             RtmpCommand::CreateStream => {
-                self.on_command_create_stream(transaction_id, stream_id, obj, others).await?;
+                self.on_command_create_stream(transaction_id, stream_id, &obj, others).await?;
             }
             RtmpCommand::DeleteStream => {
-                self.on_command_delete_stream(transaction_id, stream_id, obj, others).await?;
+                self.on_command_delete_stream(transaction_id, stream_id, &obj, others).await?;
             }
             RtmpCommand::Play => {
                 return Err(SessionError::PlayNotSupported);
             }
             RtmpCommand::Publish => {
-                self.on_command_publish(transaction_id, stream_id, obj, others).await?;
+                self.on_command_publish(transaction_id, stream_id, &obj, others).await?;
             }
             RtmpCommand::CloseStream | RtmpCommand::ReleaseStream => {
                 // Not sure what this is for
@@ -348,8 +347,8 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
         &mut self,
         transaction_id: f64,
         _stream_id: u32,
-        command_obj: HashMap<String, Amf0Value>,
-        _others: Vec<Amf0Value>,
+        command_obj: &[(Cow<'_, str>, Amf0Value<'_>)],
+        _others: Vec<Amf0Value<'_>>,
     ) -> Result<(), SessionError> {
         ProtocolControlMessagesWriter::write_window_acknowledgement_size(
             &self.chunk_encoder,
@@ -364,15 +363,15 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
             2, // 2 = dynamic
         )?;
 
-        let app_name = command_obj.get("app");
+        let app_name = command_obj.iter().find(|(key, _)| key == "app");
         let app_name = match app_name {
-            Some(Amf0Value::String(app)) => app,
+            Some((_, Amf0Value::String(app))) => app,
             _ => {
                 return Err(SessionError::NoAppName);
             }
         };
 
-        self.app_name = Some(app_name.to_owned());
+        self.app_name = Some(app_name.to_string());
 
         // The only AMF encoding supported by this server is AMF0
         // So we ignore the objectEncoding value sent by the client
@@ -406,8 +405,8 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
         &mut self,
         transaction_id: f64,
         _stream_id: u32,
-        _command_obj: HashMap<String, Amf0Value>,
-        _others: Vec<Amf0Value>,
+        _command_obj: &[(Cow<'_, str>, Amf0Value<'_>)],
+        _others: Vec<Amf0Value<'_>>,
     ) -> Result<(), SessionError> {
         // 1.0 is the Stream ID of the stream we are creating
         NetConnection::write_create_stream_response(&self.chunk_encoder, &mut self.write_buf, transaction_id, 1.0)?;
@@ -423,8 +422,8 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
         &mut self,
         transaction_id: f64,
         _stream_id: u32,
-        _command_obj: HashMap<String, Amf0Value>,
-        others: Vec<Amf0Value>,
+        _command_obj: &[(Cow<'_, str>, Amf0Value<'_>)],
+        others: Vec<Amf0Value<'_>>,
     ) -> Result<(), SessionError> {
         let stream_id = match others.first() {
             Some(Amf0Value::Number(stream_id)) => *stream_id,
@@ -455,8 +454,8 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
         &mut self,
         transaction_id: f64,
         stream_id: u32,
-        _command_obj: HashMap<String, Amf0Value>,
-        others: Vec<Amf0Value>,
+        _command_obj: &[(Cow<'_, str>, Amf0Value<'_>)],
+        others: Vec<Amf0Value<'_>>,
     ) -> Result<(), SessionError> {
         let stream_name = match others.first() {
             Some(Amf0Value::String(val)) => val,
@@ -475,7 +474,7 @@ impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
             .publish_request_producer
             .send(PublishRequest {
                 app_name: app_name.clone(),
-                stream_name: stream_name.clone(),
+                stream_name: stream_name.to_string(),
                 response,
             })
             .await

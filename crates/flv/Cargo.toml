@@ -14,6 +14,6 @@ av1 = { path = "../av1" }
 h264 = { path = "../h264" }
 h265 = { path = "../h265" }
 scuffle-aac = { path = "../aac" }
-amf0 = { path = "../amf0" }
 scuffle-bytes-util.workspace = true
+scuffle-amf0.workspace = true
 scuffle-workspace-hack.workspace = true

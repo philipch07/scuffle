@@ -1,14 +1,14 @@
-use amf0::Amf0Value;
 use bytes::Bytes;
 use num_derive::FromPrimitive;
+use scuffle_amf0::Amf0Value;
 
 #[derive(Debug)]
-pub enum RtmpMessageData {
+pub enum RtmpMessageData<'a> {
     Amf0Command {
-        command_name: Amf0Value,
-        transaction_id: Amf0Value,
-        command_object: Amf0Value,
-        others: Vec<Amf0Value>,
+        command_name: Amf0Value<'a>,
+        transaction_id: Amf0Value<'a>,
+        command_object: Amf0Value<'a>,
+        others: Vec<Amf0Value<'a>>,
     },
     AmfData {
         data: Bytes,

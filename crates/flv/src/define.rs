@@ -1,9 +1,9 @@
-use amf0::Amf0Value;
 use av1::AV1CodecConfigurationRecord;
 use bytes::Bytes;
 use h264::AVCDecoderConfigurationRecord;
 use h265::HEVCDecoderConfigurationRecord;
 use num_derive::FromPrimitive;
+use scuffle_amf0::Amf0Value;
 
 #[derive(Debug, Clone, PartialEq)]
 /// FLV File
@@ -62,7 +62,7 @@ pub enum FlvTagData {
     /// VideoData defined in the FLV specification. Chapter 1 - FLV Video Tags
     Video { frame_type: FrameType, data: FlvTagVideoData },
     /// ScriptData defined in the FLV specification. Chapter 1 - FLV Data Tags
-    ScriptData { name: String, data: Vec<Amf0Value> },
+    ScriptData { name: String, data: Vec<Amf0Value<'static>> },
     /// Data we don't know how to parse
     Unknown { tag_type: u8, data: Bytes },
 }

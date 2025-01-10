@@ -3,7 +3,7 @@ use std::{fmt, io};
 #[derive(Debug)]
 pub enum FlvDemuxerError {
     IO(io::Error),
-    Amf0Read(amf0::Amf0ReadError),
+    Amf0Read(scuffle_amf0::Amf0ReadError),
     InvalidFlvHeader,
     InvalidScriptDataName,
     InvalidEnhancedPacketType(u8),
@@ -19,8 +19,8 @@ impl From<io::Error> for FlvDemuxerError {
     }
 }
 
-impl From<amf0::Amf0ReadError> for FlvDemuxerError {
-    fn from(value: amf0::Amf0ReadError) -> Self {
+impl From<scuffle_amf0::Amf0ReadError> for FlvDemuxerError {
+    fn from(value: scuffle_amf0::Amf0ReadError) -> Self {
         Self::Amf0Read(value)
     }
 }

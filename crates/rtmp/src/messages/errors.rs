@@ -1,6 +1,6 @@
 use std::fmt;
 
-use amf0::Amf0ReadError;
+use scuffle_amf0::Amf0ReadError;
 
 use crate::macros::from_error;
 use crate::protocol_control_messages::ProtocolControlMessageError;
