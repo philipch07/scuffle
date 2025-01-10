@@ -3,6 +3,12 @@ name = "scuffle-aac"
 version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+description = "A crate for decoding AAC audio headers."
+repository = "https://github.com/scufflecloud/scuffle"
+authors = ["Scuffle <opensource@scuffle.cloud>"]
+readme = "README.md"
+documentation = "https://docs.rs/scuffle-aac"
+keywords = ["aac", "audio", "codec"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
