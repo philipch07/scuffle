@@ -426,9 +426,7 @@ impl Encoder {
 
         encoder_mut.time_base = incoming_time_base;
 
-        let mut codec_options = settings
-            .codec_specific_options()
-            .cloned();
+        let mut codec_options = settings.codec_specific_options().cloned();
 
         let codec_options_ptr = codec_options
             .as_mut()
