@@ -1,6 +1,6 @@
 use std::io;
 
-use scuffle_bitio::{BitReader, BitWriter};
+use scuffle_bytes_util::{BitReader, BitWriter};
 
 pub fn read_exp_golomb<R: io::Read>(reader: &mut BitReader<R>) -> io::Result<u64> {
     let mut leading_zeros = 0;
@@ -57,7 +57,7 @@ pub fn write_signed_exp_golomb<W: io::Write>(writer: &mut BitWriter<W>, number: 
 #[cfg(test)]
 mod tests {
     use bytes::Buf;
-    use scuffle_bitio::{BitReader, BitWriter};
+    use scuffle_bytes_util::{BitReader, BitWriter};
 
     use crate::{read_exp_golomb, read_signed_exp_golomb, write_exp_golomb, write_signed_exp_golomb};
 

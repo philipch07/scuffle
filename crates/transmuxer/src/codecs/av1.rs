@@ -8,7 +8,7 @@ use mp4::types::colr::{ColorType, Colr};
 use mp4::types::stsd::{SampleEntry, VisualSampleEntry};
 use mp4::types::trun::{TrunSample, TrunSampleFlag};
 use mp4::DynBox;
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 use crate::TransmuxError;
 

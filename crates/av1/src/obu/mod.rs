@@ -3,7 +3,7 @@ use std::io::{
 };
 
 use bytes::Bytes;
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 pub mod seq;
 

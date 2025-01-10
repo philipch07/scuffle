@@ -4,7 +4,6 @@ use std::io::{Cursor, Seek, SeekFrom};
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use bytes::BytesMut;
-use bytesio::bytes_reader::BytesReader;
 use num_traits::FromPrimitive;
 
 use super::define::{Chunk, ChunkBasicHeader, ChunkMessageHeader, ChunkType, INIT_CHUNK_SIZE, MAX_CHUNK_SIZE};
@@ -19,10 +18,6 @@ const MAX_PREVIOUS_CHUNK_HEADERS: usize = 100; // 100 chunks
 const MAX_PARTIAL_CHUNK_COUNT: usize = 4; // 4 chunks
 
 pub struct ChunkDecoder {
-    /// Our reader is a bytes reader that is used to read the bytes.
-    /// This is a wrapper around a bytes mut.
-    reader: BytesReader,
-
     /// According to the spec chunk streams are identified by the chunk stream
     /// ID. In this case that is our key.
     /// We then have a chunk header (since some chunks refer to the previous
@@ -43,7 +38,6 @@ pub struct ChunkDecoder {
 impl Default for ChunkDecoder {
     fn default() -> Self {
         Self {
-            reader: BytesReader::new(BytesMut::new()),
             previous_chunk_headers: HashMap::new(),
             partial_chunks: HashMap::new(),
             max_chunk_size: INIT_CHUNK_SIZE,
@@ -52,11 +46,6 @@ impl Default for ChunkDecoder {
 }
 
 impl ChunkDecoder {
-    /// This function is used to extend the data that we have.f
-    pub fn extend_data(&mut self, data: &[u8]) {
-        self.reader.extend_from_slice(data);
-    }
-
     /// Sometimes a client will request a chunk size change.
     pub fn update_max_chunk_size(&mut self, chunk_size: usize) -> bool {
         // We need to make sure that the chunk size is within the allowed range.
@@ -73,7 +62,7 @@ impl ChunkDecoder {
     /// - will return Ok(None) if the buffer is empty.
     /// - will return Ok(Some(Chunk)) if we have a full chunk.
     /// - Err(UnpackError) if we have an error. This will close the connection.
-    pub fn read_chunk(&mut self) -> Result<Option<Chunk>, ChunkDecodeError> {
+    pub fn read_chunk(&mut self, buffer: &mut BytesMut) -> Result<Option<Chunk>, ChunkDecodeError> {
         // We do this in a loop because we may have multiple chunks in the buffer,
         // And those chunks may be partial chunks thus we need to keep reading until we
         // have a full chunk or we run out of data.
@@ -81,7 +70,7 @@ impl ChunkDecoder {
             // The cursor is an advanced cursor that is a reference to the buffer.
             // This means the cursor does not advance the reader's position.
             // Thus allowing us to backtrack if we need to read more data.
-            let mut cursor = self.reader.advance_bytes_cursor(self.reader.len())?;
+            let mut cursor = std::io::Cursor::new(buffer.as_ref());
 
             let header = match self.read_header(&mut cursor) {
                 Ok(header) => header,
@@ -129,12 +118,14 @@ impl ChunkDecoder {
             // Since we were reading from an advanced cursor, our reads did not actually
             // advance the reader's position. We need to manually advance the reader's
             // position to the cursor's position.
-            let Ok(data) = self.reader.read_bytes(cursor.position() as usize) else {
-                // This means that the payload range was larger than the buffer.
-                // This happens when we dont have enough data to read the payload.
-                // We need to wait for more data.
+            let position = cursor.position() as usize;
+            if position > buffer.len() {
+                // In some cases we dont have enough data yet to read the chunk.
+                // We return Ok(None) here and the loop will continue.
                 return Ok(None);
-            };
+            }
+
+            let data = buffer.split_to(position);
 
             // We freeze the chunk data and slice it to get the payload.
             // Data before the slice is the header data, and data after the slice is the
@@ -237,7 +228,7 @@ impl ChunkDecoder {
     }
 
     /// Internal function used to read the basic chunk header.
-    fn read_header(&self, cursor: &mut Cursor<&'_ [u8]>) -> Result<ChunkBasicHeader, Option<ChunkDecodeError>> {
+    fn read_header(&self, cursor: &mut Cursor<&[u8]>) -> Result<ChunkBasicHeader, Option<ChunkDecodeError>> {
         // The first byte of the basic header is the format of the chunk and the stream
         // id. Mapping the error to none means that this isn't a real error but we dont
         // have enough data.
@@ -274,7 +265,7 @@ impl ChunkDecoder {
     fn read_message_header(
         &self,
         header: &ChunkBasicHeader,
-        cursor: &mut Cursor<&'_ [u8]>,
+        cursor: &mut Cursor<&[u8]>,
     ) -> Result<ChunkMessageHeader, Option<ChunkDecodeError>> {
         // Each format has a different message header length.
         match header.format {

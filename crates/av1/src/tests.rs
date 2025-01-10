@@ -1,6 +1,6 @@
 use std::io;
 
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 use crate::config::AV1CodecConfigurationRecord;
 use crate::seq::{ColorConfig, OperatingPoint, SequenceHeaderObu};

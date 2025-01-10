@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 use super::ObuHeader;
 use crate::obu::read_uvlc;

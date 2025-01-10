@@ -25,7 +25,6 @@ members = [
     "crates/aac",
     "crates/amf0",
     "crates/av1",
-    "crates/bytesio",
     "crates/exp_golomb",
     "crates/flv",
     "crates/h264",
@@ -35,7 +34,7 @@ members = [
     "crates/transmuxer",
     "dev-tools/xtask",
     "crates/future-ext",
-    "crates/bitio",
+    "crates/bytes-util",
 ]
 
 resolver = "2"
@@ -60,7 +59,7 @@ scuffle-h3-webtransport = { path = "crates/h3-webtransport", version = "0.0.2" }
 scuffle-metrics-derive = { path = "crates/metrics/derive", version = "0.0.2" }
 scuffle-ffmpeg-sys = { path = "crates/ffmpeg-sys", version = "7.1.0" }
 scuffle-future-ext = { path = "crates/future-ext", version = "0.0.1" }
-scuffle-bitio = { path = "crates/bitio", version = "0.0.1" }
+scuffle-bytes-util = { path = "crates/bytes-util", version = "0.0.1" }
 
 [profile.release-debug]
 inherits = "release"

@@ -6,10 +6,10 @@ use amf0::{Amf0Reader, Amf0Value};
 use av1::AV1CodecConfigurationRecord;
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
-use bytesio::bytes_reader::BytesCursor;
 use h264::AVCDecoderConfigurationRecord;
 use h265::HEVCDecoderConfigurationRecord;
 use num_traits::FromPrimitive;
+use scuffle_bytes_util::BytesCursorExt;
 
 use crate::define::Flv;
 use crate::{
@@ -57,7 +57,7 @@ impl FlvHeader {
         let data_offset = reader.read_u32::<BigEndian>()?;
 
         let remaining = data_offset - reader.position() as u32;
-        let extra = reader.read_slice(remaining as usize)?;
+        let extra = reader.extract_bytes(remaining as usize)?;
 
         Ok(FlvHeader {
             data_offset,
@@ -76,7 +76,7 @@ impl FlvTag {
         let timestamp = reader.read_u24::<BigEndian>()? | ((reader.read_u8()? as u32) << 24);
         let stream_id = reader.read_u24::<BigEndian>()?;
 
-        let data = reader.read_slice(data_size as usize)?;
+        let data = reader.extract_bytes(data_size as usize)?;
 
         let data = FlvTagData::demux(tag_type, data)?;
 

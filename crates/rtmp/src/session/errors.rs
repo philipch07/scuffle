@@ -1,7 +1,5 @@
 use std::fmt;
 
-use bytesio::bytesio_errors::BytesIOError;
-
 use crate::channels::UniqueID;
 use crate::chunk::ChunkDecodeError;
 use crate::handshake::HandshakeError;
@@ -14,7 +12,6 @@ use crate::user_control_messages::EventMessagesError;
 
 #[derive(Debug)]
 pub enum SessionError {
-    BytesIO(BytesIOError),
     Handshake(HandshakeError),
     Message(MessageError),
     ChunkDecode(ChunkDecodeError),
@@ -24,6 +21,8 @@ pub enum SessionError {
     EventMessages(EventMessagesError),
     UnknownStreamID(u32),
     PublisherDisconnected(UniqueID),
+    Io(std::io::Error),
+    Timeout(tokio::time::error::Elapsed),
     NoAppName,
     NoStreamName,
     PublishRequestDenied,
@@ -33,7 +32,21 @@ pub enum SessionError {
     InvalidChunkSize(usize),
 }
 
-from_error!(SessionError, Self::BytesIO, BytesIOError);
+impl SessionError {
+    pub fn is_client_closed(&self) -> bool {
+        match self {
+            Self::Io(err) => matches!(
+                err.kind(),
+                std::io::ErrorKind::ConnectionAborted
+                    | std::io::ErrorKind::ConnectionReset
+                    | std::io::ErrorKind::UnexpectedEof
+            ),
+            Self::Timeout(_) => true,
+            _ => false,
+        }
+    }
+}
+
 from_error!(SessionError, Self::Handshake, HandshakeError);
 from_error!(SessionError, Self::Message, MessageError);
 from_error!(SessionError, Self::ChunkDecode, ChunkDecodeError);
@@ -41,11 +54,13 @@ from_error!(SessionError, Self::ProtocolControlMessage, ProtocolControlMessageEr
 from_error!(SessionError, Self::NetStream, NetStreamError);
 from_error!(SessionError, Self::NetConnection, NetConnectionError);
 from_error!(SessionError, Self::EventMessages, EventMessagesError);
+from_error!(SessionError, Self::Io, std::io::Error);
+from_error!(SessionError, Self::Timeout, tokio::time::error::Elapsed);
 
 impl fmt::Display for SessionError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::BytesIO(error) => write!(f, "bytesio error: {}", error),
+            Self::Io(error) => write!(f, "io error: {}", error),
             Self::Handshake(error) => write!(f, "handshake error: {}", error),
             Self::Message(error) => write!(f, "message error: {}", error),
             Self::ChunkDecode(error) => write!(f, "chunk decode error: {}", error),
@@ -64,6 +79,7 @@ impl fmt::Display for SessionError {
             Self::InvalidChunkSize(size) => write!(f, "invalid chunk size: {}", size),
             Self::PlayNotSupported => write!(f, "play not supported"),
             Self::PublisherDropped => write!(f, "publisher dropped"),
+            Self::Timeout(error) => write!(f, "timeout: {}", error),
         }
     }
 }

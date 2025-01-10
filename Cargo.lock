@@ -59,10 +59,9 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "bytesio",
  "num-derive",
  "num-traits",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
 
@@ -205,8 +204,7 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "bytesio",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
 
@@ -371,20 +369,6 @@ name = "bytes"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "325918d6fe32f23b19878fe4b34794ae41fc19ddbe53b10571a4874d44ffd39b"
-
-[[package]]
-name = "bytesio"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "futures",
- "scuffle-future-ext",
- "scuffle-workspace-hack",
- "tokio",
- "tokio-stream",
- "tokio-util",
-]
 
 [[package]]
 name = "camino"
@@ -898,8 +882,7 @@ name = "exp_golomb"
 version = "0.0.1"
 dependencies = [
  "bytes",
- "bytesio",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
 
@@ -971,13 +954,12 @@ dependencies = [
  "av1",
  "byteorder",
  "bytes",
- "bytesio",
  "h264",
  "h265",
  "num-derive",
  "num-traits",
  "scuffle-aac",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
 
@@ -1155,9 +1137,8 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "bytesio",
  "exp_golomb",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
 
@@ -1167,9 +1148,8 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "bytesio",
  "exp_golomb",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
 
@@ -1599,13 +1579,12 @@ dependencies = [
  "av1",
  "byteorder",
  "bytes",
- "bytesio",
  "fixed",
  "h264",
  "h265",
  "paste",
  "scuffle-aac",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
  "serde",
  "serde_json",
@@ -2297,13 +2276,13 @@ dependencies = [
  "async-trait",
  "byteorder",
  "bytes",
- "bytesio",
  "chrono",
  "futures",
  "hmac",
  "num-derive",
  "num-traits",
  "rand",
+ "scuffle-bytes-util",
  "scuffle-future-ext",
  "scuffle-workspace-hack",
  "serde_json",
@@ -2484,7 +2463,7 @@ dependencies = [
  "bytes",
  "num-derive",
  "num-traits",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
 
@@ -2507,13 +2486,6 @@ dependencies = [
  "scuffle-batching",
  "scuffle-workspace-hack",
  "tokio",
-]
-
-[[package]]
-name = "scuffle-bitio"
-version = "0.0.1"
-dependencies = [
- "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -2580,6 +2552,14 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-opentelemetry",
+]
+
+[[package]]
+name = "scuffle-bytes-util"
+version = "0.0.1"
+dependencies = [
+ "bytes",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -3147,9 +3127,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.42.0"
+version = "1.43.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cec9b21b0450273377fc97bd4c33a8acffc8c996c987a7c5b319a0083707551"
+checksum = "3d61fa4ffa3de412bfea335c6ecff681de2b609ba3c77ef3e00e521813a9ed9e"
 dependencies = [
  "backtrace",
  "bytes",
@@ -3165,9 +3145,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "2.4.0"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "693d596312e88961bc67d7f1f97af8a70227d9f90c31bba5806eec004978d752"
+checksum = "6e06d43f1345a3bcd39f6a56dbb7dcab2ba47e68e8ac134855e7e2bdbaf8cab8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3351,13 +3331,12 @@ dependencies = [
  "av1",
  "byteorder",
  "bytes",
- "bytesio",
  "flv",
  "h264",
  "h265",
  "mp4",
  "scuffle-aac",
- "scuffle-bitio",
+ "scuffle-bytes-util",
  "scuffle-workspace-hack",
  "serde",
  "serde_json",

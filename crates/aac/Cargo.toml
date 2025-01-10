@@ -13,4 +13,4 @@ byteorder = "1.5"
 num-traits = "0.2"
 num-derive = "0.4"
 scuffle-workspace-hack.workspace = true
-scuffle-bitio = { workspace = true }
+scuffle-bytes-util.workspace = true

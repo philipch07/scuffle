@@ -6,7 +6,7 @@ use av1::ObuHeader;
 use bytes::Bytes;
 use h264::{Sps, SpsExtended};
 use scuffle_aac::{AudioObjectType, PartialAudioSpecificConfig};
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 use crate::{
     AacPacket, Av1Packet, AvcPacket, EnhancedPacket, Flv, FlvTagAudioData, FlvTagData, FlvTagVideoData, FrameType,

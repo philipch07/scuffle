@@ -6,13 +6,13 @@ use super::define;
 use super::define::SchemaVersion;
 use super::errors::DigestError;
 
-pub struct DigestProcessor {
+pub struct DigestProcessor<'a> {
     data: Bytes,
-    key: Bytes,
+    key: &'a [u8],
 }
 
-impl DigestProcessor {
-    pub fn new(data: Bytes, key: Bytes) -> Self {
+impl<'a> DigestProcessor<'a> {
+    pub const fn new(data: Bytes, key: &'a [u8]) -> Self {
         Self { data, key }
     }
 
@@ -30,7 +30,7 @@ impl DigestProcessor {
         }
     }
 
-    pub fn generate_and_fill_digest(&self, version: SchemaVersion) -> Result<(Bytes, Bytes, Bytes), DigestError> {
+    pub fn generate_and_fill_digest(&self, version: SchemaVersion) -> Result<(Bytes, [u8; 32], Bytes), DigestError> {
         let (left_part, _, right_part) = self.cook_raw_message(version)?;
         let computed_digest = self.make_digest(&left_part, &right_part)?;
 
@@ -82,9 +82,9 @@ impl DigestProcessor {
         Ok((left_part, digest_data, right_part))
     }
 
-    pub fn make_digest(&self, left: &[u8], right: &[u8]) -> Result<Bytes, DigestError> {
+    pub fn make_digest(&self, left: &[u8], right: &[u8]) -> Result<[u8; 32], DigestError> {
         // New hmac from the key
-        let mut mac = Hmac::<Sha256>::new_from_slice(&self.key[..]).unwrap();
+        let mut mac = Hmac::<Sha256>::new_from_slice(self.key).unwrap();
         // Update the hmac with the left and right parts
         mac.update(left);
         mac.update(right);
@@ -96,7 +96,7 @@ impl DigestProcessor {
         }
 
         // This does a copy of the memory but its only 32 bytes so its not a big deal.
-        Ok(result.to_vec().into())
+        Ok(result.into())
     }
 
     fn generate_and_validate(&self, version: SchemaVersion) -> Result<Bytes, DigestError> {
@@ -106,7 +106,7 @@ impl DigestProcessor {
 
         // If the digest we calculated is the same as the digest we read from the
         // message we have a valid message.
-        if digest_data == self.make_digest(&left_part, &right_part)? {
+        if digest_data == self.make_digest(&left_part, &right_part)?.as_ref() {
             Ok(digest_data)
         } else {
             // This does not mean the message is invalid, it just means we need to try the

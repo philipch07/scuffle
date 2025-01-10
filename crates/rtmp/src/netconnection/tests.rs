@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use amf0::{Amf0Reader, Amf0Value, Amf0WriteError};
+use bytes::{BufMut, BytesMut};
 
 use super::NetConnection;
 use crate::chunk::{ChunkDecoder, ChunkEncodeError, ChunkEncoder};
@@ -18,11 +19,11 @@ fn test_error_display() {
 #[test]
 fn test_netconnection_connect_response() {
     let encoder = ChunkEncoder::default();
-    let mut writer = Vec::new();
+    let mut buf = BytesMut::new();
 
     NetConnection::write_connect_response(
         &encoder,
-        &mut writer,
+        &mut (&mut buf).writer(),
         1.0,
         "flashver",
         31.0,
@@ -34,9 +35,8 @@ fn test_netconnection_connect_response() {
     .unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer);
 
-    let chunk = decoder.read_chunk().unwrap().unwrap();
+    let chunk = decoder.read_chunk(&mut buf).expect("read chunk").expect("chunk");
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x03);
     assert_eq!(chunk.message_header.msg_type_id as u8, 0x14);
     assert_eq!(chunk.message_header.msg_stream_id, 0);
@@ -68,14 +68,13 @@ fn test_netconnection_connect_response() {
 #[test]
 fn test_netconnection_create_stream_response() {
     let encoder = ChunkEncoder::default();
-    let mut writer = Vec::new();
+    let mut buf = BytesMut::new();
 
-    NetConnection::write_create_stream_response(&encoder, &mut writer, 1.0, 1.0).unwrap();
+    NetConnection::write_create_stream_response(&encoder, &mut (&mut buf).writer(), 1.0, 1.0).unwrap();
 
     let mut decoder = ChunkDecoder::default();
-    decoder.extend_data(&writer);
 
-    let chunk = decoder.read_chunk().unwrap().unwrap();
+    let chunk = decoder.read_chunk(&mut buf).expect("read chunk").expect("chunk");
     assert_eq!(chunk.basic_header.chunk_stream_id, 0x03);
     assert_eq!(chunk.message_header.msg_type_id as u8, 0x14);
     assert_eq!(chunk.message_header.msg_stream_id, 0);

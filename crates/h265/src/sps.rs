@@ -3,7 +3,7 @@ use std::io;
 use byteorder::ReadBytesExt;
 use bytes::Bytes;
 use exp_golomb::{read_exp_golomb, read_signed_exp_golomb};
-use scuffle_bitio::BitReader;
+use scuffle_bytes_util::BitReader;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Sequence parameter set

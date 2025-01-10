@@ -7,7 +7,6 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 bytes = "1.5"
 byteorder = "1.5"
-bytesio = { path = "../bytesio" }
 exp_golomb = { path = "../exp_golomb" }
-scuffle-bitio = { workspace = true }
+scuffle-bytes-util.workspace = true
 scuffle-workspace-hack.workspace = true

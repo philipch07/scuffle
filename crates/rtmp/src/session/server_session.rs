@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use std::io;
 use std::time::Duration;
 
 use amf0::Amf0Value;
-use bytes::Bytes;
-use bytesio::bytesio::{AsyncReadWrite, BytesIO};
-use bytesio::bytesio_errors::BytesIOError;
+use bytes::BytesMut;
+use scuffle_bytes_util::BytesCursorExt;
 use scuffle_future_ext::FutureExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::oneshot;
 
 use super::define::RtmpCommand;
@@ -19,7 +20,8 @@ use crate::netstream::NetStreamWriter;
 use crate::protocol_control_messages::ProtocolControlMessagesWriter;
 use crate::user_control_messages::EventMessagesWriter;
 use crate::{handshake, PublishProducer};
-pub struct Session<S: AsyncReadWrite> {
+
+pub struct Session<S> {
     /// When you connect via rtmp, you specify the app name in the url
     /// For example: rtmp://localhost:1935/live/xyz
     /// The app name is "live"
@@ -36,7 +38,12 @@ pub struct Session<S: AsyncReadWrite> {
     uid: Option<UniqueID>,
 
     /// Used to read and write data
-    io: BytesIO<S>,
+    io: S,
+
+    /// Buffer to read data into
+    read_buf: BytesMut,
+    /// Buffer to write data to
+    write_buf: Vec<u8>,
 
     /// Sometimes when doing the handshake we read too much data,
     /// this flag is used to indicate that we have data ready to parse and we
@@ -63,10 +70,8 @@ pub struct Session<S: AsyncReadWrite> {
     publish_request_producer: PublishProducer,
 }
 
-impl<S: AsyncReadWrite> Session<S> {
-    pub fn new(stream: S, data_producer: DataProducer, publish_request_producer: PublishProducer) -> Self {
-        let io = BytesIO::new(stream);
-
+impl<S> Session<S> {
+    pub fn new(io: S, data_producer: DataProducer, publish_request_producer: PublishProducer) -> Self {
         Self {
             uid: None,
             app_name: None,
@@ -74,6 +79,8 @@ impl<S: AsyncReadWrite> Session<S> {
             skip_read: false,
             chunk_decoder: ChunkDecoder::default(),
             chunk_encoder: ChunkEncoder::default(),
+            read_buf: BytesMut::new(),
+            write_buf: Vec::new(),
             data_producer,
             stream_id: 0,
             is_publishing: false,
@@ -84,7 +91,9 @@ impl<S: AsyncReadWrite> Session<S> {
     pub fn uid(&self) -> Option<UniqueID> {
         self.uid
     }
+}
 
+impl<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin> Session<S> {
     /// Run the session to completion
     /// The result of the return value will be true if all publishers have
     /// disconnected If any publishers are still connected, the result will be
@@ -93,7 +102,9 @@ impl<S: AsyncReadWrite> Session<S> {
     pub async fn run(&mut self) -> Result<bool, SessionError> {
         let mut handshaker = HandshakeServer::default();
         // Run the handshake to completion
-        while !self.do_handshake(&mut handshaker).await? {}
+        while !self.do_handshake(&mut handshaker).await? {
+            self.flush().await?;
+        }
 
         // Drop the handshaker, we don't need it anymore
         // We can get rid of the memory that was allocated for it
@@ -104,7 +115,7 @@ impl<S: AsyncReadWrite> Session<S> {
         // Run the session to completion
         while match self.do_ready().await {
             Ok(v) => v,
-            Err(SessionError::BytesIO(BytesIOError::ClientClosed)) => {
+            Err(err) if err.is_client_closed() => {
                 // The client closed the connection
                 // We are done with the session
                 tracing::debug!("Client closed the connection");
@@ -113,7 +124,9 @@ impl<S: AsyncReadWrite> Session<S> {
             Err(e) => {
                 return Err(e);
             }
-        } {}
+        } {
+            self.flush().await?;
+        }
 
         // We should technically check the stream_map here
         // However most clients just disconnect without cleanly stopping the subscrition
@@ -127,29 +140,30 @@ impl<S: AsyncReadWrite> Session<S> {
     /// The handshake is the first thing that happens when you connect to an
     /// rtmp server
     async fn do_handshake(&mut self, handshaker: &mut HandshakeServer) -> Result<bool, SessionError> {
-        let mut bytes_len = 0;
+        // Read the handshake data + 1 byte for the version
+        const READ_SIZE: usize = handshake::RTMP_HANDSHAKE_SIZE + 1;
+        self.read_buf.reserve(READ_SIZE);
 
-        while bytes_len < handshake::RTMP_HANDSHAKE_SIZE {
-            let buf = self
+        let mut bytes_read = 0;
+        while bytes_read < READ_SIZE {
+            let n = self
                 .io
-                .read()
-                .with_timeout(Duration::from_millis(2500))
-                .await
-                .map_err(|_| SessionError::BytesIO(BytesIOError::ClientClosed))??;
-            bytes_len += buf.len();
-            handshaker.extend_data(&buf[..]);
+                .read_buf(&mut self.read_buf)
+                .with_timeout(Duration::from_secs(2))
+                .await??;
+            bytes_read += n;
         }
 
-        let mut writer = Vec::new();
-        handshaker.handshake(&mut writer)?;
-        self.write_data(Bytes::from(writer)).await?;
+        let mut cursor = io::Cursor::new(self.read_buf.split().freeze());
+
+        handshaker.handshake(&mut cursor, &mut self.write_buf)?;
 
         if handshaker.state() == ServerHandshakeState::Finish {
-            let over_read = handshaker.extract_remaining_bytes();
+            let over_read = cursor.extract_remaining();
 
             if !over_read.is_empty() {
                 self.skip_read = true;
-                self.chunk_decoder.extend_data(&over_read[..]);
+                self.read_buf.extend_from_slice(&over_read);
             }
 
             self.send_set_chunk_size().await?;
@@ -174,13 +188,17 @@ impl<S: AsyncReadWrite> Session<S> {
         if self.skip_read {
             self.skip_read = false;
         } else {
-            let data = self
+            self.read_buf.reserve(CHUNK_SIZE);
+
+            let n = self
                 .io
-                .read()
+                .read_buf(&mut self.read_buf)
                 .with_timeout(Duration::from_millis(2500))
-                .await
-                .map_err(|_| SessionError::BytesIO(BytesIOError::ClientClosed))??;
-            self.chunk_decoder.extend_data(&data[..]);
+                .await??;
+
+            if n == 0 {
+                return Ok(false);
+            }
         }
 
         self.parse_chunks().await?;
@@ -190,7 +208,7 @@ impl<S: AsyncReadWrite> Session<S> {
 
     /// Parse data from the client into rtmp messages and process them
     async fn parse_chunks(&mut self) -> Result<(), SessionError> {
-        while let Some(chunk) = self.chunk_decoder.read_chunk()? {
+        while let Some(chunk) = self.chunk_decoder.read_chunk(&mut self.read_buf)? {
             let timestamp = chunk.message_header.timestamp;
             let msg_stream_id = chunk.message_header.msg_stream_id;
 
@@ -238,10 +256,8 @@ impl<S: AsyncReadWrite> Session<S> {
 
     /// Set the server chunk size to the client
     async fn send_set_chunk_size(&mut self) -> Result<(), SessionError> {
-        let mut writer = Vec::new();
-        ProtocolControlMessagesWriter::write_set_chunk_size(&self.chunk_encoder, &mut writer, CHUNK_SIZE as u32)?;
+        ProtocolControlMessagesWriter::write_set_chunk_size(&self.chunk_encoder, &mut self.write_buf, CHUNK_SIZE as u32)?;
         self.chunk_encoder.set_chunk_size(CHUNK_SIZE);
-        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }
@@ -335,17 +351,15 @@ impl<S: AsyncReadWrite> Session<S> {
         command_obj: HashMap<String, Amf0Value>,
         _others: Vec<Amf0Value>,
     ) -> Result<(), SessionError> {
-        let mut writer = Vec::new();
-
         ProtocolControlMessagesWriter::write_window_acknowledgement_size(
             &self.chunk_encoder,
-            &mut writer,
+            &mut self.write_buf,
             CHUNK_SIZE as u32,
         )?;
 
         ProtocolControlMessagesWriter::write_set_peer_bandwidth(
             &self.chunk_encoder,
-            &mut writer,
+            &mut self.write_buf,
             CHUNK_SIZE as u32,
             2, // 2 = dynamic
         )?;
@@ -371,7 +385,7 @@ impl<S: AsyncReadWrite> Session<S> {
         // We will eventually support this spec but for now we will stick to AMF0
         NetConnection::write_connect_response(
             &self.chunk_encoder,
-            &mut writer,
+            &mut self.write_buf,
             transaction_id,
             "FMS/3,0,1,123", // flash version (this value is used by other media servers as well)
             31.0,            // No idea what this is, but it is used by other media servers as well
@@ -380,8 +394,6 @@ impl<S: AsyncReadWrite> Session<S> {
             "Connection Succeeded.",
             0.0,
         )?;
-
-        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }
@@ -397,10 +409,8 @@ impl<S: AsyncReadWrite> Session<S> {
         _command_obj: HashMap<String, Amf0Value>,
         _others: Vec<Amf0Value>,
     ) -> Result<(), SessionError> {
-        let mut writer = Vec::new();
         // 1.0 is the Stream ID of the stream we are creating
-        NetConnection::write_create_stream_response(&self.chunk_encoder, &mut writer, transaction_id, 1.0)?;
-        self.write_data(Bytes::from(writer)).await?;
+        NetConnection::write_create_stream_response(&self.chunk_encoder, &mut self.write_buf, transaction_id, 1.0)?;
 
         Ok(())
     }
@@ -416,8 +426,6 @@ impl<S: AsyncReadWrite> Session<S> {
         _command_obj: HashMap<String, Amf0Value>,
         others: Vec<Amf0Value>,
     ) -> Result<(), SessionError> {
-        let mut writer = Vec::new();
-
         let stream_id = match others.first() {
             Some(Amf0Value::Number(stream_id)) => *stream_id,
             _ => 0.0,
@@ -430,14 +438,12 @@ impl<S: AsyncReadWrite> Session<S> {
 
         NetStreamWriter::write_on_status(
             &self.chunk_encoder,
-            &mut writer,
+            &mut self.write_buf,
             transaction_id,
             "status",
             "NetStream.DeleteStream.Suceess",
             "",
         )?;
-
-        self.write_data(Bytes::from(writer)).await?;
 
         Ok(())
     }
@@ -487,33 +493,27 @@ impl<S: AsyncReadWrite> Session<S> {
         self.is_publishing = true;
         self.stream_id = stream_id;
 
-        let mut writer = Vec::new();
-        EventMessagesWriter::write_stream_begin(&self.chunk_encoder, &mut writer, stream_id)?;
+        EventMessagesWriter::write_stream_begin(&self.chunk_encoder, &mut self.write_buf, stream_id)?;
 
         NetStreamWriter::write_on_status(
             &self.chunk_encoder,
-            &mut writer,
+            &mut self.write_buf,
             transaction_id,
             "status",
             "NetStream.Publish.Start",
             "",
         )?;
 
-        self.write_data(Bytes::from(writer)).await?;
-
         Ok(())
     }
 
-    /// write_data is a helper function to write data to the underlying
-    /// connection. If the data is empty, it will not write anything.
-    /// This is to avoid writing empty bytes to the underlying connection.
-    async fn write_data(&mut self, data: Bytes) -> Result<(), SessionError> {
-        if !data.is_empty() {
+    async fn flush(&mut self) -> Result<(), SessionError> {
+        if !self.write_buf.is_empty() {
             self.io
-                .write(data)
+                .write_all(self.write_buf.as_ref())
                 .with_timeout(Duration::from_secs(2))
-                .await
-                .map_err(|_| SessionError::BytesIO(BytesIOError::ClientClosed))??;
+                .await??;
+            self.write_buf.clear();
         }
 
         Ok(())
