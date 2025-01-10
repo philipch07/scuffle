@@ -10,6 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "Derive macros for scuffle-bootstrap."
 keywords = ["bootstrap", "derive", "macros"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [lib]
 proc-macro = true
 
@@ -19,3 +22,7 @@ proc-macro2 = "1"
 quote = "1"
 darling = "0.20"
 scuffle-workspace-hack.workspace = true
+
+[dev-dependencies]
+insta = "1"
+prettyplease = "0.2"

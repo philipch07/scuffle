@@ -2574,6 +2574,8 @@ name = "scuffle-bootstrap-derive"
 version = "0.0.2"
 dependencies = [
  "darling",
+ "insta",
+ "prettyplease",
  "proc-macro2",
  "quote",
  "scuffle-workspace-hack",

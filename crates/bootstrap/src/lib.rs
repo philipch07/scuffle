@@ -61,76 +61,53 @@ pub mod service;
 
 pub use config::{ConfigParser, EmptyConfig};
 pub use global::Global;
-pub use scuffle_bootstrap_derive::main;
 pub use service::Service;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use {anyhow, futures, scuffle_context, tokio};
+    pub use {anyhow, futures, scuffle_bootstrap_derive, scuffle_context, tokio};
 }
 
-// Note: Tests are disabled due to a problem with cargo caching
-
-// #[cfg(test)]
-// #[cfg_attr(all(test, coverage_nightly), coverage(off))]
-// mod tests {
-//     #[test]
-//     fn main_test() {
-//         insta::assert_snapshot!(postcompile::compile! {
-//             use std::sync::Arc;
-
-//             use scuffle_bootstrap::main;
-
-//             struct TestGlobal;
-
-//             impl scuffle_signal::SignalConfig for TestGlobal {}
-
-//             impl scuffle_bootstrap::global::GlobalWithoutConfig for
-// TestGlobal {                 async fn init() -> anyhow::Result<Arc<Self>> {
-//                     Ok(Arc::new(Self))
-//                 }
-//             }
-
-//             main! {
-//                 TestGlobal {
-//                     scuffle_signal::SignalSvc,
-//                 }
-//             }
-//         });
-//     }
-
-//     #[test]
-//     fn main_test_custom_service() {
-//         insta::assert_snapshot!(postcompile::compile! {
-//             use std::sync::Arc;
-
-//             use scuffle_bootstrap::main;
-
-//             struct TestGlobal;
-
-//             impl scuffle_signal::SignalConfig for TestGlobal {}
-
-//             impl scuffle_bootstrap::global::GlobalWithoutConfig for
-// TestGlobal {                 async fn init() -> anyhow::Result<Arc<Self>> {
-//                     Ok(Arc::new(Self))
-//                 }
-//             }
-
-//             struct MySvc;
-
-//             impl scuffle_bootstrap::service::Service<TestGlobal> for MySvc {
-//                 async fn run(self, _: Arc<TestGlobal>, _:
-// scuffle_context::Context) -> anyhow::Result<()> {
-// println!("running");                     Ok(())
-//                 }
-//             }
-
-//             main! {
-//                 TestGlobal {
-//                     scuffle_signal::SignalSvc,
-//                     MySvc,
-//                 }
-//             }
-//         });
-//     }
-// }
+/// This macro is used to generate the main function for a given global type
+/// and service types. It will run all the services in parallel and wait for
+/// them to finish before exiting.
+///
+/// # Example
+///
+/// ```rust
+/// # use std::sync::Arc;
+/// # struct MyGlobal;
+/// # struct MyService;
+/// # impl scuffle_bootstrap::global::GlobalWithoutConfig for MyGlobal {
+/// #     async fn init() -> anyhow::Result<Arc<Self>> {
+/// #         Ok(Arc::new(Self))
+/// #     }
+/// # }
+/// # impl scuffle_bootstrap::service::Service<MyGlobal> for MyService {
+/// #     async fn run(self, global: Arc<MyGlobal>, ctx: scuffle_context::Context) -> anyhow::Result<()> {
+/// #         println!("running");
+/// #         ctx.done().await;
+/// #         Ok(())
+/// #     }
+/// # }
+/// # impl scuffle_signal::SignalConfig for MyGlobal {
+/// # }
+/// scuffle_bootstrap::main! {
+///     MyGlobal {
+///         scuffle_signal::SignalSvc,
+///         MyService,
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// - [`Service`](crate::Service)
+/// - [`Global`](crate::Global)
+// We wrap the macro here so that the doc tests can be run & that the docs resolve for `Service` & `Global`
+#[macro_export]
+macro_rules! main {
+    ($($body:tt)*) => {
+        $crate::prelude::scuffle_bootstrap_derive::main! { $($body)* }
+    };
+}
