@@ -1,6 +1,4 @@
-use av1::seq::SequenceHeaderObu;
-use av1::{AV1CodecConfigurationRecord, ObuHeader, ObuType};
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use flv::FrameType;
 use mp4::types::av01::Av01;
 use mp4::types::av1c::Av1C;
@@ -8,18 +6,22 @@ use mp4::types::colr::{ColorType, Colr};
 use mp4::types::stsd::{SampleEntry, VisualSampleEntry};
 use mp4::types::trun::{TrunSample, TrunSampleFlag};
 use mp4::DynBox;
-use scuffle_bytes_util::BitReader;
+use scuffle_av1::seq::SequenceHeaderObu;
+use scuffle_av1::{AV1CodecConfigurationRecord, ObuHeader, ObuType};
+use scuffle_bytes_util::BytesCursorExt;
 
 use crate::TransmuxError;
 
 pub fn stsd_entry(config: AV1CodecConfigurationRecord) -> Result<(DynBox, SequenceHeaderObu), TransmuxError> {
-    let (header, data) = ObuHeader::parse(&mut BitReader::new_from_slice(&config.config_obu))?;
+    let mut cursor = std::io::Cursor::new(config.config_obu.clone());
+    let header = ObuHeader::parse(&mut cursor)?;
+    let data = cursor.extract_bytes(header.size.unwrap_or(cursor.remaining() as u64) as usize)?;
 
     if header.obu_type != ObuType::SequenceHeader {
         return Err(TransmuxError::InvalidAv1DecoderConfigurationRecord);
     }
 
-    let seq_obu = SequenceHeaderObu::parse(header, data)?;
+    let seq_obu = SequenceHeaderObu::parse(header, &mut std::io::Cursor::new(data))?;
 
     // Unfortunate there does not seem to be a way to get the
     // frame rate from the sequence header unless the timing_info is present

@@ -1,9 +1,9 @@
 use amf0::Amf0Value;
-use av1::AV1CodecConfigurationRecord;
 use bytes::Bytes;
 use h264::AVCDecoderConfigurationRecord;
 use h265::HEVCDecoderConfigurationRecord;
 use num_derive::FromPrimitive;
+use scuffle_av1::AV1CodecConfigurationRecord;
 
 #[derive(Debug, Clone, PartialEq)]
 /// FLV File

@@ -199,16 +199,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
-name = "av1"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "scuffle-bytes-util",
- "scuffle-workspace-hack",
-]
-
-[[package]]
 name = "aws-lc-rs"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -579,6 +569,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "console"
+version = "0.15.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea3c6ecd8059b57859df5c69830340ed3c41d30e3da0c1cbed90a96ac853041b"
+dependencies = [
+ "encode_unicode",
+ "libc",
+ "once_cell",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "const-random"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -833,6 +835,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
+name = "encode_unicode"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -951,7 +959,6 @@ name = "flv"
 version = "0.0.1"
 dependencies = [
  "amf0",
- "av1",
  "byteorder",
  "bytes",
  "h264",
@@ -959,6 +966,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "scuffle-aac",
+ "scuffle-av1",
  "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
@@ -1373,6 +1381,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "insta"
+version = "1.42.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6513e4067e16e69ed1db5ab56048ed65db32d10ba5fc1217f5393f8f17d8b5a5"
+dependencies = [
+ "console",
+ "linked-hash-map",
+ "once_cell",
+ "similar",
+]
+
+[[package]]
 name = "is-terminal"
 version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1492,6 +1512,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "linked-hash-map"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1576,7 +1602,6 @@ dependencies = [
 name = "mp4"
 version = "0.0.1"
 dependencies = [
- "av1",
  "byteorder",
  "bytes",
  "fixed",
@@ -1584,6 +1609,7 @@ dependencies = [
  "h265",
  "paste",
  "scuffle-aac",
+ "scuffle-av1",
  "scuffle-bytes-util",
  "scuffle-workspace-hack",
  "serde",
@@ -2468,6 +2494,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "scuffle-av1"
+version = "0.0.1"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "insta",
+ "scuffle-bytes-util",
+ "scuffle-workspace-hack",
+]
+
+[[package]]
 name = "scuffle-batching"
 version = "0.0.4"
 dependencies = [
@@ -2920,6 +2957,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "similar"
+version = "2.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1de1d4f81173b03af4c0cbed3c898f6bff5b870e4a7f5d6f4057d62a7a4b686e"
+
+[[package]]
 name = "slab"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3328,7 +3371,6 @@ name = "transmuxer"
 version = "0.0.1"
 dependencies = [
  "amf0",
- "av1",
  "byteorder",
  "bytes",
  "flv",
@@ -3336,6 +3378,7 @@ dependencies = [
  "h265",
  "mp4",
  "scuffle-aac",
+ "scuffle-av1",
  "scuffle-bytes-util",
  "scuffle-workspace-hack",
  "serde",

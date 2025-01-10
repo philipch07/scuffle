@@ -4,11 +4,11 @@ use std::io::{
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use av1::AV1CodecConfigurationRecord;
 use bytes::{Buf, Bytes};
 use fixed::FixedI32;
 use h264::AVCDecoderConfigurationRecord;
 use h265::{HEVCDecoderConfigurationRecord, NaluArray, NaluType};
+use scuffle_av1::AV1CodecConfigurationRecord;
 
 use crate::boxes::header::{BoxHeader, FullBoxHeader};
 use crate::boxes::types::avc1::Avc1;

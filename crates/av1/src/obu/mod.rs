@@ -1,32 +1,31 @@
-use std::io::{
-    Read, {self},
-};
+use std::io;
 
-use bytes::Bytes;
 use scuffle_bytes_util::BitReader;
+use utils::read_leb128;
 
 pub mod seq;
+mod utils;
 
-#[derive(Debug, Clone, PartialEq)]
 /// OBU Header
 /// AV1-Spec-2 - 5.3.2
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub struct ObuHeader {
     pub obu_type: ObuType,
-    pub extension_flag: bool,
-    pub has_size_field: bool,
+    pub size: Option<u64>,
     pub extension_header: Option<ObuHeaderExtension>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
 /// Obu Header Extension
 /// AV1-Spec-2 - 5.3.3
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub struct ObuHeaderExtension {
     pub temporal_id: u8,
     pub spatial_id: u8,
 }
 
 impl ObuHeader {
-    pub fn parse<T: io::Read>(bit_reader: &mut BitReader<T>) -> io::Result<(Self, Bytes)> {
+    pub fn parse(cursor: &mut impl io::Read) -> io::Result<Self> {
+        let mut bit_reader = BitReader::new(cursor);
         let forbidden_bit = bit_reader.read_bit()?;
         if forbidden_bit {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "obu_forbidden_bit is not 0"));
@@ -55,29 +54,26 @@ impl ObuHeader {
 
         let size = if has_size_field {
             // obu_size
-            read_leb128(bit_reader)?
+            Some(read_leb128(&mut bit_reader)?)
         } else {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "obu_size is not present"));
+            None
         };
 
-        let mut data = vec![0; size as usize];
-        bit_reader.read_exact(&mut data)?;
+        if !bit_reader.is_aligned() {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "bit reader is not aligned"));
+        }
 
-        Ok((
-            ObuHeader {
-                obu_type: ObuType::from(obu_type as u8),
-                extension_flag,
-                has_size_field,
-                extension_header,
-            },
-            Bytes::from(data),
-        ))
+        Ok(ObuHeader {
+            obu_type: ObuType::from(obu_type as u8),
+            size,
+            extension_header,
+        })
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
 /// OBU Type
 /// AV1-Spec-2 - 6.2.2
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum ObuType {
     SequenceHeader,
     TemporalDelimiter,
@@ -125,32 +121,116 @@ impl From<ObuType> for u8 {
     }
 }
 
-/// Read a little-endian variable-length integer.
-/// AV1-Spec-2 - 4.10.5
-fn read_leb128<T: io::Read>(reader: &mut BitReader<T>) -> io::Result<u64> {
-    let mut result = 0;
-    for i in 0..8 {
-        let byte = reader.read_bits(8)?;
-        result |= (byte & 0x7f) << (i * 7);
-        if byte & 0x80 == 0 {
-            break;
+#[cfg(test)]
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
+mod tests {
+    use bytes::Buf;
+
+    use super::*;
+
+    #[test]
+    fn test_obu_header_parse() {
+        let mut cursor = std::io::Cursor::new(b"\n\x0f\0\0\0j\xef\xbf\xe1\xbc\x02\x19\x90\x10\x10\x10@");
+        let header = ObuHeader::parse(&mut cursor).unwrap();
+        insta::assert_debug_snapshot!(header, @r"
+        ObuHeader {
+            obu_type: SequenceHeader,
+            size: Some(
+                15,
+            ),
+            extension_header: None,
+        }
+        ");
+
+        assert_eq!(cursor.position(), 2);
+        assert_eq!(cursor.remaining(), 15);
+    }
+
+    #[test]
+    fn test_obu_header_parse_no_size_field() {
+        let mut cursor = std::io::Cursor::new(b"\x00");
+        let header = ObuHeader::parse(&mut cursor).unwrap();
+        insta::assert_debug_snapshot!(header, @r"
+        ObuHeader {
+            obu_type: Reserved(
+                0,
+            ),
+            size: None,
+            extension_header: None,
+        }
+        ");
+
+        assert_eq!(cursor.position(), 1);
+        assert_eq!(cursor.remaining(), 0);
+    }
+
+    #[test]
+    fn test_obu_header_parse_extension_header() {
+        let mut cursor = std::io::Cursor::new([0b00000100, 0b11010000]);
+        let header = ObuHeader::parse(&mut cursor).unwrap();
+        insta::assert_debug_snapshot!(header, @r"
+        ObuHeader {
+            obu_type: Reserved(
+                0,
+            ),
+            size: None,
+            extension_header: Some(
+                ObuHeaderExtension {
+                    temporal_id: 6,
+                    spatial_id: 2,
+                },
+            ),
+        }
+        ");
+
+        assert_eq!(cursor.position(), 2);
+        assert_eq!(cursor.remaining(), 0);
+    }
+
+    #[test]
+    fn test_obu_header_forbidden_bit_set() {
+        let err = ObuHeader::parse(&mut std::io::Cursor::new(
+            b"\xff\x0f\0\0\0j\xef\xbf\xe1\xbc\x02\x19\x90\x10\x10\x10@",
+        ))
+        .unwrap_err();
+        insta::assert_debug_snapshot!(err, @r#"
+        Custom {
+            kind: InvalidData,
+            error: "obu_forbidden_bit is not 0",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_obu_header_parse_invalid_obu_type() {
+        let err = ObuHeader::parse(&mut std::io::Cursor::new(b"\x01")).unwrap_err();
+        insta::assert_debug_snapshot!(err, @r#"
+        Custom {
+            kind: InvalidData,
+            error: "obu_reserved_1bit is not 0",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_obu_to_from_u8() {
+        let case = [
+            (ObuType::SequenceHeader, 1),
+            (ObuType::TemporalDelimiter, 2),
+            (ObuType::FrameHeader, 3),
+            (ObuType::TileGroup, 4),
+            (ObuType::Metadata, 5),
+            (ObuType::Frame, 6),
+            (ObuType::RedundantFrameHeader, 7),
+            (ObuType::TileList, 8),
+            (ObuType::Padding, 15),
+            (ObuType::Reserved(0), 0),
+            (ObuType::Reserved(100), 100),
+        ];
+
+        for (obu_type, value) in case {
+            assert_eq!(u8::from(obu_type), value);
+            assert_eq!(ObuType::from(value), obu_type);
         }
     }
-    Ok(result)
-}
-
-/// Read a variable-length unsigned integer.
-/// AV1-Spec-2 - 4.10.3
-fn read_uvlc<T: io::Read>(reader: &mut BitReader<T>) -> io::Result<u64> {
-    let mut leading_zeros = 0;
-    while !reader.read_bit()? {
-        leading_zeros += 1;
-    }
-
-    if leading_zeros >= 32 {
-        return Ok((1 << 32) - 1);
-    }
-
-    let value = reader.read_bits(leading_zeros)?;
-    Ok(value + (1 << leading_zeros) - 1)
 }
