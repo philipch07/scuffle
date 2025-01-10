@@ -4,7 +4,7 @@ use std::io::{
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::{Buf, Bytes};
-use scuffle_bytes_util::{BitWriter, BytesCursor};
+use scuffle_bytes_util::{BitWriter, BytesCursorExt};
 
 #[derive(Debug, Clone, PartialEq)]
 /// AVC (H.264) Decoder Configuration Record

@@ -56,30 +56,40 @@ impl<T: io::Read> BitReader<T> {
     }
 
     /// Aligns the reader to the next byte boundary
+    #[inline(always)]
     pub fn align(&mut self) -> io::Result<()> {
-        let amount_to_read = 8 - self.bit_pos;
-        self.read_bits(amount_to_read)?;
+        // This has the effect of making the next read_bit call read the next byte
+        // and is equivalent to calling read_bits(8 - self.bit_pos)
+        self.bit_pos = 0;
         Ok(())
     }
 }
 
 impl<T> BitReader<T> {
     /// Returns the underlying reader
+    #[inline(always)]
+    #[must_use]
     pub fn into_inner(self) -> T {
         self.data
     }
 
     /// Returns a reference to the underlying reader
+    #[inline(always)]
+    #[must_use]
     pub const fn get_ref(&self) -> &T {
         &self.data
     }
 
     /// Returns the current bit position (0-7)
+    #[inline(always)]
+    #[must_use]
     pub const fn bit_pos(&self) -> u8 {
         self.bit_pos
     }
 
     /// Checks if the reader is aligned to the byte boundary
+    #[inline(always)]
+    #[must_use]
     pub const fn is_aligned(&self) -> bool {
         self.bit_pos == 0
     }

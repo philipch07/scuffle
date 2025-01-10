@@ -6,4 +6,4 @@ mod bytes_cursor;
 
 pub use bit_read::BitReader;
 pub use bit_write::BitWriter;
-pub use bytes_cursor::BytesCursor;
+pub use bytes_cursor::{BytesCursor, BytesCursorExt};

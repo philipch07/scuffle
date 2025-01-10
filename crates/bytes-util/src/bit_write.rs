@@ -11,11 +11,7 @@ pub struct BitWriter<W> {
 
 impl<W: Default> Default for BitWriter<W> {
     fn default() -> Self {
-        Self {
-            bit_pos: 0,
-            current_byte: 0,
-            writer: W::default(),
-        }
+        Self::new(W::default())
     }
 }
 
@@ -81,18 +77,21 @@ impl<W> BitWriter<W> {
 
     /// Returns the current bit position (0-7)
     #[inline(always)]
+    #[must_use]
     pub const fn bit_pos(&self) -> u8 {
         self.bit_pos % 8
     }
 
     /// Checks if the writer is aligned to the byte boundary
     #[inline(always)]
+    #[must_use]
     pub const fn is_aligned(&self) -> bool {
         self.bit_pos % 8 == 0
     }
 
     /// Returns a reference to the underlying writer
     #[inline(always)]
+    #[must_use]
     pub const fn get_ref(&self) -> &W {
         &self.writer
     }

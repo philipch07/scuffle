@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use amf0::Amf0Value;
 use bytes::BytesMut;
-use scuffle_bytes_util::BytesCursor;
+use scuffle_bytes_util::BytesCursorExt;
 use scuffle_future_ext::FutureExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::oneshot;

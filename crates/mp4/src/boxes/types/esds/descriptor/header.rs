@@ -2,7 +2,7 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 use bytes::Bytes;
-use scuffle_bytes_util::BytesCursor;
+use scuffle_bytes_util::BytesCursorExt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DescriptorHeader {

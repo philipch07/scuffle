@@ -2,26 +2,39 @@ use std::io;
 
 use bytes::Bytes;
 
+pub type BytesCursor = io::Cursor<Bytes>;
+
 /// A helper trait to implement zero copy reads on a `Cursor<Bytes>` type.
-pub trait BytesCursor {
+///
+/// Allowing for zero copy reads from a `Cursor<Bytes>` type.
+pub trait BytesCursorExt {
     /// Returns the remaining bytes in the cursor.
+    #[must_use]
     fn remaining(&self) -> usize;
 
-    /// Extracts the remaining bytes from the cursor returning.
+    /// Extracts the remaining bytes from the cursor.
     ///
     /// This does not do a copy of the bytes, and is O(1) time.
     ///
     /// This is the same as `BytesCursor::extract_bytes(self.remaining())`.
+    ///
+    /// This is equivalent if you were to read the remaining data into a new
+    /// buffer, however this is more efficient as it does not copy the
+    /// bytes.
     fn extract_remaining(&mut self) -> Bytes;
 
-    /// Extracts a bytes from the cursor.
+    /// Extracts bytes from the cursor.
     ///
     /// This does not do a copy of the bytes, and is O(1) time.
     /// Returns an error if the size is greater than the remaining bytes.
+    ///
+    /// This is equivalent if you were to read the remaining data into a new
+    /// buffer, however this is more efficient as it does not copy the
+    /// bytes.
     fn extract_bytes(&mut self, size: usize) -> io::Result<Bytes>;
 }
 
-impl BytesCursor for io::Cursor<Bytes> {
+impl BytesCursorExt for BytesCursor {
     fn remaining(&self) -> usize {
         // We have to use a saturating sub here because the position can be
         // greater than the length of the bytes.

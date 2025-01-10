@@ -3,7 +3,7 @@ use std::io::{self, Seek, Write};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use rand::Rng;
-use scuffle_bytes_util::BytesCursor;
+use scuffle_bytes_util::BytesCursorExt;
 
 use super::define::{RtmpVersion, SchemaVersion, ServerHandshakeState};
 use super::digest::DigestProcessor;

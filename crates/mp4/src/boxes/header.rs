@@ -5,7 +5,7 @@ use std::io::{
 
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
-use scuffle_bytes_util::BytesCursor;
+use scuffle_bytes_util::BytesCursorExt;
 
 #[derive(Clone, PartialEq)]
 pub struct BoxHeader {

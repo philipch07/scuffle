@@ -9,7 +9,7 @@ use bytes::{Buf, Bytes};
 use h264::AVCDecoderConfigurationRecord;
 use h265::HEVCDecoderConfigurationRecord;
 use num_traits::FromPrimitive;
-use scuffle_bytes_util::BytesCursor;
+use scuffle_bytes_util::BytesCursorExt;
 
 use crate::define::Flv;
 use crate::{
