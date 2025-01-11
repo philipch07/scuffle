@@ -1,7 +1,5 @@
 //! # scuffle-expgolomb
 //!
-//! [![crates.io](https://img.shields.io/crates/v/scuffle-expgolomb.svg)](https://crates.io/crates/scuffle-expgolomb) [![docs.rs](https://img.shields.io/docsrs/scuffle-expgolomb)](https://docs.rs/scuffle-expgolomb)
-//!
 //! A set of helper functions to encode and decode exponential-golomb values.
 //!
 //! This crate extends upon the [`BitReader`] and [`BitWriter`] from the
