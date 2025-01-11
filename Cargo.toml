@@ -25,7 +25,7 @@ members = [
     "crates/aac",
     "crates/amf0",
     "crates/av1",
-    "crates/exp_golomb",
+    "crates/expgolomb",
     "crates/flv",
     "crates/h264",
     "crates/h265",
@@ -60,6 +60,7 @@ scuffle-metrics-derive = { path = "crates/metrics/derive", version = "0.0.2" }
 scuffle-ffmpeg-sys = { path = "crates/ffmpeg-sys", version = "7.1.0" }
 scuffle-future-ext = { path = "crates/future-ext", version = "0.0.1" }
 scuffle-bytes-util = { path = "crates/bytes-util", version = "0.0.1" }
+scuffle-expgolomb = { path = "crates/expgolomb", version = "0.0.1" }
 
 [profile.release-debug]
 inherits = "release"

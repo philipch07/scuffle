@@ -2,8 +2,8 @@ use std::io;
 
 use byteorder::ReadBytesExt;
 use bytes::Bytes;
-use exp_golomb::{read_exp_golomb, read_signed_exp_golomb};
 use scuffle_bytes_util::BitReader;
+use scuffle_expgolomb::BitReaderExpGolombExt;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Sequence parameter set
@@ -109,13 +109,13 @@ impl Sps {
             }
         }
 
-        read_exp_golomb(&mut bit_reader)?; // sps_seq_parameter_set_id
-        let chroma_format_idc = read_exp_golomb(&mut bit_reader)?;
+        bit_reader.read_exp_golomb()?; // sps_seq_parameter_set_id
+        let chroma_format_idc = bit_reader.read_exp_golomb()?;
         if chroma_format_idc == 3 {
             bit_reader.read_bit()?;
         }
-        let pic_width_in_luma_samples = read_exp_golomb(&mut bit_reader)?;
-        let pic_height_in_luma_samples = read_exp_golomb(&mut bit_reader)?;
+        let pic_width_in_luma_samples = bit_reader.read_exp_golomb()?;
+        let pic_height_in_luma_samples = bit_reader.read_exp_golomb()?;
         let conformance_window_flag = bit_reader.read_bit()?;
 
         let conf_win_left_offset;
@@ -124,10 +124,10 @@ impl Sps {
         let conf_win_bottom_offset;
 
         if conformance_window_flag {
-            conf_win_left_offset = read_exp_golomb(&mut bit_reader)?;
-            conf_win_right_offset = read_exp_golomb(&mut bit_reader)?;
-            conf_win_top_offset = read_exp_golomb(&mut bit_reader)?;
-            conf_win_bottom_offset = read_exp_golomb(&mut bit_reader)?;
+            conf_win_left_offset = bit_reader.read_exp_golomb()?;
+            conf_win_right_offset = bit_reader.read_exp_golomb()?;
+            conf_win_top_offset = bit_reader.read_exp_golomb()?;
+            conf_win_bottom_offset = bit_reader.read_exp_golomb()?;
         } else {
             conf_win_left_offset = 0;
             conf_win_right_offset = 0;
@@ -146,25 +146,25 @@ impl Sps {
         let width = pic_width_in_luma_samples - sub_width_c * (conf_win_left_offset + conf_win_right_offset);
         let height = pic_height_in_luma_samples - sub_height_c * (conf_win_top_offset + conf_win_bottom_offset);
 
-        read_exp_golomb(&mut bit_reader)?; // bit_depth_luma_minus8
-        read_exp_golomb(&mut bit_reader)?; // bit_depth_chroma_minus8
-        read_exp_golomb(&mut bit_reader)?; // log2_max_pic_order_cnt_lsb_minus4
+        bit_reader.read_exp_golomb()?; // bit_depth_luma_minus8
+        bit_reader.read_exp_golomb()?; // bit_depth_chroma_minus8
+        bit_reader.read_exp_golomb()?; // log2_max_pic_order_cnt_lsb_minus4
         let sps_sub_layer_ordering_info_present_flag = bit_reader.read_bit()?;
 
         if sps_sub_layer_ordering_info_present_flag {
             for _ in 0..=sps_max_sub_layers_minus1 {
-                read_exp_golomb(&mut bit_reader)?; // sps_max_dec_pic_buffering_minus1
-                read_exp_golomb(&mut bit_reader)?; // sps_max_num_reorder_pics
-                read_exp_golomb(&mut bit_reader)?; // sps_max_latency_increase_plus1
+                bit_reader.read_exp_golomb()?; // sps_max_dec_pic_buffering_minus1
+                bit_reader.read_exp_golomb()?; // sps_max_num_reorder_pics
+                bit_reader.read_exp_golomb()?; // sps_max_latency_increase_plus1
             }
         };
 
-        read_exp_golomb(&mut bit_reader)?; // log2_min_luma_coding_block_size_minus3
-        read_exp_golomb(&mut bit_reader)?; // log2_diff_max_min_luma_coding_block_size
-        read_exp_golomb(&mut bit_reader)?; // log2_min_transform_block_size_minus2
-        read_exp_golomb(&mut bit_reader)?; // log2_diff_max_min_transform_block_size
-        read_exp_golomb(&mut bit_reader)?; // max_transform_hierarchy_depth_inter
-        read_exp_golomb(&mut bit_reader)?; // max_transform_hierarchy_depth_intra
+        bit_reader.read_exp_golomb()?; // log2_min_luma_coding_block_size_minus3
+        bit_reader.read_exp_golomb()?; // log2_diff_max_min_luma_coding_block_size
+        bit_reader.read_exp_golomb()?; // log2_min_transform_block_size_minus2
+        bit_reader.read_exp_golomb()?; // log2_diff_max_min_transform_block_size
+        bit_reader.read_exp_golomb()?; // max_transform_hierarchy_depth_inter
+        bit_reader.read_exp_golomb()?; // max_transform_hierarchy_depth_intra
 
         let scaling_list_enabled_flag = bit_reader.read_bit()?;
         if scaling_list_enabled_flag {
@@ -175,16 +175,16 @@ impl Sps {
                     while matrix_id < 6 {
                         let scaling_list_pred_mode_flag = bit_reader.read_bit()?;
                         if !scaling_list_pred_mode_flag {
-                            read_exp_golomb(&mut bit_reader)?; // scaling_list_pred_matrix_id_delta
+                            bit_reader.read_exp_golomb()?; // scaling_list_pred_matrix_id_delta
                         } else {
                             let coef_num = 64.min(1 << (4 + (size_id << 1)));
                             let mut next_coef = 8;
                             if size_id > 1 {
-                                let scaling_list_dc_coef_minus8 = read_signed_exp_golomb(&mut bit_reader)?;
+                                let scaling_list_dc_coef_minus8 = bit_reader.read_signed_exp_golomb()?;
                                 next_coef = 8 + scaling_list_dc_coef_minus8;
                             }
                             for _ in 0..coef_num {
-                                let scaling_list_delta_coef = read_signed_exp_golomb(&mut bit_reader)?;
+                                let scaling_list_delta_coef = bit_reader.read_signed_exp_golomb()?;
                                 next_coef = (next_coef + scaling_list_delta_coef + 256) % 256;
                             }
                         }
@@ -201,17 +201,17 @@ impl Sps {
             // pcm_enabled_flag
             bit_reader.seek_bits(4)?; // pcm_sample_bit_depth_luma_minus1
             bit_reader.seek_bits(4)?; // pcm_sample_bit_depth_chroma_minus1
-            read_exp_golomb(&mut bit_reader)?; // log2_min_pcm_luma_coding_block_size_minus3
-            read_exp_golomb(&mut bit_reader)?; // log2_diff_max_min_pcm_luma_coding_block_size
+            bit_reader.read_exp_golomb()?; // log2_min_pcm_luma_coding_block_size_minus3
+            bit_reader.read_exp_golomb()?; // log2_diff_max_min_pcm_luma_coding_block_size
             bit_reader.seek_bits(1)?; // pcm_loop_filter_disabled_flag
         }
 
-        let num_short_term_ref_pic_sets = read_exp_golomb(&mut bit_reader)?;
+        let num_short_term_ref_pic_sets = bit_reader.read_exp_golomb()?;
         let mut num_delta_pocs = vec![0; num_short_term_ref_pic_sets as usize];
         for st_rps_idx in 0..num_short_term_ref_pic_sets {
             if st_rps_idx != 0 && bit_reader.read_bit()? {
                 bit_reader.seek_bits(1)?;
-                read_exp_golomb(&mut bit_reader)?; // delta_rps_sign
+                bit_reader.read_exp_golomb()?; // delta_rps_sign
 
                 num_delta_pocs[st_rps_idx as usize] = 0;
 
@@ -228,16 +228,16 @@ impl Sps {
                     }
                 }
             } else {
-                let num_negative_pics = read_exp_golomb(&mut bit_reader)?;
-                let num_positive_pics = read_exp_golomb(&mut bit_reader)?;
+                let num_negative_pics = bit_reader.read_exp_golomb()?;
+                let num_positive_pics = bit_reader.read_exp_golomb()?;
 
                 num_delta_pocs[st_rps_idx as usize] = num_negative_pics + num_positive_pics;
                 for _ in 0..num_negative_pics {
-                    read_exp_golomb(&mut bit_reader)?; // delta_poc_s0_minus1
+                    bit_reader.read_exp_golomb()?; // delta_poc_s0_minus1
                     bit_reader.seek_bits(1)?; // used_by_curr_pic_s0_flag
                 }
                 for _ in 0..num_positive_pics {
-                    read_exp_golomb(&mut bit_reader)?; // delta_poc_s1_minus1
+                    bit_reader.read_exp_golomb()?; // delta_poc_s1_minus1
                     bit_reader.seek_bits(1)?; // used_by_curr_pic_s1_flag
                 }
             }
@@ -245,9 +245,9 @@ impl Sps {
 
         let long_term_ref_pics_present_flag = bit_reader.read_bit()?;
         if long_term_ref_pics_present_flag {
-            let num_long_term_ref_pics_sps = read_exp_golomb(&mut bit_reader)?;
+            let num_long_term_ref_pics_sps = bit_reader.read_exp_golomb()?;
             for _ in 0..num_long_term_ref_pics_sps {
-                read_exp_golomb(&mut bit_reader)?; // lt_ref_pic_poc_lsb_sps
+                bit_reader.read_exp_golomb()?; // lt_ref_pic_poc_lsb_sps
                 bit_reader.seek_bits(1)?; // used_by_curr_pic_lt_sps_flag
             }
         }
@@ -303,8 +303,8 @@ impl Sps {
 
             let chroma_loc_info_present_flag = bit_reader.read_bit()?;
             if chroma_loc_info_present_flag {
-                read_exp_golomb(&mut bit_reader)?; // chroma_sample_loc_type_top_field
-                read_exp_golomb(&mut bit_reader)?; // chroma_sample_loc_type_bottom_field
+                bit_reader.read_exp_golomb()?; // chroma_sample_loc_type_top_field
+                bit_reader.read_exp_golomb()?; // chroma_sample_loc_type_bottom_field
             }
 
             bit_reader.seek_bits(1)?;
@@ -313,10 +313,10 @@ impl Sps {
             let default_display_window_flag = bit_reader.read_bit()?;
 
             if default_display_window_flag {
-                read_exp_golomb(&mut bit_reader)?; // def_disp_win_left_offset
-                read_exp_golomb(&mut bit_reader)?; // def_disp_win_right_offset
-                read_exp_golomb(&mut bit_reader)?; // def_disp_win_top_offset
-                read_exp_golomb(&mut bit_reader)?; // def_disp_win_bottom_offset
+                bit_reader.read_exp_golomb()?; // def_disp_win_left_offset
+                bit_reader.read_exp_golomb()?; // def_disp_win_right_offset
+                bit_reader.read_exp_golomb()?; // def_disp_win_top_offset
+                bit_reader.read_exp_golomb()?; // def_disp_win_bottom_offset
             }
 
             let vui_timing_info_present_flag = bit_reader.read_bit()?;

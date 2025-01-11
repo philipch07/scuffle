@@ -878,15 +878,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "exp_golomb"
-version = "0.0.1"
-dependencies = [
- "bytes",
- "scuffle-bytes-util",
- "scuffle-workspace-hack",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1137,8 +1128,8 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "exp_golomb",
  "scuffle-bytes-util",
+ "scuffle-expgolomb",
  "scuffle-workspace-hack",
 ]
 
@@ -1148,8 +1139,8 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "exp_golomb",
  "scuffle-bytes-util",
+ "scuffle-expgolomb",
  "scuffle-workspace-hack",
 ]
 
@@ -2573,6 +2564,15 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tokio-util",
+]
+
+[[package]]
+name = "scuffle-expgolomb"
+version = "0.0.1"
+dependencies = [
+ "bytes",
+ "scuffle-bytes-util",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
