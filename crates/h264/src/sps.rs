@@ -2,8 +2,8 @@ use std::io;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
-use exp_golomb::{read_exp_golomb, read_signed_exp_golomb};
 use scuffle_bytes_util::BitReader;
+use scuffle_expgolomb::BitReaderExpGolombExt;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Sequence parameter set
@@ -70,7 +70,7 @@ impl Sps {
         )?;
 
         let level_idc = bit_reader.read_u8()?;
-        read_exp_golomb(&mut bit_reader)?; // seq_parameter_set_id
+        bit_reader.read_exp_golomb()?; // seq_parameter_set_id
 
         let sps_ext = match profile_idc {
             100 | 110 | 122 | 244 | 44 | 83 | 86 | 118 | 128 | 138 | 139 | 134 | 135 => {
@@ -79,24 +79,24 @@ impl Sps {
             _ => None,
         };
 
-        read_exp_golomb(&mut bit_reader)?; // log2_max_frame_num_minus4
-        let pic_order_cnt_type = read_exp_golomb(&mut bit_reader)?;
+        bit_reader.read_exp_golomb()?; // log2_max_frame_num_minus4
+        let pic_order_cnt_type = bit_reader.read_exp_golomb()?;
         if pic_order_cnt_type == 0 {
-            read_exp_golomb(&mut bit_reader)?; // log2_max_pic_order_cnt_lsb_minus4
+            bit_reader.read_exp_golomb()?; // log2_max_pic_order_cnt_lsb_minus4
         } else if pic_order_cnt_type == 1 {
             bit_reader.seek_bits(1)?; // delta_pic_order_always_zero_flag
-            read_signed_exp_golomb(&mut bit_reader)?; // offset_for_non_ref_pic
-            read_signed_exp_golomb(&mut bit_reader)?; // offset_for_top_to_bottom_field
-            let num_ref_frames_in_pic_order_cnt_cycle = read_exp_golomb(&mut bit_reader)?;
+            bit_reader.read_signed_exp_golomb()?; // offset_for_non_ref_pic
+            bit_reader.read_signed_exp_golomb()?; // offset_for_top_to_bottom_field
+            let num_ref_frames_in_pic_order_cnt_cycle = bit_reader.read_exp_golomb()?;
             for _ in 0..num_ref_frames_in_pic_order_cnt_cycle {
-                read_signed_exp_golomb(&mut bit_reader)?; // offset_for_ref_frame
+                bit_reader.read_signed_exp_golomb()?; // offset_for_ref_frame
             }
         }
 
-        read_exp_golomb(&mut bit_reader)?; // max_num_ref_frames
+        bit_reader.read_exp_golomb()?; // max_num_ref_frames
         bit_reader.read_bit()?; // gaps_in_frame_num_value_allowed_flag
-        let pic_width_in_mbs_minus1 = read_exp_golomb(&mut bit_reader)?; // pic_width_in_mbs_minus1
-        let pic_height_in_map_units_minus1 = read_exp_golomb(&mut bit_reader)?; // pic_height_in_map_units_minus1
+        let pic_width_in_mbs_minus1 = bit_reader.read_exp_golomb()?; // pic_width_in_mbs_minus1
+        let pic_height_in_map_units_minus1 = bit_reader.read_exp_golomb()?; // pic_height_in_map_units_minus1
         let frame_mbs_only_flag = bit_reader.read_bit()?;
         if !frame_mbs_only_flag {
             bit_reader.seek_bits(1)?; // mb_adaptive_frame_field_flag
@@ -111,10 +111,10 @@ impl Sps {
 
         if bit_reader.read_bit()? {
             // frame_cropping_flag
-            frame_crop_left_offset = read_exp_golomb(&mut bit_reader)?; // frame_crop_left_offset
-            frame_crop_right_offset = read_exp_golomb(&mut bit_reader)?; // frame_crop_right_offset
-            frame_crop_top_offset = read_exp_golomb(&mut bit_reader)?; // frame_crop_top_offset
-            frame_crop_bottom_offset = read_exp_golomb(&mut bit_reader)?; // frame_crop_bottom_offset
+            frame_crop_left_offset = bit_reader.read_exp_golomb()?; // frame_crop_left_offset
+            frame_crop_right_offset = bit_reader.read_exp_golomb()?; // frame_crop_right_offset
+            frame_crop_top_offset = bit_reader.read_exp_golomb()?; // frame_crop_top_offset
+            frame_crop_bottom_offset = bit_reader.read_exp_golomb()?; // frame_crop_bottom_offset
         }
 
         let width = ((pic_width_in_mbs_minus1 + 1) * 16) - frame_crop_right_offset * 2 - frame_crop_left_offset * 2;
@@ -175,8 +175,8 @@ impl Sps {
 
             // chroma_loc_info_present_flag
             if bit_reader.read_bit()? {
-                read_exp_golomb(&mut bit_reader)?; // chroma_sample_loc_type_top_field
-                read_exp_golomb(&mut bit_reader)?; // chroma_sample_loc_type_bottom_field
+                bit_reader.read_exp_golomb()?; // chroma_sample_loc_type_top_field
+                bit_reader.read_exp_golomb()?; // chroma_sample_loc_type_bottom_field
             }
 
             // timing_info_present_flag
@@ -215,13 +215,13 @@ pub struct SpsExtended {
 
 impl SpsExtended {
     pub fn parse<T: io::Read>(reader: &mut BitReader<T>) -> io::Result<Self> {
-        let chroma_format_idc = read_exp_golomb(reader)?;
+        let chroma_format_idc = reader.read_exp_golomb()?;
         if chroma_format_idc == 3 {
             reader.read_bit()?;
         }
 
-        let bit_depth_luma_minus8 = read_exp_golomb(reader)?;
-        let bit_depth_chroma_minus8 = read_exp_golomb(reader)?;
+        let bit_depth_luma_minus8 = reader.read_exp_golomb()?;
+        let bit_depth_chroma_minus8 = reader.read_exp_golomb()?;
         reader.read_bit()?; // qpprime_y_zero_transform_bypass_flag
 
         if reader.read_bit()? {
@@ -234,7 +234,7 @@ impl SpsExtended {
                     let size = if i < 6 { 16 } else { 64 };
                     let mut next_scale = 8;
                     for _ in 0..size {
-                        let delta_scale = read_signed_exp_golomb(reader)?;
+                        let delta_scale = reader.read_signed_exp_golomb()?;
                         next_scale = (next_scale + delta_scale + 256) % 256;
                         if next_scale == 0 {
                             break;

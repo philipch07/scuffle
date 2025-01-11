@@ -1,0 +1,21 @@
+[package]
+name = "scuffle-expgolomb"
+version = "0.0.1"
+edition = "2021"
+repository = "https://github.com/scufflecloud/scuffle"
+authors = ["Scuffle <opensource@scuffle.cloud>"]
+readme = "README.md"
+documentation = "https://docs.rs/scuffle-expgolomb"
+license = "MIT OR Apache-2.0"
+description = "Exponential-Golomb encoder and decoder."
+keywords = ["exp-golomb", "video", "h264", "h265"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
+[dependencies]
+scuffle-bytes-util.workspace = true
+scuffle-workspace-hack.workspace = true
+
+[dev-dependencies]
+bytes = "1.5"
