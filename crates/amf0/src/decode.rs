@@ -17,14 +17,14 @@ pub struct Amf0Decoder<'a> {
 
 impl<'a> Amf0Decoder<'a> {
     /// Create a new AMF0 decoder.
-    pub fn new(buff: &'a [u8]) -> Self {
+    pub const fn new(buff: &'a [u8]) -> Self {
         Self {
             cursor: Cursor::new(buff),
         }
     }
 
     /// Check if the decoder has reached the end of the AMF0 data.
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.cursor.get_ref().len() == self.cursor.position() as usize
     }
 
@@ -81,7 +81,7 @@ impl<'a> Amf0Decoder<'a> {
     }
 
     fn read_bool(&mut self) -> Result<bool, Amf0ReadError> {
-        Ok(self.cursor.read_u8()? == 1)
+        Ok(self.cursor.read_u8()? > 0)
     }
 
     fn read_string(&mut self) -> Result<Cow<'a, str>, Amf0ReadError> {
@@ -93,15 +93,14 @@ impl<'a> Amf0Decoder<'a> {
 
     fn is_read_object_eof(&mut self) -> Result<bool, Amf0ReadError> {
         let pos = self.cursor.position();
-        let marker = self.cursor.read_u24::<BigEndian>();
-        self.cursor.seek(SeekFrom::Start(pos))?;
+        let marker = self.cursor.read_u24::<BigEndian>().map(|m| Amf0Marker::from_u32(m));
 
-        match Amf0Marker::from_u32(marker?) {
-            Some(Amf0Marker::ObjectEnd) => {
-                self.cursor.read_u24::<BigEndian>()?;
-                Ok(true)
-            }
-            _ => Ok(false),
+        match marker {
+            Ok(Some(Amf0Marker::ObjectEnd)) => Ok(true),
+            _ => {
+                self.cursor.seek(SeekFrom::Start(pos))?;
+                Ok(false)
+            },
         }
     }
 
