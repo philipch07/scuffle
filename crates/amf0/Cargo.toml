@@ -16,5 +16,5 @@ byteorder = "1.5"
 num-traits = "0.2"
 num-derive = "0.4"
 scuffle-bytes-util.workspace = true
-thiserror = "2"
+thiserror = "2.0"
 scuffle-workspace-hack.workspace = true
