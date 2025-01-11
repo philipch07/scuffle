@@ -801,6 +801,634 @@ mod tests {
     }
 
     #[test]
+    fn test_seq_obu_parse_num_ticks_per_picture() {
+        let mut bits = BitWriter::new(Vec::new());
+
+        bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
+        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(false).unwrap(); // reduced_still_picture_header
+        bits.write_bit(true).unwrap(); // timing_info_present_flag
+
+        bits.write_u32::<BigEndian>(1).unwrap(); // num_units_in_display_tick
+        bits.write_u32::<BigEndian>(1).unwrap(); // time_scale
+        bits.write_bit(true).unwrap(); // num_ticks_per_picture
+        bits.write_bits(0b01, 1).unwrap(); // read_uvlc
+
+        bits.write_bit(true).unwrap(); // decoder_model_info_present_flag
+        bits.write_bits(4, 5).unwrap(); // buffer_delay_length
+        bits.write_u32::<BigEndian>(1).unwrap(); // num_units_in_decoding_tick
+        bits.write_bits(4, 5).unwrap(); // buffer_removal_time_length
+        bits.write_bits(4, 5).unwrap(); // frame_presentation_time_length
+
+        bits.write_bit(true).unwrap(); // initial_display_delay_present_flag
+        bits.write_bits(0, 5).unwrap(); // operating_points_cnt_minus_1
+
+        bits.write_bits(0, 12).unwrap(); // idc
+        bits.write_bits(1, 5).unwrap(); // seq_lvl_idx
+        bits.write_bit(true).unwrap(); // seq_tier
+
+        bits.write_bits(0b1010, 5).unwrap(); // decoder_buffer_delay
+        bits.write_bits(0b0101, 5).unwrap(); // encoder_buffer_delay
+        bits.write_bit(false).unwrap(); // low_delay_mode_flag
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+        bits.write_bits(15, 4).unwrap(); // initial_display_delay_minus_1
+
+        bits.write_bits(15, 4).unwrap(); // operating_points_cnt_minus_1
+        bits.write_bits(15, 4).unwrap(); // operating_points_cnt_minus_1
+        bits.write_bits(1919, 16).unwrap(); // operating_points_cnt_minus_1
+        bits.write_bits(1079, 16).unwrap(); // operating_points_cnt_minus_1
+
+        bits.write_bit(true).unwrap(); // frame_id_numbers_present_flag
+        bits.write_bits(0b1101, 4).unwrap(); // delta_frame_id_length
+        bits.write_bits(0b101, 3).unwrap(); // additional_frame_id_length
+
+        bits.write_bit(false).unwrap(); // use_128x128_superblock
+        bits.write_bit(false).unwrap(); // enable_filter_intra
+        bits.write_bit(false).unwrap(); // enable_intra_edge_filter
+
+        bits.write_bit(false).unwrap(); // enable_interintra_compound
+        bits.write_bit(false).unwrap(); // enable_masked_compound
+        bits.write_bit(false).unwrap(); // enable_warped_motion
+        bits.write_bit(false).unwrap(); // enable_dual_filter
+        bits.write_bit(true).unwrap(); // enable_order_hint
+        bits.write_bit(false).unwrap(); // enable_jnt_comp
+        bits.write_bit(false).unwrap(); // enable_ref_frame_mvs
+
+        bits.write_bit(false).unwrap();
+        bits.write_bit(true).unwrap();
+        bits.write_bit(false).unwrap();
+        bits.write_bit(false).unwrap();
+
+        bits.write_bits(0b100, 3).unwrap();
+
+        bits.write_bit(false).unwrap(); // enable_superres
+        bits.write_bit(false).unwrap(); // enable_cdef
+        bits.write_bit(false).unwrap(); // enable_restoration
+
+        bits.write_bit(false).unwrap(); // high_bitdepth
+        bits.write_bit(true).unwrap(); // mono_chrome
+        bits.write_bit(false).unwrap(); // color_description_present_flag
+        bits.write_bit(true).unwrap(); // color_range
+        bits.write_bit(true).unwrap(); // separate_uv_delta_q
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+
+        let obu_header = SequenceHeaderObu::parse(
+            ObuHeader {
+                obu_type: ObuType::SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            &mut io::Cursor::new(bits.finish().unwrap()),
+        )
+        .unwrap();
+
+        insta::assert_debug_snapshot!(obu_header, @r"
+        SequenceHeaderObu {
+            header: ObuHeader {
+                obu_type: SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            seq_profile: 2,
+            still_picture: false,
+            reduced_still_picture_header: false,
+            timing_info: Some(
+                TimingInfo {
+                    num_units_in_display_tick: 1,
+                    time_scale: 1,
+                    num_ticks_per_picture: Some(
+                        1,
+                    ),
+                },
+            ),
+            decoder_model_info: Some(
+                DecoderModelInfo {
+                    buffer_delay_length: 5,
+                    num_units_in_decoding_tick: 1,
+                    buffer_removal_time_length: 5,
+                    frame_presentation_time_length: 5,
+                },
+            ),
+            operating_points: [
+                OperatingPoint {
+                    idc: 0,
+                    seq_level_idx: 1,
+                    seq_tier: false,
+                    operating_parameters_info: Some(
+                        OperatingParametersInfo {
+                            decoder_buffer_delay: 10,
+                            encoder_buffer_delay: 5,
+                            low_delay_mode_flag: false,
+                        },
+                    ),
+                    initial_display_delay: Some(
+                        16,
+                    ),
+                },
+            ],
+            max_frame_width: 1920,
+            max_frame_height: 1080,
+            frame_ids: Some(
+                FrameIds {
+                    delta_frame_id_length: 15,
+                    additional_frame_id_length: 6,
+                },
+            ),
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: true,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            seq_force_screen_content_tools: 1,
+            seq_force_integer_mv: 0,
+            order_hint_bits: 5,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            color_config: ColorConfig {
+                bit_depth: 8,
+                mono_chrome: true,
+                num_planes: 1,
+                color_primaries: 2,
+                transfer_characteristics: 2,
+                matrix_coefficients: 2,
+                full_color_range: true,
+                subsampling_x: true,
+                subsampling_y: true,
+                chroma_sample_position: 0,
+                separate_uv_delta_q: false,
+            },
+            film_grain_params_present: true,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_seq_obu_parse_initial_display_delay_is_none() {
+        let mut bits = BitWriter::new(Vec::new());
+
+        bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
+        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(false).unwrap(); // reduced_still_picture_header
+        bits.write_bit(true).unwrap(); // timing_info_present_flag
+
+        bits.write_u32::<BigEndian>(1).unwrap(); // num_units_in_display_tick
+        bits.write_u32::<BigEndian>(1).unwrap(); // time_scale
+        bits.write_bit(false).unwrap(); // num_ticks_per_picture
+
+        bits.write_bit(true).unwrap(); // decoder_model_info_present_flag
+        bits.write_bits(4, 5).unwrap(); // buffer_delay_length
+        bits.write_u32::<BigEndian>(1).unwrap(); // num_units_in_decoding_tick
+        bits.write_bits(4, 5).unwrap(); // buffer_removal_time_length
+        bits.write_bits(4, 5).unwrap(); // frame_presentation_time_length
+
+        bits.write_bit(true).unwrap(); // initial_display_delay_present_flag
+        bits.write_bits(0, 5).unwrap(); // operating_points_cnt_minus_1
+
+        bits.write_bits(0, 12).unwrap(); // idc
+        bits.write_bits(1, 5).unwrap(); // seq_lvl_idx
+        bits.write_bit(true).unwrap(); // seq_tier
+
+        bits.write_bits(0b1010, 5).unwrap(); // decoder_buffer_delay
+        bits.write_bits(0b0101, 5).unwrap(); // encoder_buffer_delay
+        bits.write_bit(false).unwrap(); // low_delay_mode_flag
+
+        bits.write_bit(false).unwrap(); // initial_display_delay_present_for_this_op
+
+        bits.write_bits(11, 4).unwrap(); // frame_width_bits
+        bits.write_bits(11, 4).unwrap(); // frame_height_bits
+        bits.write_bits(1919, 12).unwrap(); // max_frame_width
+        bits.write_bits(1079, 12).unwrap(); // max_frame_height
+
+        bits.write_bit(true).unwrap(); // frame_id_numbers_present_flag
+        bits.write_bits(0b1101, 4).unwrap(); // delta_frame_id_length
+        bits.write_bits(0b101, 3).unwrap(); // additional_frame_id_length
+
+        bits.write_bit(false).unwrap(); // use_128x128_superblock
+        bits.write_bit(false).unwrap(); // enable_filter_intra
+        bits.write_bit(false).unwrap(); // enable_intra_edge_filter
+
+        bits.write_bit(false).unwrap(); // enable_interintra_compound
+        bits.write_bit(false).unwrap(); // enable_masked_compound
+        bits.write_bit(false).unwrap(); // enable_warped_motion
+        bits.write_bit(false).unwrap(); // enable_dual_filter
+        bits.write_bit(true).unwrap(); // enable_order_hint
+        bits.write_bit(false).unwrap(); // enable_jnt_comp
+        bits.write_bit(false).unwrap(); // enable_ref_frame_mvs
+
+        bits.write_bit(false).unwrap();
+        bits.write_bit(true).unwrap();
+        bits.write_bit(false).unwrap();
+        bits.write_bit(false).unwrap();
+
+        bits.write_bits(0b100, 3).unwrap();
+
+        bits.write_bit(false).unwrap(); // enable_superres
+        bits.write_bit(false).unwrap(); // enable_cdef
+        bits.write_bit(false).unwrap(); // enable_restoration
+
+        bits.write_bit(false).unwrap(); // high_bitdepth
+        bits.write_bit(true).unwrap(); // mono_chrome
+        bits.write_bit(false).unwrap(); // color_description_present_flag
+        bits.write_bit(true).unwrap(); // color_range
+        bits.write_bit(true).unwrap(); // separate_uv_delta_q
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+
+        let obu_header = SequenceHeaderObu::parse(
+            ObuHeader {
+                obu_type: ObuType::SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            &mut io::Cursor::new(bits.finish().unwrap()),
+        )
+        .unwrap();
+
+        insta::assert_debug_snapshot!(obu_header, @r"
+        SequenceHeaderObu {
+            header: ObuHeader {
+                obu_type: SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            seq_profile: 2,
+            still_picture: false,
+            reduced_still_picture_header: false,
+            timing_info: Some(
+                TimingInfo {
+                    num_units_in_display_tick: 1,
+                    time_scale: 1,
+                    num_ticks_per_picture: None,
+                },
+            ),
+            decoder_model_info: Some(
+                DecoderModelInfo {
+                    buffer_delay_length: 5,
+                    num_units_in_decoding_tick: 1,
+                    buffer_removal_time_length: 5,
+                    frame_presentation_time_length: 5,
+                },
+            ),
+            operating_points: [
+                OperatingPoint {
+                    idc: 0,
+                    seq_level_idx: 1,
+                    seq_tier: false,
+                    operating_parameters_info: Some(
+                        OperatingParametersInfo {
+                            decoder_buffer_delay: 10,
+                            encoder_buffer_delay: 5,
+                            low_delay_mode_flag: false,
+                        },
+                    ),
+                    initial_display_delay: None,
+                },
+            ],
+            max_frame_width: 1920,
+            max_frame_height: 1080,
+            frame_ids: Some(
+                FrameIds {
+                    delta_frame_id_length: 15,
+                    additional_frame_id_length: 6,
+                },
+            ),
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: true,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            seq_force_screen_content_tools: 1,
+            seq_force_integer_mv: 0,
+            order_hint_bits: 5,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            color_config: ColorConfig {
+                bit_depth: 8,
+                mono_chrome: true,
+                num_planes: 1,
+                color_primaries: 2,
+                transfer_characteristics: 2,
+                matrix_coefficients: 2,
+                full_color_range: true,
+                subsampling_x: true,
+                subsampling_y: true,
+                chroma_sample_position: 0,
+                separate_uv_delta_q: false,
+            },
+            film_grain_params_present: true,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_seq_obu_parse_enable_order_hint_is_false() {
+        let mut bits = BitWriter::new(Vec::new());
+
+        bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
+        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(false).unwrap(); // reduced_still_picture_header
+        bits.write_bit(true).unwrap(); // timing_info_present_flag
+
+        bits.write_u32::<BigEndian>(1).unwrap(); // num_units_in_display_tick
+        bits.write_u32::<BigEndian>(1).unwrap(); // time_scale
+        bits.write_bit(false).unwrap(); // num_ticks_per_picture
+
+        bits.write_bit(true).unwrap(); // decoder_model_info_present_flag
+        bits.write_bits(4, 5).unwrap(); // buffer_delay_length
+        bits.write_u32::<BigEndian>(1).unwrap(); // num_units_in_decoding_tick
+        bits.write_bits(4, 5).unwrap(); // buffer_removal_time_length
+        bits.write_bits(4, 5).unwrap(); // frame_presentation_time_length
+
+        bits.write_bit(true).unwrap(); // initial_display_delay_present_flag
+        bits.write_bits(0, 5).unwrap(); // operating_points_cnt_minus_1
+
+        bits.write_bits(0, 12).unwrap(); // idc
+        bits.write_bits(1, 5).unwrap(); // seq_lvl_idx
+        bits.write_bit(true).unwrap(); // seq_tier
+
+        bits.write_bits(0b1010, 5).unwrap(); // decoder_buffer_delay
+        bits.write_bits(0b0101, 5).unwrap(); // encoder_buffer_delay
+        bits.write_bit(false).unwrap(); // low_delay_mode_flag
+
+        bits.write_bit(false).unwrap(); // initial_display_delay_present_for_this_op
+
+        bits.write_bits(11, 4).unwrap(); // frame_width_bits
+        bits.write_bits(11, 4).unwrap(); // frame_height_bits
+        bits.write_bits(1919, 12).unwrap(); // max_frame_width
+        bits.write_bits(1079, 12).unwrap(); // max_frame_height
+
+        bits.write_bit(true).unwrap(); // frame_id_numbers_present_flag
+        bits.write_bits(0b1101, 4).unwrap(); // delta_frame_id_length
+        bits.write_bits(0b101, 3).unwrap(); // additional_frame_id_length
+
+        bits.write_bit(false).unwrap(); // use_128x128_superblock
+        bits.write_bit(false).unwrap(); // enable_filter_intra
+        bits.write_bit(false).unwrap(); // enable_intra_edge_filter
+
+        bits.write_bit(false).unwrap(); // enable_interintra_compound
+        bits.write_bit(false).unwrap(); // enable_masked_compound
+        bits.write_bit(false).unwrap(); // enable_warped_motion
+        bits.write_bit(false).unwrap(); // enable_dual_filter
+        bits.write_bit(false).unwrap(); // enable_order_hint
+
+        bits.write_bit(true).unwrap(); // seq_choose_screen_content_tools
+        bits.write_bit(true).unwrap(); // sets seq_force_integer_mv to be 2
+
+        bits.write_bit(false).unwrap(); // enable_superres
+        bits.write_bit(false).unwrap(); // enable_cdef
+        bits.write_bit(false).unwrap(); // enable_restoration
+
+        bits.write_bit(false).unwrap(); // high_bitdepth
+        bits.write_bit(true).unwrap(); // mono_chrome
+        bits.write_bit(false).unwrap(); // color_description_present_flag
+        bits.write_bit(true).unwrap(); // color_range
+        bits.write_bit(true).unwrap(); // separate_uv_delta_q
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+
+        let obu_header = SequenceHeaderObu::parse(
+            ObuHeader {
+                obu_type: ObuType::SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            &mut io::Cursor::new(bits.finish().unwrap()),
+        )
+        .unwrap();
+
+        insta::assert_debug_snapshot!(obu_header, @r"
+        SequenceHeaderObu {
+            header: ObuHeader {
+                obu_type: SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            seq_profile: 2,
+            still_picture: false,
+            reduced_still_picture_header: false,
+            timing_info: Some(
+                TimingInfo {
+                    num_units_in_display_tick: 1,
+                    time_scale: 1,
+                    num_ticks_per_picture: None,
+                },
+            ),
+            decoder_model_info: Some(
+                DecoderModelInfo {
+                    buffer_delay_length: 5,
+                    num_units_in_decoding_tick: 1,
+                    buffer_removal_time_length: 5,
+                    frame_presentation_time_length: 5,
+                },
+            ),
+            operating_points: [
+                OperatingPoint {
+                    idc: 0,
+                    seq_level_idx: 1,
+                    seq_tier: false,
+                    operating_parameters_info: Some(
+                        OperatingParametersInfo {
+                            decoder_buffer_delay: 10,
+                            encoder_buffer_delay: 5,
+                            low_delay_mode_flag: false,
+                        },
+                    ),
+                    initial_display_delay: None,
+                },
+            ],
+            max_frame_width: 1920,
+            max_frame_height: 1080,
+            frame_ids: Some(
+                FrameIds {
+                    delta_frame_id_length: 15,
+                    additional_frame_id_length: 6,
+                },
+            ),
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: false,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            seq_force_screen_content_tools: 2,
+            seq_force_integer_mv: 2,
+            order_hint_bits: 0,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            color_config: ColorConfig {
+                bit_depth: 8,
+                mono_chrome: true,
+                num_planes: 1,
+                color_primaries: 2,
+                transfer_characteristics: 2,
+                matrix_coefficients: 2,
+                full_color_range: true,
+                subsampling_x: true,
+                subsampling_y: true,
+                chroma_sample_position: 0,
+                separate_uv_delta_q: false,
+            },
+            film_grain_params_present: true,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_seq_obu_parse_decoder_model_info_present_is_false() {
+        let mut bits = BitWriter::new(Vec::new());
+
+        bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
+        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(false).unwrap(); // reduced_still_picture_header
+        bits.write_bit(true).unwrap(); // timing_info_present_flag
+
+        bits.write_u32::<BigEndian>(1).unwrap(); // num_units_in_display_tick
+        bits.write_u32::<BigEndian>(1).unwrap(); // time_scale
+        bits.write_bit(false).unwrap(); // num_ticks_per_picture
+
+        bits.write_bit(false).unwrap(); // decoder_model_info_present_flag
+
+        bits.write_bit(true).unwrap(); // initial_display_delay_present_flag
+        bits.write_bits(0, 5).unwrap(); // operating_points_cnt_minus_1
+
+        bits.write_bits(0, 12).unwrap(); // idc
+        bits.write_bits(1, 5).unwrap(); // seq_lvl_idx
+
+        bits.write_bit(false).unwrap(); // initial_display_delay_present_for_this_op
+
+        bits.write_bits(11, 4).unwrap(); // frame_width_bits
+        bits.write_bits(11, 4).unwrap(); // frame_height_bits
+        bits.write_bits(1919, 12).unwrap(); // max_frame_width
+        bits.write_bits(1079, 12).unwrap(); // max_frame_height
+
+        bits.write_bit(true).unwrap(); // frame_id_numbers_present_flag
+        bits.write_bits(0b1101, 4).unwrap(); // delta_frame_id_length
+        bits.write_bits(0b101, 3).unwrap(); // additional_frame_id_length
+
+        bits.write_bit(false).unwrap(); // use_128x128_superblock
+        bits.write_bit(false).unwrap(); // enable_filter_intra
+        bits.write_bit(false).unwrap(); // enable_intra_edge_filter
+
+        bits.write_bit(false).unwrap(); // enable_interintra_compound
+        bits.write_bit(false).unwrap(); // enable_masked_compound
+        bits.write_bit(false).unwrap(); // enable_warped_motion
+        bits.write_bit(false).unwrap(); // enable_dual_filter
+        bits.write_bit(false).unwrap(); // enable_order_hint
+
+        bits.write_bit(true).unwrap(); // seq_choose_screen_content_tools
+        bits.write_bit(true).unwrap(); // sets seq_force_integer_mv to be 2
+
+        bits.write_bit(false).unwrap(); // enable_superres
+        bits.write_bit(false).unwrap(); // enable_cdef
+        bits.write_bit(false).unwrap(); // enable_restoration
+
+        bits.write_bit(false).unwrap(); // high_bitdepth
+        bits.write_bit(true).unwrap(); // mono_chrome
+        bits.write_bit(false).unwrap(); // color_description_present_flag
+        bits.write_bit(true).unwrap(); // color_range
+        bits.write_bit(true).unwrap(); // separate_uv_delta_q
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+
+        let obu_header = SequenceHeaderObu::parse(
+            ObuHeader {
+                obu_type: ObuType::SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            &mut io::Cursor::new(bits.finish().unwrap()),
+        )
+        .unwrap();
+
+        insta::assert_debug_snapshot!(obu_header, @r"
+        SequenceHeaderObu {
+            header: ObuHeader {
+                obu_type: SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            seq_profile: 2,
+            still_picture: false,
+            reduced_still_picture_header: false,
+            timing_info: Some(
+                TimingInfo {
+                    num_units_in_display_tick: 1,
+                    time_scale: 1,
+                    num_ticks_per_picture: None,
+                },
+            ),
+            decoder_model_info: None,
+            operating_points: [
+                OperatingPoint {
+                    idc: 0,
+                    seq_level_idx: 1,
+                    seq_tier: false,
+                    operating_parameters_info: None,
+                    initial_display_delay: None,
+                },
+            ],
+            max_frame_width: 1920,
+            max_frame_height: 1080,
+            frame_ids: Some(
+                FrameIds {
+                    delta_frame_id_length: 15,
+                    additional_frame_id_length: 6,
+                },
+            ),
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: false,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            seq_force_screen_content_tools: 2,
+            seq_force_integer_mv: 2,
+            order_hint_bits: 0,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            color_config: ColorConfig {
+                bit_depth: 8,
+                mono_chrome: true,
+                num_planes: 1,
+                color_primaries: 2,
+                transfer_characteristics: 2,
+                matrix_coefficients: 2,
+                full_color_range: true,
+                subsampling_x: true,
+                subsampling_y: true,
+                chroma_sample_position: 0,
+                separate_uv_delta_q: false,
+            },
+            film_grain_params_present: true,
+        }
+        ");
+    }
+
+    #[test]
     fn test_seq_obu_parse_color_range_and_subsampling() {
         let mut bits = BitWriter::new(Vec::new());
 
@@ -940,5 +1568,297 @@ mod tests {
                 subsampling_y: false,
             }
         );
+    }
+
+    #[test]
+    fn test_color_config_parse_bit_depth_12() {
+        let mut bits = BitWriter::new(Vec::new());
+
+        bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
+        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(true).unwrap(); // reduced_still_picture_header
+        bits.write_bits(11, 5).unwrap(); // seq_lvl_idx
+
+        bits.write_bits(15, 4).unwrap();
+        bits.write_bits(15, 4).unwrap();
+        bits.write_bits(1919, 16).unwrap();
+        bits.write_bits(1079, 16).unwrap();
+
+        bits.write_bit(false).unwrap(); // use_128x128_superblock
+        bits.write_bit(false).unwrap(); // enable_filter_intra
+        bits.write_bit(false).unwrap(); // enable_intra_edge_filter
+        bits.write_bit(false).unwrap(); // enable_superres
+        bits.write_bit(false).unwrap(); // enable_cdef
+        bits.write_bit(false).unwrap(); // enable_restoration
+
+        bits.write_bit(true).unwrap(); // high_bitdepth
+        bits.write_bit(true).unwrap(); // sets bitdepth to 12 instead of 10
+        bits.write_bit(true).unwrap(); // mono_chrome
+        bits.write_bit(false).unwrap(); // color_description_present_flag
+        bits.write_bit(true).unwrap(); // color_range
+        bits.write_bit(true).unwrap(); // separate_uv_delta_q
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+
+        let obu_header = SequenceHeaderObu::parse(
+            ObuHeader {
+                obu_type: ObuType::SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            &mut io::Cursor::new(bits.finish().unwrap()),
+        )
+        .unwrap();
+
+        insta::assert_debug_snapshot!(obu_header, @r"
+        SequenceHeaderObu {
+            header: ObuHeader {
+                obu_type: SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            seq_profile: 2,
+            still_picture: false,
+            reduced_still_picture_header: true,
+            timing_info: None,
+            decoder_model_info: None,
+            operating_points: [
+                OperatingPoint {
+                    idc: 0,
+                    seq_level_idx: 11,
+                    seq_tier: false,
+                    operating_parameters_info: None,
+                    initial_display_delay: None,
+                },
+            ],
+            max_frame_width: 1920,
+            max_frame_height: 1080,
+            frame_ids: None,
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: false,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            seq_force_screen_content_tools: 2,
+            seq_force_integer_mv: 2,
+            order_hint_bits: 0,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            color_config: ColorConfig {
+                bit_depth: 12,
+                mono_chrome: true,
+                num_planes: 1,
+                color_primaries: 2,
+                transfer_characteristics: 2,
+                matrix_coefficients: 2,
+                full_color_range: true,
+                subsampling_x: true,
+                subsampling_y: true,
+                chroma_sample_position: 0,
+                separate_uv_delta_q: false,
+            },
+            film_grain_params_present: true,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_color_config_parse_bit_depth_10() {
+        let mut bits = BitWriter::new(Vec::new());
+
+        bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
+        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(true).unwrap(); // reduced_still_picture_header
+        bits.write_bits(11, 5).unwrap(); // seq_lvl_idx
+
+        bits.write_bits(15, 4).unwrap();
+        bits.write_bits(15, 4).unwrap();
+        bits.write_bits(1919, 16).unwrap();
+        bits.write_bits(1079, 16).unwrap();
+
+        bits.write_bit(false).unwrap(); // use_128x128_superblock
+        bits.write_bit(false).unwrap(); // enable_filter_intra
+        bits.write_bit(false).unwrap(); // enable_intra_edge_filter
+        bits.write_bit(false).unwrap(); // enable_superres
+        bits.write_bit(false).unwrap(); // enable_cdef
+        bits.write_bit(false).unwrap(); // enable_restoration
+
+        bits.write_bit(true).unwrap(); // high_bitdepth
+        bits.write_bit(false).unwrap(); // sets bitdepth to 10 instead of 12
+        bits.write_bit(true).unwrap(); // mono_chrome
+        bits.write_bit(false).unwrap(); // color_description_present_flag
+        bits.write_bit(true).unwrap(); // color_range
+        bits.write_bit(true).unwrap(); // separate_uv_delta_q
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+
+        let obu_header = SequenceHeaderObu::parse(
+            ObuHeader {
+                obu_type: ObuType::SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            &mut io::Cursor::new(bits.finish().unwrap()),
+        )
+        .unwrap();
+
+        insta::assert_debug_snapshot!(obu_header, @r"
+        SequenceHeaderObu {
+            header: ObuHeader {
+                obu_type: SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            seq_profile: 2,
+            still_picture: false,
+            reduced_still_picture_header: true,
+            timing_info: None,
+            decoder_model_info: None,
+            operating_points: [
+                OperatingPoint {
+                    idc: 0,
+                    seq_level_idx: 11,
+                    seq_tier: false,
+                    operating_parameters_info: None,
+                    initial_display_delay: None,
+                },
+            ],
+            max_frame_width: 1920,
+            max_frame_height: 1080,
+            frame_ids: None,
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: false,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            seq_force_screen_content_tools: 2,
+            seq_force_integer_mv: 2,
+            order_hint_bits: 0,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            color_config: ColorConfig {
+                bit_depth: 10,
+                mono_chrome: true,
+                num_planes: 1,
+                color_primaries: 2,
+                transfer_characteristics: 2,
+                matrix_coefficients: 2,
+                full_color_range: true,
+                subsampling_x: true,
+                subsampling_y: true,
+                chroma_sample_position: 0,
+                separate_uv_delta_q: false,
+            },
+            film_grain_params_present: true,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_color_config_parse_csp_unknown() {
+        let mut bits = BitWriter::new(Vec::new());
+
+        bits.write_bits(0b001, 3).unwrap(); // seq_profile (1)
+        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(true).unwrap(); // reduced_still_picture_header
+        bits.write_bits(11, 5).unwrap(); // seq_lvl_idx
+
+        bits.write_bits(15, 4).unwrap();
+        bits.write_bits(15, 4).unwrap();
+        bits.write_bits(1919, 16).unwrap();
+        bits.write_bits(1079, 16).unwrap();
+
+        bits.write_bit(false).unwrap(); // use_128x128_superblock
+        bits.write_bit(false).unwrap(); // enable_filter_intra
+        bits.write_bit(false).unwrap(); // enable_intra_edge_filter
+        bits.write_bit(false).unwrap(); // enable_superres
+        bits.write_bit(false).unwrap(); // enable_cdef
+        bits.write_bit(false).unwrap(); // enable_restoration
+
+        bits.write_bit(false).unwrap(); // high_bitdepth
+        bits.write_bit(false).unwrap(); // mono_chrome
+        bits.write_bit(false).unwrap(); // color_description_present_flag
+        bits.write_bit(true).unwrap(); // separate_uv_delta_q
+
+        bits.write_bit(true).unwrap(); // film_grain_params_present
+
+        let obu_header = SequenceHeaderObu::parse(
+            ObuHeader {
+                obu_type: ObuType::SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            &mut io::Cursor::new(bits.finish().unwrap()),
+        )
+        .unwrap();
+
+        insta::assert_debug_snapshot!(obu_header, @r"
+        SequenceHeaderObu {
+            header: ObuHeader {
+                obu_type: SequenceHeader,
+                size: None,
+                extension_header: None,
+            },
+            seq_profile: 1,
+            still_picture: false,
+            reduced_still_picture_header: true,
+            timing_info: None,
+            decoder_model_info: None,
+            operating_points: [
+                OperatingPoint {
+                    idc: 0,
+                    seq_level_idx: 11,
+                    seq_tier: false,
+                    operating_parameters_info: None,
+                    initial_display_delay: None,
+                },
+            ],
+            max_frame_width: 1920,
+            max_frame_height: 1080,
+            frame_ids: None,
+            use_128x128_superblock: false,
+            enable_filter_intra: false,
+            enable_intra_edge_filter: false,
+            enable_interintra_compound: false,
+            enable_masked_compound: false,
+            enable_warped_motion: false,
+            enable_dual_filter: false,
+            enable_order_hint: false,
+            enable_jnt_comp: false,
+            enable_ref_frame_mvs: false,
+            seq_force_screen_content_tools: 2,
+            seq_force_integer_mv: 2,
+            order_hint_bits: 0,
+            enable_superres: false,
+            enable_cdef: false,
+            enable_restoration: false,
+            color_config: ColorConfig {
+                bit_depth: 8,
+                mono_chrome: false,
+                num_planes: 3,
+                color_primaries: 2,
+                transfer_characteristics: 2,
+                matrix_coefficients: 2,
+                full_color_range: false,
+                subsampling_x: false,
+                subsampling_y: false,
+                chroma_sample_position: 0,
+                separate_uv_delta_q: true,
+            },
+            film_grain_params_present: true,
+        }
+        ");
     }
 }
