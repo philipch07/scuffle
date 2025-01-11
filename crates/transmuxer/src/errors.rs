@@ -5,18 +5,13 @@ pub enum TransmuxError {
     InvalidVideoDimensions,
     InvalidVideoFrameRate,
     InvalidAudioSampleRate,
+    InvalidAudioChannels,
+    InvalidAudioSampleSize,
     InvalidHEVCDecoderConfigurationRecord,
     InvalidAv1DecoderConfigurationRecord,
     InvalidAVCDecoderConfigurationRecord,
     NoSequenceHeaders,
     IO(io::Error),
-    FlvDemuxer(flv::FlvDemuxerError),
-}
-
-impl From<flv::FlvDemuxerError> for TransmuxError {
-    fn from(err: flv::FlvDemuxerError) -> Self {
-        Self::FlvDemuxer(err)
-    }
 }
 
 impl From<io::Error> for TransmuxError {
@@ -31,6 +26,8 @@ impl std::fmt::Display for TransmuxError {
             Self::InvalidVideoDimensions => write!(f, "invalid video dimensions"),
             Self::InvalidVideoFrameRate => write!(f, "invalid video frame rate"),
             Self::InvalidAudioSampleRate => write!(f, "invalid audio sample rate"),
+            Self::InvalidAudioChannels => write!(f, "invalid audio channels"),
+            Self::InvalidAudioSampleSize => write!(f, "invalid audio sample size"),
             Self::InvalidHEVCDecoderConfigurationRecord => {
                 write!(f, "invalid hevc decoder configuration record")
             }
@@ -42,7 +39,6 @@ impl std::fmt::Display for TransmuxError {
             }
             Self::NoSequenceHeaders => write!(f, "no sequence headers"),
             Self::IO(err) => write!(f, "io error: {}", err),
-            Self::FlvDemuxer(err) => write!(f, "flv demuxer error: {}", err),
         }
     }
 }

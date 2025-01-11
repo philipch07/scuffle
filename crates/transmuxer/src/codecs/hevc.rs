@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use flv::FrameType;
 use h265::{HEVCDecoderConfigurationRecord, Sps};
 use mp4::types::colr::{ColorType, Colr};
 use mp4::types::hev1::Hev1;
@@ -7,6 +6,7 @@ use mp4::types::hvcc::HvcC;
 use mp4::types::stsd::{SampleEntry, VisualSampleEntry};
 use mp4::types::trun::{TrunSample, TrunSampleFlag};
 use mp4::DynBox;
+use scuffle_flv::video::FrameType;
 
 use crate::TransmuxError;
 

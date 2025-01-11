@@ -934,23 +934,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flv"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "h264",
- "h265",
- "num-derive",
- "num-traits",
- "scuffle-aac",
- "scuffle-amf0",
- "scuffle-av1",
- "scuffle-bytes-util",
- "scuffle-workspace-hack",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2638,6 +2621,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "scuffle-flv"
+version = "0.0.1"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "h264",
+ "h265",
+ "num-derive",
+ "num-traits",
+ "scuffle-aac",
+ "scuffle-amf0",
+ "scuffle-av1",
+ "scuffle-bytes-util",
+ "scuffle-workspace-hack",
+ "thiserror 2.0.7",
+]
+
+[[package]]
 name = "scuffle-future-ext"
 version = "0.0.1"
 dependencies = [
@@ -3385,7 +3386,6 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "flv",
  "h264",
  "h265",
  "mp4",
@@ -3393,6 +3393,7 @@ dependencies = [
  "scuffle-amf0",
  "scuffle-av1",
  "scuffle-bytes-util",
+ "scuffle-flv",
  "scuffle-workspace-hack",
  "serde",
  "serde_json",

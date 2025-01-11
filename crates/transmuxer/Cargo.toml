@@ -10,11 +10,11 @@ bytes = "1.5"
 
 h264 = { path = "../h264" }
 h265 = { path = "../h265" }
-scuffle-av1.workspace = true
 scuffle-aac = { path = "../aac" }
-scuffle-amf0.workspace = true
-flv = { path = "../flv" }
 mp4 = { path = "../mp4" }
+scuffle-av1.workspace = true
+scuffle-flv.workspace = true
+scuffle-amf0.workspace = true
 scuffle-bytes-util.workspace = true
 scuffle-workspace-hack.workspace = true
 

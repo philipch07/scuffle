@@ -1,5 +1,4 @@
 use bytes::Bytes;
-use flv::{SoundSize, SoundType};
 use mp4::types::esds::descriptor::header::DescriptorHeader;
 use mp4::types::esds::descriptor::traits::DescriptorType;
 use mp4::types::esds::descriptor::types::decoder_config::DecoderConfigDescriptor;
@@ -11,6 +10,7 @@ use mp4::types::stsd::{AudioSampleEntry, SampleEntry};
 use mp4::types::trun::{TrunSample, TrunSampleFlag};
 use mp4::DynBox;
 use scuffle_aac::PartialAudioSpecificConfig;
+use scuffle_flv::audio::{SoundSize, SoundType};
 
 use crate::TransmuxError;
 
@@ -27,10 +27,12 @@ pub fn stsd_entry(
                 match sound_type {
                     SoundType::Mono => 1,
                     SoundType::Stereo => 2,
+                    _ => return Err(TransmuxError::InvalidAudioChannels),
                 },
                 match sound_size {
                     SoundSize::Bit8 => 8,
                     SoundSize::Bit16 => 16,
+                    _ => return Err(TransmuxError::InvalidAudioSampleSize),
                 },
                 aac_config.sampling_frequency,
             )),

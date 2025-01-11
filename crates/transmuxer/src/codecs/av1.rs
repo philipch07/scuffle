@@ -1,5 +1,4 @@
 use bytes::{Buf, Bytes};
-use flv::FrameType;
 use mp4::types::av01::Av01;
 use mp4::types::av1c::Av1C;
 use mp4::types::colr::{ColorType, Colr};
@@ -9,6 +8,7 @@ use mp4::DynBox;
 use scuffle_av1::seq::SequenceHeaderObu;
 use scuffle_av1::{AV1CodecConfigurationRecord, ObuHeader, ObuType};
 use scuffle_bytes_util::BytesCursorExt;
+use scuffle_flv::video::FrameType;
 
 use crate::TransmuxError;
 

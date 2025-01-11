@@ -1211,6 +1211,7 @@ fn test_demux_av1_aac() {
                                 chroma_subsampling_y: true,
                                 chroma_sample_position: 1,
                                 initial_presentation_delay_minus_one: None,
+                                hdr_wcg_idc: 0,
                                 config_obu: b"\n\x0e\0\0\0$O\x7fS\0\xbe\x04\x04\x04\x04\x90".to_vec().into(),
                             },
                         },
