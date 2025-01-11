@@ -7,8 +7,8 @@
 //! A set of helper functions to encode and decode exponential-golomb values.
 //!
 //! This crate extends upon the [`BitReader`] and [`BitWriter`] from the
-//! [`scuffle-bytes-util`](scuffle_bytes_util) crate to provide functionality for
-//! reading and writing Exp-Golomb encoded numbers.
+//! [`scuffle-bytes-util`](scuffle_bytes_util) crate to provide functionality
+//! for reading and writing Exp-Golomb encoded numbers.
 //!
 //! ```rust
 //! # fn test() -> std::io::Result<()> {
@@ -39,11 +39,11 @@
 //!
 //! ## License
 //!
-//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
-//! You can choose between one of them if you use this work.
+//! This project is licensed under the [MIT](./LICENSE.MIT) or
+//! [Apache-2.0](./LICENSE.Apache-2.0) license. You can choose between one of
+//! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
-//!
 #![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
 use std::io;
