@@ -7,6 +7,7 @@ use num_traits::FromPrimitive;
 use super::{Amf0Marker, Amf0ReadError, Amf0Value};
 
 /// An AMF0 Decoder.
+///
 /// This decoder takes a reference to a byte slice and reads the AMF0 data from
 /// it. All returned objects are references to the original byte slice. Making
 /// it very cheap to use.

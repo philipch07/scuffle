@@ -7,6 +7,7 @@ use super::define::Amf0Marker;
 use super::{Amf0Value, Amf0WriteError};
 
 /// AMF0 encoder.
+///
 /// Allows for encoding an AMF0 to some writer.
 pub struct Amf0Encoder;
 
