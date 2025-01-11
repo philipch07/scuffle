@@ -93,14 +93,14 @@ impl<'a> Amf0Decoder<'a> {
 
     fn is_read_object_eof(&mut self) -> Result<bool, Amf0ReadError> {
         let pos = self.cursor.position();
-        let marker = self.cursor.read_u24::<BigEndian>().map(|m| Amf0Marker::from_u32(m));
+        let marker = self.cursor.read_u24::<BigEndian>().map(Amf0Marker::from_u32);
 
         match marker {
             Ok(Some(Amf0Marker::ObjectEnd)) => Ok(true),
             _ => {
                 self.cursor.seek(SeekFrom::Start(pos))?;
                 Ok(false)
-            },
+            }
         }
     }
 
