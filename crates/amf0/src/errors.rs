@@ -1,65 +1,97 @@
-use std::{fmt, io, str};
+use std::io;
 
 use super::define::Amf0Marker;
-use super::Amf0Value;
 
-#[derive(Debug)]
+/// Errors that can occur when decoding AMF0 data.
+#[derive(Debug, thiserror::Error)]
 pub enum Amf0ReadError {
+    /// An unknown marker was encountered.
+    #[error("unknown marker: {0}")]
     UnknownMarker(u8),
+    /// An unsupported type was encountered.
+    #[error("unsupported type: {0:?}")]
     UnsupportedType(Amf0Marker),
-    StringParseError(str::Utf8Error),
-    IO(io::Error),
-    WrongType,
+    /// A string parse error occurred.
+    #[error("string parse error: {0}")]
+    StringParseError(#[from] std::str::Utf8Error),
+    /// An IO error occurred.
+    #[error("io error: {0}")]
+    Io(#[from] io::Error),
+    /// A wrong type was encountered. Created when using
+    /// `Amf0Decoder::next_with_type` and the next value is not the expected
+    /// type.
+    #[error("wrong type: expected {0:?}, got {1:?}")]
+    WrongType(Amf0Marker, Amf0Marker),
 }
 
-macro_rules! from_error {
-    ($tt:ty, $val:expr, $err:ty) => {
-        impl From<$err> for $tt {
-            fn from(error: $err) -> Self {
-                $val(error)
-            }
-        }
-    };
-}
-
-from_error!(Amf0ReadError, Self::StringParseError, str::Utf8Error);
-from_error!(Amf0ReadError, Self::IO, io::Error);
-
-#[derive(Debug)]
+/// Errors that can occur when encoding AMF0 data.
+#[derive(Debug, thiserror::Error)]
 pub enum Amf0WriteError {
+    /// A normal string was too long.
+    #[error("normal string too long")]
     NormalStringTooLong,
-    IO(io::Error),
-    UnsupportedType(Amf0Value),
+    /// An IO error occurred.
+    #[error("io error: {0}")]
+    Io(#[from] io::Error),
+    /// An unsupported type was encountered.
+    #[error("unsupported type: {0:?}")]
+    UnsupportedType(Amf0Marker),
 }
 
-from_error!(Amf0WriteError, Self::IO, io::Error);
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use byteorder::ReadBytesExt;
+    use io::Cursor;
 
-impl fmt::Display for Amf0ReadError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::UnknownMarker(marker) => {
-                write!(f, "unknown marker: {}", marker)
-            }
-            Self::UnsupportedType(marker) => {
-                write!(f, "unsupported type: {:?}", marker)
-            }
-            Self::WrongType => write!(f, "wrong type"),
-            Self::StringParseError(err) => write!(f, "string parse error: {}", err),
-            Self::IO(err) => write!(f, "io error: {}", err),
+    use super::*;
+
+    #[test]
+    fn test_read_error_display() {
+        let cases = [
+            (Amf0ReadError::UnknownMarker(100), "unknown marker: 100"),
+            (
+                Amf0ReadError::UnsupportedType(Amf0Marker::Reference),
+                "unsupported type: Reference",
+            ),
+            (
+                Amf0ReadError::WrongType(Amf0Marker::Reference, Amf0Marker::Boolean),
+                "wrong type: expected Reference, got Boolean",
+            ),
+            (
+                Amf0ReadError::StringParseError(
+                    #[allow(unknown_lints, invalid_from_utf8)]
+                    std::str::from_utf8(b"\xFF\xFF").unwrap_err(),
+                ),
+                "string parse error: invalid utf-8 sequence of 1 bytes from index 0",
+            ),
+            (
+                Amf0ReadError::Io(Cursor::new(Vec::<u8>::new()).read_u8().unwrap_err()),
+                "io error: failed to fill whole buffer",
+            ),
+        ];
+
+        for (err, expected) in cases {
+            assert_eq!(err.to_string(), expected);
         }
     }
-}
 
-impl fmt::Display for Amf0WriteError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::NormalStringTooLong => {
-                write!(f, "normal string too long")
-            }
-            Self::UnsupportedType(value_type) => {
-                write!(f, "unsupported type: {:?}", value_type)
-            }
-            Self::IO(error) => write!(f, "io error: {}", error),
+    #[test]
+    fn test_write_error_display() {
+        let cases = [
+            (
+                Amf0WriteError::UnsupportedType(Amf0Marker::ObjectEnd),
+                "unsupported type: ObjectEnd",
+            ),
+            (
+                Amf0WriteError::Io(Cursor::new(Vec::<u8>::new()).read_u8().unwrap_err()),
+                "io error: failed to fill whole buffer",
+            ),
+            (Amf0WriteError::NormalStringTooLong, "normal string too long"),
+        ];
+
+        for (err, expected) in cases {
+            assert_eq!(err.to_string(), expected);
         }
     }
 }

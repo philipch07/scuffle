@@ -1,6 +1,6 @@
 use std::fmt;
 
-use amf0::Amf0WriteError;
+use scuffle_amf0::Amf0WriteError;
 
 use crate::chunk::ChunkEncodeError;
 use crate::macros::from_error;

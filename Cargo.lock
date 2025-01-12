@@ -54,18 +54,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
-name = "amf0"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "num-derive",
- "num-traits",
- "scuffle-bytes-util",
- "scuffle-workspace-hack",
-]
-
-[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -941,7 +929,6 @@ dependencies = [
 name = "flv"
 version = "0.0.1"
 dependencies = [
- "amf0",
  "av1",
  "byteorder",
  "bytes",
@@ -950,6 +937,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "scuffle-aac",
+ "scuffle-amf0",
  "scuffle-bytes-util",
  "scuffle-workspace-hack",
 ]
@@ -2263,7 +2251,6 @@ dependencies = [
 name = "rtmp"
 version = "0.0.1"
 dependencies = [
- "amf0",
  "async-trait",
  "byteorder",
  "bytes",
@@ -2273,6 +2260,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rand",
+ "scuffle-amf0",
  "scuffle-bytes-util",
  "scuffle-future-ext",
  "scuffle-workspace-hack",
@@ -2456,6 +2444,19 @@ dependencies = [
  "num-traits",
  "scuffle-bytes-util",
  "scuffle-workspace-hack",
+]
+
+[[package]]
+name = "scuffle-amf0"
+version = "0.0.1"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "num-derive",
+ "num-traits",
+ "scuffle-bytes-util",
+ "scuffle-workspace-hack",
+ "thiserror 2.0.7",
 ]
 
 [[package]]
@@ -3327,7 +3328,6 @@ dependencies = [
 name = "transmuxer"
 version = "0.0.1"
 dependencies = [
- "amf0",
  "av1",
  "byteorder",
  "bytes",
@@ -3336,6 +3336,7 @@ dependencies = [
  "h265",
  "mp4",
  "scuffle-aac",
+ "scuffle-amf0",
  "scuffle-bytes-util",
  "scuffle-workspace-hack",
  "serde",

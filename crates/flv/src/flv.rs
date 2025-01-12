@@ -2,13 +2,13 @@ use std::io::{
     Read, {self},
 };
 
-use amf0::{Amf0Reader, Amf0Value};
 use av1::AV1CodecConfigurationRecord;
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
 use h264::AVCDecoderConfigurationRecord;
 use h265::HEVCDecoderConfigurationRecord;
 use num_traits::FromPrimitive;
+use scuffle_amf0::{Amf0Decoder, Amf0Value};
 use scuffle_bytes_util::BytesCursorExt;
 
 use crate::define::Flv;
@@ -145,7 +145,8 @@ impl FlvTagData {
                 })
             }
             Some(FlvTagType::ScriptData) => {
-                let values = Amf0Reader::new(reader.extract_remaining()).read_all()?;
+                let remaining = reader.extract_remaining();
+                let values = Amf0Decoder::new(&remaining).decode_all()?;
 
                 let name = match values.first() {
                     Some(Amf0Value::String(name)) => name,
@@ -153,8 +154,8 @@ impl FlvTagData {
                 };
 
                 Ok(FlvTagData::ScriptData {
-                    name: name.clone(),
-                    data: values.into_iter().skip(1).collect(),
+                    name: name.to_string(),
+                    data: values.into_iter().skip(1).map(|v| v.to_owned()).collect(),
                 })
             }
             None => Ok(FlvTagData::Unknown {

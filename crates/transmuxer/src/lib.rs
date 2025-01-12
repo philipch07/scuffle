@@ -1,10 +1,10 @@
 #![allow(clippy::single_match)]
 
+use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::Debug;
 use std::io;
 
-use amf0::Amf0Value;
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
 use flv::{
@@ -39,6 +39,7 @@ use mp4::types::trex::Trex;
 use mp4::types::trun::Trun;
 use mp4::types::vmhd::Vmhd;
 use mp4::BoxType;
+use scuffle_amf0::Amf0Value;
 
 mod codecs;
 mod define;
@@ -46,6 +47,12 @@ mod errors;
 
 pub use define::*;
 pub use errors::TransmuxError;
+
+struct Tags {
+    video_sequence_header: Option<VideoSequenceHeader>,
+    audio_sequence_header: Option<AudioSequenceHeader>,
+    scriptdata_tag: Option<HashMap<Cow<'static, str>, Amf0Value<'static>>>,
+}
 
 #[derive(Debug, Clone)]
 pub struct Transmuxer {
@@ -283,13 +290,7 @@ impl Transmuxer {
     }
 
     /// Internal function to find the tags we need to create the init segment.
-    fn find_tags(
-        &self,
-    ) -> (
-        Option<VideoSequenceHeader>,
-        Option<AudioSequenceHeader>,
-        Option<HashMap<String, Amf0Value>>,
-    ) {
+    fn find_tags(&self) -> Tags {
         let tags = self.tags.iter();
         let mut video_sequence_header = None;
         let mut audio_sequence_header = None;
@@ -336,7 +337,7 @@ impl Transmuxer {
                         let meta_object = data.iter().find(|v| matches!(v, Amf0Value::Object(_)));
 
                         if let Some(Amf0Value::Object(meta_object)) = meta_object {
-                            scriptdata_tag = Some(meta_object.clone());
+                            scriptdata_tag = Some(meta_object.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
                         }
                     }
                 }
@@ -344,7 +345,11 @@ impl Transmuxer {
             }
         }
 
-        (video_sequence_header, audio_sequence_header, scriptdata_tag)
+        Tags {
+            video_sequence_header,
+            audio_sequence_header,
+            scriptdata_tag,
+        }
     }
 
     /// Create the init segment.
@@ -354,7 +359,11 @@ impl Transmuxer {
     ) -> Result<Option<(VideoSettings, AudioSettings)>, TransmuxError> {
         // We need to find the tag that is the video sequence header
         // and the audio sequence header
-        let (video_sequence_header, audio_sequence_header, scriptdata_tag) = self.find_tags();
+        let Tags {
+            video_sequence_header,
+            audio_sequence_header,
+            scriptdata_tag,
+        } = self.find_tags();
 
         let Some(video_sequence_header) = video_sequence_header else {
             return Ok(None);

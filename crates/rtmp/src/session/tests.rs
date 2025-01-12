@@ -1,3 +1,5 @@
+use scuffle_amf0::Amf0Marker;
+
 use crate::chunk::{ChunkDecodeError, ChunkEncodeError};
 use crate::handshake::{DigestError, HandshakeError};
 use crate::messages::MessageError;
@@ -15,8 +17,14 @@ fn test_error_display() {
     let error = SessionError::Handshake(HandshakeError::Digest(DigestError::NotEnoughData));
     assert_eq!(error.to_string(), "handshake error: digest error: not enough data");
 
-    let error = SessionError::Message(MessageError::Amf0Read(amf0::Amf0ReadError::WrongType));
-    assert_eq!(error.to_string(), "message error: amf0 read error: wrong type");
+    let error = SessionError::Message(MessageError::Amf0Read(scuffle_amf0::Amf0ReadError::WrongType(
+        Amf0Marker::String,
+        Amf0Marker::EcmaArray,
+    )));
+    assert_eq!(
+        error.to_string(),
+        "message error: amf0 read error: wrong type: expected String, got EcmaArray"
+    );
 
     let error = SessionError::ChunkDecode(ChunkDecodeError::TooManyPreviousChunkHeaders);
     assert_eq!(error.to_string(), "chunk decode error: too many previous chunk headers");
