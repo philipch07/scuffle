@@ -43,7 +43,7 @@ opentelemetry-traces = ["opentelemetry", "tracing-opentelemetry"]
 opentelemetry-logs = ["opentelemetry", "opentelemetry-appender-tracing"]
 
 [package.metadata.xtask]
-addative-features = [
+additive-features = [
     "default",
     "prometheus",
     "pprof",

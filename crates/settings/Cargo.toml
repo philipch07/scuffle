@@ -35,7 +35,7 @@ full = ["all-formats", "templates", "cli", "bootstrap"]
 bootstrap = ["scuffle-bootstrap", "anyhow", "cli"]
 
 [package.metadata.xtask]
-addative-features = [
+additive-features = [
     "cli",
     "ron",
     "toml",
