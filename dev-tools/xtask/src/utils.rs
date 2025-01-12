@@ -23,8 +23,8 @@ pub struct XTaskMetadata {
     pub max_combination_size: Option<usize>,
     #[serde(alias = "allow-list")]
     pub allow_list: BTreeSet<String>,
-    #[serde(alias = "addative-features")]
-    pub addative_features: BTreeSet<String>,
+    #[serde(alias = "additive-features")]
+    pub additive_features: BTreeSet<String>,
     pub skip: bool,
 }
 
@@ -38,7 +38,7 @@ impl Default for XTaskMetadata {
             always_include_features: Default::default(),
             max_combination_size: None,
             allow_list: Default::default(),
-            addative_features: Default::default(),
+            additive_features: Default::default(),
             skip: false,
         }
     }
@@ -173,7 +173,7 @@ pub fn test_package_features<'a>(
 
     let mut viable_features = BTreeMap::new();
 
-    let mut addative_features = BTreeMap::new();
+    let mut additive_features = BTreeMap::new();
 
     for (feature, deps) in package_features.iter() {
         // If we are using an allow list, only include features that are in the allow
@@ -186,37 +186,37 @@ pub fn test_package_features<'a>(
 
         let flattened = flatten_features(deps, &package_features);
 
-        if !xtask_metadata.addative_features.contains(*feature) {
+        if !xtask_metadata.additive_features.contains(*feature) {
             viable_features.insert(*feature, flattened);
         } else {
-            addative_features.insert(*feature, flattened);
+            additive_features.insert(*feature, flattened);
         }
     }
 
     // Remove features that are not in the package
     always_included_features.retain(|f| package_features.contains_key(f));
 
-    // Non addative permutations are permutations that we need to find every
+    // Non additive permutations are permutations that we need to find every
     // combination of
-    let mut non_addative_permutations = BTreeSet::new();
+    let mut non_additive_permutations = BTreeSet::new();
 
-    // This finds all the combinations of features that are not addative
+    // This finds all the combinations of features that are not additive
     find_permutations(
         always_included_features.clone(),
         xtask_metadata.max_combination_size.unwrap_or(viable_features.len() + 1),
-        &mut non_addative_permutations,
+        &mut non_additive_permutations,
         &viable_features,
         &skip_feature_sets,
     );
 
-    // This finds all the combinations of features that are addative
-    // With addative features we do not need to find every combination, we just need
-    // to add the addative features to the non addative permutations
+    // This finds all the combinations of features that are additive
+    // With additive features we do not need to find every combination, we just need
+    // to add the additive features to the non additive permutations
 
-    // This loop adds the addative features to the non addative permutations
+    // This loop adds the additive features to the non additive permutations
     // Example:
-    // - NON_ADDATIVE = [(A), (B), (A, B), ()]
-    // - ADDATIVE = [(C), (D), (E)]
+    // - NON_ADDITIVE = [(A), (B), (A, B), ()]
+    // - ADDITIVE = [(C), (D), (E)]
     // Result: [
     //   (),
     //   (A),
@@ -237,11 +237,11 @@ pub fn test_package_features<'a>(
     //   (C, D),
     //   (C, D, E),
     // ]
-    // To note: we do not test for combinations of the addative features. Such as
+    // To note: we do not test for combinations of the additive features. Such as
     // (A, D, E).
 
     let mut permutations = BTreeSet::new();
-    for mut permutation in non_addative_permutations {
+    for mut permutation in non_additive_permutations {
         let flattened: BTreeSet<_> = permutation
             .clone()
             .into_iter()
@@ -249,7 +249,7 @@ pub fn test_package_features<'a>(
             .collect();
 
         permutations.insert(permutation.clone());
-        for (feature, deps) in addative_features.iter() {
+        for (feature, deps) in additive_features.iter() {
             if flattened.contains(feature) {
                 continue;
             }
@@ -267,7 +267,7 @@ pub fn test_package_features<'a>(
         .flat_map(|f| viable_features[f].iter().chain(std::iter::once(f)))
         .collect();
 
-    for feature in addative_features.keys() {
+    for feature in additive_features.keys() {
         if flattened.contains(feature) {
             continue;
         }

@@ -27,7 +27,7 @@ tracing = ["internal-logs", "dep:tracing"]
 extended-numbers = []
 
 [package.metadata.xtask]
-addative-features = [
+additive-features = [
     "prometheus",
     "tracing",
     "extended-numbers",
