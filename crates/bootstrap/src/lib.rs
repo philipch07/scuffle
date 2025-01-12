@@ -59,7 +59,9 @@ pub mod config;
 pub mod global;
 pub mod service;
 
-pub use config::{ConfigParser, EmptyConfig};
+pub use config::ConfigParser;
+#[doc(hidden)]
+pub use config::EmptyConfig;
 pub use global::{Global, GlobalWithoutConfig};
 pub use service::Service;
 

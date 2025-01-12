@@ -35,14 +35,17 @@ pub trait Service<Global>: Send + Sync + 'static + Sized {
     /// the future should resolve to `Ok(())`. As a best practice, the
     /// service should stop as soon as the provided context is done.
     ///
-    /// Note: Adding the `scuffle_signal::SignalSvc` service to the list of
-    /// services when calling [`main`](crate::main) will cancel the context as
-    /// soon as a shutdown signal is received.
+    /// Note: Adding the
+    /// [`scuffle_signal::SignalSvc`](../../scuffle_signal/struct.SignalSvc.
+    /// html) service to the list of services when calling
+    /// [`main`](crate::main) will cancel the context as soon as a shutdown
+    /// signal is received.
     ///
     /// # See Also
     ///
     /// - [`Context`](scuffle_context::Context)
-    /// - `scuffle_signal::SignalSvc`
+    /// - [`scuffle_signal::SignalSvc`](../../scuffle_signal/struct.SignalSvc.
+    ///   html)
     fn run(
         self,
         global: Arc<Global>,

@@ -90,6 +90,7 @@ fn default_runtime_builder() -> tokio::runtime::Builder {
 ///
 /// # See Also
 ///
+/// - [`GlobalWithoutConfig`]
 /// - [`Service`](crate::Service)
 /// - [`main`](crate::main)
 pub trait Global: Send + Sync + 'static {
@@ -106,6 +107,34 @@ pub trait Global: Send + Sync + 'static {
     }
 
     /// Builds the tokio runtime for the process.
+    ///
+    /// If not overridden, a default runtime builder is used to build the
+    /// runtime. It uses the following environment variables:
+    /// - `TOKIO_WORKER_THREADS`: Number of worker threads to use. If 1, a
+    ///   current thread runtime is used.
+    ///
+    ///   See [`tokio::runtime::Builder::worker_threads`] for details.
+    /// - `TOKIO_MAX_BLOCKING_THREADS`: Maximum number of blocking threads.
+    ///
+    ///   See [`tokio::runtime::Builder::max_blocking_threads`] for details.
+    /// - `TOKIO_DISABLE_TIME`: If `true` disables time.
+    ///
+    ///   See [`tokio::runtime::Builder::enable_time`] for details.
+    /// - `TOKIO_DISABLE_IO`: If `true` disables IO.
+    ///
+    ///   See [`tokio::runtime::Builder::enable_io`] for details.
+    /// - `TOKIO_THREAD_STACK_SIZE`: Thread stack size.
+    ///
+    ///   See [`tokio::runtime::Builder::thread_stack_size`] for details.
+    /// - `TOKIO_GLOBAL_QUEUE_INTERVAL`: Global queue interval.
+    ///
+    ///   See [`tokio::runtime::Builder::global_queue_interval`] for details.
+    /// - `TOKIO_EVENT_INTERVAL`: Event interval.
+    ///
+    ///   See [`tokio::runtime::Builder::event_interval`] for details.
+    /// - `TOKIO_MAX_IO_EVENTS_PER_TICK`: Maximum IO events per tick.
+    ///
+    ///   See [`tokio::runtime::Builder::max_io_events_per_tick`] for details.
     #[inline(always)]
     fn tokio_runtime() -> tokio::runtime::Runtime {
         default_runtime_builder().build().expect("runtime build")
@@ -167,6 +196,34 @@ pub trait Global: Send + Sync + 'static {
 /// Refer to [`Global`] for details.
 pub trait GlobalWithoutConfig: Send + Sync + 'static {
     /// Builds the tokio runtime for the process.
+    ///
+    /// If not overridden, a default runtime builder is used to build the
+    /// runtime. It uses the following environment variables:
+    /// - `TOKIO_WORKER_THREADS`: Number of worker threads to use. If 1, a
+    ///   current thread runtime is used.
+    ///
+    ///   See [`tokio::runtime::Builder::worker_threads`] for details.
+    /// - `TOKIO_MAX_BLOCKING_THREADS`: Maximum number of blocking threads.
+    ///
+    ///   See [`tokio::runtime::Builder::max_blocking_threads`] for details.
+    /// - `TOKIO_DISABLE_TIME`: If `true` disables time.
+    ///
+    ///   See [`tokio::runtime::Builder::enable_time`] for details.
+    /// - `TOKIO_DISABLE_IO`: If `true` disables IO.
+    ///
+    ///   See [`tokio::runtime::Builder::enable_io`] for details.
+    /// - `TOKIO_THREAD_STACK_SIZE`: Thread stack size.
+    ///
+    ///   See [`tokio::runtime::Builder::thread_stack_size`] for details.
+    /// - `TOKIO_GLOBAL_QUEUE_INTERVAL`: Global queue interval.
+    ///
+    ///   See [`tokio::runtime::Builder::global_queue_interval`] for details.
+    /// - `TOKIO_EVENT_INTERVAL`: Event interval.
+    ///
+    ///   See [`tokio::runtime::Builder::event_interval`] for details.
+    /// - `TOKIO_MAX_IO_EVENTS_PER_TICK`: Maximum IO events per tick.
+    ///
+    ///   See [`tokio::runtime::Builder::max_io_events_per_tick`] for details.
     #[inline(always)]
     fn tokio_runtime() -> tokio::runtime::Runtime {
         default_runtime_builder().build().expect("runtime build")
