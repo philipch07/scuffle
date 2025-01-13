@@ -172,7 +172,7 @@ mod tests {
             ),
             size: None,
             extension_header: Some(
-                ObuHeaderExtension {
+                ObuExtensionHeader {
                     temporal_id: 6,
                     spatial_id: 2,
                 },
