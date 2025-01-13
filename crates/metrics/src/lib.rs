@@ -41,10 +41,10 @@
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(feature = "prometheus")]
-#[cfg_attr(docsrs, doc(cfg(feature = "prometheus")))]
 /// A copy of the opentelemetry-prometheus crate, updated to work with the
 /// latest version of opentelemetry.
+#[cfg(feature = "prometheus")]
+#[cfg_attr(docsrs, doc(cfg(feature = "prometheus")))]
 pub mod prometheus;
 
 #[doc(hidden)]
