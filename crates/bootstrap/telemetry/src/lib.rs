@@ -125,8 +125,8 @@ pub trait TelemetryConfig: Global {
 
     /// Return a Prometheus metrics registry to scrape metrics from.
     ///
-    /// Returning `Some` will enable the `/metrics` http endpoint which is used
-    /// by Prometheus to scrape metrics.
+    /// Returning `Some` will enable the `/metrics` http endpoint which can be
+    /// used by Prometheus to scrape metrics.
     ///
     /// Disabled (`None`) by default.
     #[cfg(feature = "prometheus")]
