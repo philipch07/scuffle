@@ -1,16 +1,17 @@
 use anyhow::Context;
 use bytes::Bytes;
+use scuffle_bootstrap::global::Global;
+use scuffle_bootstrap::service::Service;
+use scuffle_context::ContextFutExt;
+use scuffle_http::backend::HttpServer;
+use scuffle_http::body::IncomingBody;
+
 #[cfg(feature = "opentelemetry-logs")]
 pub use opentelemetry_appender_tracing;
 #[cfg(feature = "opentelemetry")]
 pub use opentelemetry_sdk;
 #[cfg(feature = "prometheus")]
 pub use prometheus_client;
-use scuffle_bootstrap::global::Global;
-use scuffle_bootstrap::service::Service;
-use scuffle_context::ContextFutExt;
-use scuffle_http::backend::HttpServer;
-use scuffle_http::body::IncomingBody;
 #[cfg(feature = "opentelemetry-traces")]
 pub use tracing_opentelemetry;
 
