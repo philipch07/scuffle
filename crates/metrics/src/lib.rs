@@ -1,5 +1,3 @@
-#![doc = include_str!("../README.md")]
-
 #[cfg(feature = "prometheus")]
 /// A copy of the opentelemetry-prometheus crate, updated to work with the
 /// latest version of opentelemetry.

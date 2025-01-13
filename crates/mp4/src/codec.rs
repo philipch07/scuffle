@@ -5,10 +5,10 @@ use scuffle_aac::AudioObjectType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VideoCodec {
-    /// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/codecs_parameter
+    /// <https://developer.mozilla.org/en-US/docs/Web/Media/Formats/codecs_parameter>
     Avc { profile: u8, constraint_set: u8, level: u8 },
     /// There is barely any documentation on this.
-    /// http://hevcvideo.xp3.biz/html5_video.html
+    /// <https://hevcvideo.xp3.biz/html5_video.html>
     Hevc {
         general_profile_space: u8,
         profile_compatibility: u32,
@@ -17,7 +17,7 @@ pub enum VideoCodec {
         tier: bool,
         constraint_indicator: u64,
     },
-    /// https://developer.mozilla.org/en-US/docs/Web/Media/Formats/codecs_parameter#av1
+    /// <https://developer.mozilla.org/en-US/docs/Web/Media/Formats/codecs_parameter#av1>
     Av1 {
         profile: u8,
         level: u8,

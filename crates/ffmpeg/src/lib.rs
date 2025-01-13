@@ -1,5 +1,3 @@
-#![doc = include_str!("../README.md")]
-
 pub mod codec;
 pub mod consts;
 pub mod decoder;

@@ -8,7 +8,7 @@ use crate::boxes::traits::BoxType;
 
 #[derive(Debug, Clone, PartialEq)]
 /// AV1 Configuration Box
-/// https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-section
+/// <https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-section>
 pub struct Av1C {
     pub header: BoxHeader,
     pub av1_config: AV1CodecConfigurationRecord,

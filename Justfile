@@ -1,5 +1,6 @@
 mod? local
 
+
 # By default we use the nightly toolchain, however you can override this by setting the RUST_TOOLCHAIN environment variable.
 export RUST_TOOLCHAIN := env_var_or_default('RUST_TOOLCHAIN', 'nightly')
 
@@ -29,8 +30,17 @@ test *args:
     cargo +{{RUST_TOOLCHAIN}} llvm-cov report --lcov --output-path ./lcov.info
     cargo +{{RUST_TOOLCHAIN}} llvm-cov report --html
 
+alias docs := doc
 doc *args:
-    cargo +{{RUST_TOOLCHAIN}} doc --no-deps --all-features {{args}}
+    # `--cfg docsrs` enables us to write feature hints in the form of `#[cfg_attr(docsrs, doc(cfg(feature = "some-feature")))]`
+    # `--enable-index-page` makes the command generate an index page which lists all crates (unstable)
+    # `-D warnings` disallow all warnings
+    # `-Zunstable-options` enables unstable options (for the `--enable-index-page` flag)
+    RUSTDOCFLAGS="-D warnings --cfg docsrs --enable-index-page -Zunstable-options" cargo +{{RUST_TOOLCHAIN}} doc --no-deps --all-features {{args}}
+
+alias docs-serve := doc-serve
+doc-serve: doc
+    miniserve target/doc --index index.html --port 3000
 
 deny *args:
     cargo +{{RUST_TOOLCHAIN}} deny {{args}} --all-features check

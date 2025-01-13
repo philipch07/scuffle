@@ -1,5 +1,3 @@
-#![doc = include_str!("../README.md")]
-
 use enum_impl::metric_enum_impl;
 use metrics_impl::metrics_impl;
 use proc_macro::TokenStream;

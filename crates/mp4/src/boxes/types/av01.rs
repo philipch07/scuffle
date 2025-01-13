@@ -15,7 +15,7 @@ use crate::codec::VideoCodec;
 
 #[derive(Debug, Clone, PartialEq)]
 /// AV1 Codec Box
-/// https://aomediacodec.github.io/av1-isobmff/#av1sampleentry-section
+/// <https://aomediacodec.github.io/av1-isobmff/#av1sampleentry-section>
 pub struct Av01 {
     pub header: BoxHeader,
     pub visual_sample_entry: SampleEntry<VisualSampleEntry>,
