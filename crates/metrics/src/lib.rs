@@ -3,6 +3,29 @@
 //! A wrapper around opentelemetry to provide a more ergonomic interface for
 //! creating metrics.
 //!
+//! ## Example
+//!
+//! ```rust
+//! #[scuffle_metrics::metrics]
+//! mod example {
+//!     use scuffle_metrics::{MetricEnum, collector::CounterU64};
+//!
+//!     #[derive(MetricEnum)]
+//!     pub enum Kind {
+//!         Http,
+//!         Grpc,
+//!     }
+//!
+//!     #[metrics(unit = "requests")]
+//!     pub fn request(kind: Kind) -> CounterU64;
+//! }
+//!
+//! // Increment the counter
+//! example::request(example::Kind::Http).incr();
+//! ```
+//!
+//! For details see [`metrics`].
+//!
 //! ## Status
 //!
 //! This crate is currently under development and is not yet stable.
@@ -16,8 +39,10 @@
 //! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "prometheus")]
+#[cfg_attr(docsrs, doc(cfg(feature = "prometheus")))]
 /// A copy of the opentelemetry-prometheus crate, updated to work with the
 /// latest version of opentelemetry.
 pub mod prometheus;
