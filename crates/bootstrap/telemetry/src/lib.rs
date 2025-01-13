@@ -1,6 +1,7 @@
 //! # scuffle-bootstrap-telemetry
 //!
-//! A crate used to add telemetry to applications built with the scuffle-bootstrap.
+//! A crate used to add telemetry to applications built with the
+//! scuffle-bootstrap.
 //!
 //! ## Feature Flags
 //!
@@ -16,31 +17,32 @@
 //!
 //! ## Status
 //!
-//! This crate is currently under development and is not yet stable, unit tests are not yet fully implemented.
+//! This crate is currently under development and is not yet stable, unit tests
+//! are not yet fully implemented.
 //!
 //! Unit tests are not yet fully implemented. Use at your own risk.
 //!
 //! ## License
 //!
-//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
-//! You can choose between one of them if you use this work.
+//! This project is licensed under the [MIT](./LICENSE.MIT) or
+//! [Apache-2.0](./LICENSE.Apache-2.0) license. You can choose between one of
+//! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 
 use anyhow::Context;
 use bytes::Bytes;
-use scuffle_bootstrap::global::Global;
-use scuffle_bootstrap::service::Service;
-use scuffle_context::ContextFutExt;
-use scuffle_http::backend::HttpServer;
-use scuffle_http::body::IncomingBody;
-
 #[cfg(feature = "opentelemetry-logs")]
 pub use opentelemetry_appender_tracing;
 #[cfg(feature = "opentelemetry")]
 pub use opentelemetry_sdk;
 #[cfg(feature = "prometheus")]
 pub use prometheus_client;
+use scuffle_bootstrap::global::Global;
+use scuffle_bootstrap::service::Service;
+use scuffle_context::ContextFutExt;
+use scuffle_http::backend::HttpServer;
+use scuffle_http::body::IncomingBody;
 #[cfg(feature = "opentelemetry-traces")]
 pub use tracing_opentelemetry;
 
@@ -50,7 +52,8 @@ pub use tracing_opentelemetry;
 ///
 /// # HTTP Server
 ///
-/// This service provides a http server which will bind to the address provided by the config. (See [`TelemetryConfig`])
+/// This service provides a http server which will bind to the address provided
+/// by the config. (See [`TelemetryConfig`])
 ///
 /// ## Endpoints
 ///
@@ -60,15 +63,27 @@ pub use tracing_opentelemetry;
 ///
 /// Health check endpoint.
 ///
+/// This endpoint calls the health check function provided by the config and
+/// responds with `200 OK` if the health check returns `Ok(())`. If the health
+/// check returns an error, the endpoint returns `500 Internal Server Error`
+/// along with the error message.
+///
 /// ### `/metrics`
 ///
-/// Prometheus metrics endpoint.
+/// Metrics endpoint which can be used by Prometheus to scrape metrics.
 ///
-/// This endpoint is only enabled if the `prometheus` feature flag is enabled and a metrics registry is provided through the config.
+/// This endpoint is only enabled if the `prometheus` feature flag is enabled
+/// and a metrics registry is provided through the config.
 ///
 /// ### `/pprof/cpu`
 ///
-/// pprof cpu endpoint.
+/// pprof cpu endpoint to capture a cpu profile.
+///
+/// #### Query Parameters
+///
+/// - `freq`: Sampling frequency in Hz.
+/// - `duration`: Duration the profile should be captured for in s.
+/// - `ignore`: List of functions to exclude from the profile.
 ///
 /// This endpoint is only enabled if the `pprof` feature flag is enabled.
 ///
@@ -76,7 +91,8 @@ pub use tracing_opentelemetry;
 ///
 /// OpenTelemetry flush endpoint.
 ///
-/// This endpoint is only enabled if the `opentelemetry` feature flag is enabled and an OpenTelemetry config is provided through the config.
+/// This endpoint is only enabled if one of the `opentelemetry` feature flags is
+/// enabled and an OpenTelemetry config is provided through the config.
 pub struct TelemetrySvc;
 
 /// Implement this trait to configure the telemetry service.
@@ -105,7 +121,8 @@ pub trait TelemetryConfig: Global {
 
     /// Return a Prometheus metrics registry to scrape metrics from.
     ///
-    /// Returning `Some` will enable the `/metrics` http endpoint which is used by Prometheus to scrape metrics.
+    /// Returning `Some` will enable the `/metrics` http endpoint which is used
+    /// by Prometheus to scrape metrics.
     ///
     /// Disabled (`None`) by default.
     #[cfg(feature = "prometheus")]
@@ -117,7 +134,8 @@ pub trait TelemetryConfig: Global {
     ///
     /// If provided the service will flush and shutdown the OpenTelemetry
     /// instance when it shuts down.
-    /// Additionally, the service provides the `/opentelemetry/flush` http endpoint to manually flush the data.
+    /// Additionally, the service provides the `/opentelemetry/flush` http
+    /// endpoint to manually flush the data.
     #[cfg(feature = "opentelemetry")]
     fn opentelemetry(&self) -> Option<&opentelemetry::OpenTelemetry> {
         None
