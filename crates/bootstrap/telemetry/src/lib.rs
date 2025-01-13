@@ -29,14 +29,18 @@
 //! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use anyhow::Context;
 use bytes::Bytes;
 #[cfg(feature = "opentelemetry-logs")]
+#[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-logs")))]
 pub use opentelemetry_appender_tracing;
 #[cfg(feature = "opentelemetry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry")))]
 pub use opentelemetry_sdk;
 #[cfg(feature = "prometheus")]
+#[cfg_attr(docsrs, doc(cfg(feature = "prometheus")))]
 pub use prometheus_client;
 use scuffle_bootstrap::global::Global;
 use scuffle_bootstrap::service::Service;
@@ -126,6 +130,7 @@ pub trait TelemetryConfig: Global {
     ///
     /// Disabled (`None`) by default.
     #[cfg(feature = "prometheus")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "prometheus")))]
     fn prometheus_metrics_registry(&self) -> Option<&prometheus_client::registry::Registry> {
         None
     }
@@ -137,6 +142,7 @@ pub trait TelemetryConfig: Global {
     /// Additionally, the service provides the `/opentelemetry/flush` http
     /// endpoint to manually flush the data.
     #[cfg(feature = "opentelemetry")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry")))]
     fn opentelemetry(&self) -> Option<&opentelemetry::OpenTelemetry> {
         None
     }
@@ -337,6 +343,7 @@ async fn opentelemetry_flush<G: TelemetryConfig>(
 }
 
 #[cfg(feature = "opentelemetry")]
+#[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry")))]
 pub mod opentelemetry {
     pub use ::opentelemetry::*;
 
@@ -353,10 +360,13 @@ pub mod opentelemetry {
     #[derive(Debug, Default, Clone)]
     pub struct OpenTelemetry {
         #[cfg(feature = "opentelemetry-metrics")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-metrics")))]
         metrics: Option<opentelemetry_sdk::metrics::SdkMeterProvider>,
         #[cfg(feature = "opentelemetry-traces")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-traces")))]
         traces: Option<opentelemetry_sdk::trace::TracerProvider>,
         #[cfg(feature = "opentelemetry-logs")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-logs")))]
         logs: Option<opentelemetry_sdk::logs::LoggerProvider>,
     }
 
@@ -391,6 +401,7 @@ pub mod opentelemetry {
         }
 
         #[cfg(feature = "opentelemetry-metrics")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-metrics")))]
         pub fn with_metrics(self, metrics: impl Into<Option<opentelemetry_sdk::metrics::SdkMeterProvider>>) -> Self {
             Self {
                 metrics: metrics.into(),
@@ -402,6 +413,7 @@ pub mod opentelemetry {
         }
 
         #[cfg(feature = "opentelemetry-traces")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-traces")))]
         pub fn with_traces(self, traces: impl Into<Option<opentelemetry_sdk::trace::TracerProvider>>) -> Self {
             Self {
                 traces: traces.into(),
@@ -413,6 +425,7 @@ pub mod opentelemetry {
         }
 
         #[cfg(feature = "opentelemetry-logs")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-logs")))]
         pub fn with_logs(self, logs: impl Into<Option<opentelemetry_sdk::logs::LoggerProvider>>) -> Self {
             Self {
                 logs: logs.into(),

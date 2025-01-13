@@ -42,6 +42,10 @@ opentelemetry-metrics = ["opentelemetry"]
 opentelemetry-traces = ["opentelemetry", "tracing-opentelemetry"]
 opentelemetry-logs = ["opentelemetry", "opentelemetry-appender-tracing"]
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [package.metadata.xtask]
 additive-features = [
     "default",
