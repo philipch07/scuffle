@@ -3,15 +3,54 @@
 > [!WARNING]  
 > This crate is under active development and may not be stable.
 
- [![crates.io](https://img.shields.io/crates/v/scuffle-bootstrap.svg)](https://crates.io/crates/scuffle-bootstrap) [![docs.rs](https://img.shields.io/docsrs/scuffle-bootstrap)](https://docs.rs/scuffle-bootstrap)
+[![crates.io](https://img.shields.io/crates/v/scuffle-bootstrap.svg)](https://crates.io/crates/scuffle-bootstrap) [![docs.rs](https://img.shields.io/docsrs/scuffle-bootstrap)](https://docs.rs/scuffle-bootstrap)
 
 ---
 
 A utility crate for creating binaries.
 
+Refer to `Global`, `Service`, and `main` for more information.
+
 ## Usage
 
-TODO(troy): Add usage examples to readme.
+```rust
+use std::sync::Arc;
+
+/// Our global state
+struct Global;
+
+// Required by the signal service
+impl scuffle_signal::SignalConfig for Global {}
+
+impl scuffle_bootstrap::global::GlobalWithoutConfig for Global {
+    async fn init() -> anyhow::Result<Arc<Self>> {
+        Ok(Arc::new(Self))
+    }
+}
+
+/// Our own custom service
+struct MySvc;
+
+impl scuffle_bootstrap::service::Service<Global> for MySvc {
+    async fn run(self, global: Arc<Global>, ctx: scuffle_context::Context) -> anyhow::Result<()> {
+        println!("running");
+
+        // Do some work here
+
+        // Wait for the context to be cacelled by the signal service
+        ctx.done().await;
+        Ok(())
+    }
+}
+
+// This generates the main function which runs all the services
+scuffle_bootstrap::main! {
+    Global {
+        scuffle_signal::SignalSvc,
+        MySvc,
+    }
+}
+```
 
 ## License
 

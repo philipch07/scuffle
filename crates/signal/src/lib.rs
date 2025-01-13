@@ -1,12 +1,5 @@
 //! # scuffle-signal
 //!
-//! > WARNING
-//! > This crate is under active development and may not be stable.
-//!
-//! [![crates.io](https://img.shields.io/crates/v/scuffle-signal.svg)](https://crates.io/crates/scuffle-signal) [![docs.rs](https://img.shields.io/docsrs/scuffle-signal)](https://docs.rs/scuffle-signal)
-//!
-//! ---
-//!
 //! A crate designed to provide a more user friendly interface to
 //! `tokio::signal`.
 //!

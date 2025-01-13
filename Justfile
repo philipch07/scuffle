@@ -29,6 +29,9 @@ test *args:
     cargo +{{RUST_TOOLCHAIN}} llvm-cov report --lcov --output-path ./lcov.info
     cargo +{{RUST_TOOLCHAIN}} llvm-cov report --html
 
+doc *args:
+    cargo +{{RUST_TOOLCHAIN}} doc --no-deps --all-features {{args}}
+
 deny *args:
     cargo +{{RUST_TOOLCHAIN}} deny {{args}} --all-features check
 
