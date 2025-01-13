@@ -24,6 +24,9 @@ impl ScriptData {
             .decode_all()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid script data"))?;
 
-        Ok(Self { name: name.into_owned(), data: data.into_iter().map(|v| v.to_owned()).collect() })
+        Ok(Self {
+            name: name.into_owned(),
+            data: data.into_iter().map(|v| v.to_owned()).collect(),
+        })
     }
 }

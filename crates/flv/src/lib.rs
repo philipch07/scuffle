@@ -5,9 +5,11 @@
 //!
 //! ---
 //!
-//! A pure Rust implementation of the FLV format, allowing for demuxing of FLV files or streams.
+//! A pure Rust implementation of the FLV format, allowing for demuxing of FLV
+//! files or streams.
 //!
-//! This does not support all FLV features (mainly those from FLV 10.1), however it does support some newer features, from the enhanced FLV specification.
+//! This does not support all FLV features (mainly those from FLV 10.1), however
+//! it does support some newer features, from the enhanced FLV specification.
 //!
 //! ## Specifications
 //!
@@ -18,8 +20,9 @@
 //!
 //! ## License
 //!
-//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
-//! You can choose between one of them if you use this work.
+//! This project is licensed under the [MIT](./LICENSE.MIT) or
+//! [Apache-2.0](./LICENSE.Apache-2.0) license. You can choose between one of
+//! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 #![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
@@ -48,12 +51,12 @@ mod tests {
     use std::io;
     use std::path::PathBuf;
 
-    use scuffle_amf0::Amf0Value;
-    use scuffle_av1::seq::SequenceHeaderObu;
-    use scuffle_av1::ObuHeader;
     use bytes::Bytes;
     use h264::{Sps, SpsExtended};
     use scuffle_aac::{AudioObjectType, PartialAudioSpecificConfig};
+    use scuffle_amf0::Amf0Value;
+    use scuffle_av1::seq::SequenceHeaderObu;
+    use scuffle_av1::ObuHeader;
 
     use crate::aac::AacPacket;
     use crate::audio::{AudioData, AudioDataBody, SoundRate, SoundSize, SoundType};
@@ -79,7 +82,6 @@ mod tests {
         assert!(flv.header.has_video);
         assert_eq!(flv.header.extra.len(), 0);
 
-
         let mut tags = flv.tags.into_iter();
 
         // Metadata tag
@@ -103,7 +105,7 @@ mod tests {
                 _ => panic!("expected object"),
             };
 
-            let object = object.into_iter().map(|(k, v)| (k.as_ref(), v)).collect::<HashMap<_, _>>();
+            let object = object.iter().map(|(k, v)| (k.as_ref(), v)).collect::<HashMap<_, _>>();
 
             // Should have a audio sample size property
             let audio_sample_size = match object.get("audiosamplesize") {
@@ -387,7 +389,7 @@ mod tests {
                 _ => panic!("expected object"),
             };
 
-            let object = object.into_iter().map(|(k, v)| (k.as_ref(), v)).collect::<HashMap<_, _>>();
+            let object = object.iter().map(|(k, v)| (k.as_ref(), v)).collect::<HashMap<_, _>>();
 
             // Should have a audio sample size property
             let audio_sample_size = match object.get("audiosamplesize") {
@@ -637,7 +639,7 @@ mod tests {
                 _ => panic!("expected object"),
             };
 
-            let object = object.into_iter().map(|(k, v)| (k.as_ref(), v)).collect::<HashMap<_, _>>();
+            let object = object.iter().map(|(k, v)| (k.as_ref(), v)).collect::<HashMap<_, _>>();
 
             // Should have a audio sample size property
             let audio_sample_size = match object.get("audiosamplesize") {

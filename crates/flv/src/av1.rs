@@ -1,5 +1,5 @@
-use scuffle_av1::AV1CodecConfigurationRecord;
 use bytes::Bytes;
+use scuffle_av1::AV1CodecConfigurationRecord;
 
 /// AV1 Packet
 /// This is a container for av1 data.

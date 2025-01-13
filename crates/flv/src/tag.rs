@@ -13,14 +13,17 @@ use crate::macros::nutype_enum;
 /// this the [`FlvTagData`] enum is used.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - FLV tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - FLV
+///   tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.1 - FLV Tag)
 ///
-/// The v10.1 spec adds some additional fields to the tag to accomodate encryption.
-/// We dont support this because it is not needed for our use case. (and I suspect it is not used anywhere anymore.)
+/// The v10.1 spec adds some additional fields to the tag to accomodate
+/// encryption. We dont support this because it is not needed for our use case.
+/// (and I suspect it is not used anywhere anymore.)
 ///
-/// However if the Tag is encrypted the tag_type will be a larger number (one we dont support), and therefore the
-/// [`FlvTagData::Unknown`] variant will be used.
+/// However if the Tag is encrypted the tag_type will be a larger number (one we
+/// dont support), and therefore the [`FlvTagData::Unknown`] variant will be
+/// used.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlvTag {
     /// A timestamp in milliseconds
@@ -37,13 +40,15 @@ impl FlvTag {
         let tag_type = FlvTagType::from(reader.read_u8()?);
 
         let data_size = reader.read_u24::<BigEndian>()?;
-        // The timestamp bit is weird. Its 24bits but then there is an extended 8 bit number to create a 32bit number.
+        // The timestamp bit is weird. Its 24bits but then there is an extended 8 bit
+        // number to create a 32bit number.
         let timestamp_ms = reader.read_u24::<BigEndian>()? | ((reader.read_u8()? as u32) << 24);
 
         // The stream id according to the spec is ALWAYS 0. (likely not true)
         let stream_id = reader.read_u24::<BigEndian>()?;
 
-        // We then extract the data from the reader. (advancing the cursor to the end of the tag)
+        // We then extract the data from the reader. (advancing the cursor to the end of
+        // the tag)
         let data = reader.extract_bytes(data_size as usize)?;
 
         // Finally we demux the data.
@@ -79,26 +84,31 @@ nutype_enum! {
 /// This enum contains the data for the different types of tags.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - FLV tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - FLV
+///   tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.1 - FLV Tag)
 #[derive(Debug, Clone, PartialEq)]
 pub enum FlvTagData {
     /// AudioData when the FlvTagType is Audio(8)
     /// Defined by:
-    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio tags)
+    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format -
+    ///   Audio tags)
     /// - video_file_format_spec_v10_1.pdf (Annex E.4.2.1 - AUDIODATA)
     Audio(AudioData),
     /// VideoData when the FlvTagType is Video(9)
     /// Defined by:
-    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Video tags)
+    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format -
+    ///   Video tags)
     /// - video_file_format_spec_v10_1.pdf (Annex E.4.3.1 - VIDEODATA)
     Video(VideoData),
     /// ScriptData when the FlvTagType is ScriptData(18)
     /// Defined by:
-    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Data tags)
+    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Data
+    ///   tags)
     /// - video_file_format_spec_v10_1.pdf (Annex E.4.4.1 - SCRIPTDATA)
     ScriptData(ScriptData),
-    /// Any tag type that we dont know how to parse, with the corresponding data being the raw bytes of the tag
+    /// Any tag type that we dont know how to parse, with the corresponding data
+    /// being the raw bytes of the tag
     Unknown { tag_type: FlvTagType, data: Bytes },
 }
 

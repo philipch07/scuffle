@@ -19,13 +19,15 @@ pub struct FlvHeader {
     /// Whether the FLV file has video.
     pub has_video: bool,
     /// The extra data in the FLV file.
-    /// Since the header provides a data offset, this is the bytes between the end of the header and the start of the data.
+    /// Since the header provides a data offset, this is the bytes between the
+    /// end of the header and the start of the data.
     pub extra: Bytes,
 }
 
 impl FlvHeader {
     /// Demux the FLV header from the given reader.
-    /// The reader will be returned in the position of the start of the data offset.
+    /// The reader will be returned in the position of the start of the data
+    /// offset.
     pub fn demux(reader: &mut io::Cursor<Bytes>) -> io::Result<Self> {
         let start = reader.position() as usize;
 

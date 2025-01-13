@@ -12,7 +12,8 @@ use crate::macros::nutype_enum;
 /// This is the container for the audio data.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio
+///   tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.2.1 - AUDIODATA)
 #[derive(Debug, Clone, PartialEq)]
 pub struct AudioData {
@@ -93,7 +94,8 @@ nutype_enum! {
 /// This is the container for the audio data body.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio
+///   tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.2.1 - AUDIODATA)
 #[derive(Debug, Clone, PartialEq)]
 pub enum AudioDataBody {

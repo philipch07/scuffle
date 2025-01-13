@@ -1,9 +1,9 @@
 use std::io::{self, Read};
 
-use scuffle_av1::{AV1CodecConfigurationRecord, AV1VideoDescriptor};
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
 use h265::HEVCDecoderConfigurationRecord;
+use scuffle_av1::{AV1CodecConfigurationRecord, AV1VideoDescriptor};
 use scuffle_bytes_util::BytesCursorExt;
 
 use super::av1::Av1Packet;
@@ -36,7 +36,8 @@ nutype_enum! {
 /// This is a container for video data.
 /// This enum contains the data for the different types of video tags.
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Video tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Video
+///   tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.3.1 - VIDEODATA)
 #[derive(Debug, Clone, PartialEq)]
 pub struct VideoData {
@@ -95,7 +96,8 @@ nutype_enum! {
 /// This enum contains the data for the different types of video tags.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Video tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Video
+///   tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.3.1 - VIDEODATA)
 #[derive(Debug, Clone, PartialEq)]
 pub enum VideoDataBody {
@@ -125,7 +127,8 @@ nutype_enum! {
     }
 }
 
-/// A wrapper enum for the different types of video packets that can be used in a FLV file.
+/// A wrapper enum for the different types of video packets that can be used in
+/// a FLV file.
 ///
 /// Used to construct a [`VideoDataBody`].
 ///
