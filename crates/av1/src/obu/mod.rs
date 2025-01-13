@@ -12,13 +12,13 @@ mod utils;
 pub struct ObuHeader {
     pub obu_type: ObuType,
     pub size: Option<u64>,
-    pub extension_header: Option<ObuHeaderExtension>,
+    pub extension_header: Option<ObuExtensionHeader>,
 }
 
 /// Obu Header Extension
 /// AV1-Spec-2 - 5.3.3
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub struct ObuHeaderExtension {
+pub struct ObuExtensionHeader {
     pub temporal_id: u8,
     pub spatial_id: u8,
 }
@@ -41,7 +41,7 @@ impl ObuHeader {
             let temporal_id = bit_reader.read_bits(3)?;
             let spatial_id = bit_reader.read_bits(2)?;
             bit_reader.read_bits(3)?; // reserved_3bits
-            Some(ObuHeaderExtension {
+            Some(ObuExtensionHeader {
                 temporal_id: temporal_id as u8,
                 spatial_id: spatial_id as u8,
             })
