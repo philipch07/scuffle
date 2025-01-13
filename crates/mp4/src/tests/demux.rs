@@ -1201,8 +1201,6 @@ fn test_demux_av1_aac() {
                         av1c: Av1C {
                             header: BoxHeader { box_type: *b"av1C" },
                             av1_config: AV1CodecConfigurationRecord {
-                                marker: true,
-                                version: 1,
                                 seq_profile: 0,
                                 seq_level_idx_0: 4,
                                 seq_tier_0: false,

@@ -62,6 +62,23 @@ pub struct TimingInfo {
     pub num_ticks_per_picture: Option<u64>,
 }
 
+impl TimingInfo {
+    pub fn parse(bit_reader: &mut BitReader<impl io::Read>) -> io::Result<Self> {
+        let num_units_in_display_tick = bit_reader.read_u32::<BigEndian>()?;
+        let time_scale = bit_reader.read_u32::<BigEndian>()?;
+        let num_ticks_per_picture = if bit_reader.read_bit()? {
+            Some(read_uvlc(bit_reader)? + 1)
+        } else {
+            None
+        };
+        Ok(Self {
+            num_units_in_display_tick,
+            time_scale,
+            num_ticks_per_picture,
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub struct DecoderModelInfo {
     pub buffer_delay_length: u8,
@@ -70,11 +87,39 @@ pub struct DecoderModelInfo {
     pub frame_presentation_time_length: u8,
 }
 
+impl DecoderModelInfo {
+    pub fn parse(bit_reader: &mut BitReader<impl io::Read>) -> io::Result<Self> {
+        let buffer_delay_length = bit_reader.read_bits(5)? as u8 + 1;
+        let num_units_in_decoding_tick = bit_reader.read_u32::<BigEndian>()?;
+        let buffer_removal_time_length = bit_reader.read_bits(5)? as u8 + 1;
+        let frame_presentation_time_length = bit_reader.read_bits(5)? as u8 + 1;
+        Ok(Self {
+            buffer_delay_length,
+            num_units_in_decoding_tick,
+            buffer_removal_time_length,
+            frame_presentation_time_length,
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub struct OperatingParametersInfo {
     pub decoder_buffer_delay: u64,
     pub encoder_buffer_delay: u64,
     pub low_delay_mode_flag: bool,
+}
+
+impl OperatingParametersInfo {
+    pub fn parse(delay_bit_length: u8, bit_reader: &mut BitReader<impl io::Read>) -> io::Result<Self> {
+        let decoder_buffer_delay = bit_reader.read_bits(delay_bit_length)?;
+        let encoder_buffer_delay = bit_reader.read_bits(delay_bit_length)?;
+        let low_delay_mode_flag = bit_reader.read_bit()?;
+        Ok(Self {
+            decoder_buffer_delay,
+            encoder_buffer_delay,
+            low_delay_mode_flag,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -239,6 +284,13 @@ impl SequenceHeaderObu {
         let still_picture = bit_reader.read_bit()?;
         let reduced_still_picture_header = bit_reader.read_bit()?;
 
+        if !still_picture && reduced_still_picture_header {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "reduced_still_picture_header is true but still_picture is false",
+            ));
+        }
+
         let mut timing_info = None;
         let mut decoder_model_info = None;
         let mut operating_points = Vec::new();
@@ -254,31 +306,11 @@ impl SequenceHeaderObu {
         } else {
             let timing_info_present_flag = bit_reader.read_bit()?;
             if timing_info_present_flag {
-                let num_units_in_display_tick = bit_reader.read_u32::<BigEndian>()?;
-                let time_scale = bit_reader.read_u32::<BigEndian>()?;
-                let num_ticks_per_picture = if bit_reader.read_bit()? {
-                    Some(read_uvlc(&mut bit_reader)? + 1)
-                } else {
-                    None
-                };
-                timing_info = Some(TimingInfo {
-                    num_units_in_display_tick,
-                    time_scale,
-                    num_ticks_per_picture,
-                });
+                timing_info = Some(TimingInfo::parse(&mut bit_reader)?);
 
                 let decoder_model_info_present_flag = bit_reader.read_bit()?;
                 if decoder_model_info_present_flag {
-                    let buffer_delay_length = bit_reader.read_bits(5)? as u8 + 1;
-                    let num_units_in_decoding_tick = bit_reader.read_u32::<BigEndian>()?;
-                    let buffer_removal_time_length = bit_reader.read_bits(5)? as u8 + 1;
-                    let frame_presentation_time_length = bit_reader.read_bits(5)? as u8 + 1;
-                    decoder_model_info = Some(DecoderModelInfo {
-                        buffer_delay_length,
-                        num_units_in_decoding_tick,
-                        buffer_removal_time_length,
-                        frame_presentation_time_length,
-                    });
+                    decoder_model_info = Some(DecoderModelInfo::parse(&mut bit_reader)?);
                 }
             }
 
@@ -288,23 +320,14 @@ impl SequenceHeaderObu {
                 let idc = bit_reader.read_bits(12)? as u16;
                 let seq_level_idx = bit_reader.read_bits(5)? as u8;
                 let seq_tier = if seq_level_idx > 7 { bit_reader.read_bit()? } else { false };
-                let decoder_model_present_for_this_op = if decoder_model_info.is_some() {
-                    bit_reader.read_bit()?
+                let decoder_model_present_for_this_op = if let Some(decoder_model_info) = decoder_model_info {
+                    bit_reader.read_bit()?.then_some(decoder_model_info.buffer_delay_length)
                 } else {
-                    false
+                    None
                 };
 
-                let operating_parameters_info = if decoder_model_present_for_this_op {
-                    let decoder_buffer_delay =
-                        bit_reader.read_bits(decoder_model_info.as_ref().unwrap().buffer_delay_length)?;
-                    let encoder_buffer_delay =
-                        bit_reader.read_bits(decoder_model_info.as_ref().unwrap().buffer_delay_length)?;
-                    let low_delay_mode_flag = bit_reader.read_bit()?;
-                    Some(OperatingParametersInfo {
-                        decoder_buffer_delay,
-                        encoder_buffer_delay,
-                        low_delay_mode_flag,
-                    })
+                let operating_parameters_info = if let Some(delay_bit_length) = decoder_model_present_for_this_op {
+                    Some(OperatingParametersInfo::parse(delay_bit_length, &mut bit_reader)?)
                 } else {
                     None
                 };
@@ -541,7 +564,7 @@ mod tests {
         let mut bits = BitWriter::new(Vec::new());
 
         bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
-        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(true).unwrap(); // still_picture
         bits.write_bit(true).unwrap(); // reduced_still_picture_header
         bits.write_bits(11, 5).unwrap(); // seq_lvl_idx
 
@@ -583,7 +606,7 @@ mod tests {
                 extension_header: None,
             },
             seq_profile: 2,
-            still_picture: false,
+            still_picture: true,
             reduced_still_picture_header: true,
             timing_info: None,
             decoder_model_info: None,
@@ -1575,7 +1598,7 @@ mod tests {
         let mut bits = BitWriter::new(Vec::new());
 
         bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
-        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(true).unwrap(); // still_picture
         bits.write_bit(true).unwrap(); // reduced_still_picture_header
         bits.write_bits(11, 5).unwrap(); // seq_lvl_idx
 
@@ -1618,7 +1641,7 @@ mod tests {
                 extension_header: None,
             },
             seq_profile: 2,
-            still_picture: false,
+            still_picture: true,
             reduced_still_picture_header: true,
             timing_info: None,
             decoder_model_info: None,
@@ -1673,7 +1696,7 @@ mod tests {
         let mut bits = BitWriter::new(Vec::new());
 
         bits.write_bits(0b010, 3).unwrap(); // seq_profile (2)
-        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(true).unwrap(); // still_picture
         bits.write_bit(true).unwrap(); // reduced_still_picture_header
         bits.write_bits(11, 5).unwrap(); // seq_lvl_idx
 
@@ -1716,7 +1739,7 @@ mod tests {
                 extension_header: None,
             },
             seq_profile: 2,
-            still_picture: false,
+            still_picture: true,
             reduced_still_picture_header: true,
             timing_info: None,
             decoder_model_info: None,
@@ -1771,7 +1794,7 @@ mod tests {
         let mut bits = BitWriter::new(Vec::new());
 
         bits.write_bits(0b001, 3).unwrap(); // seq_profile (1)
-        bits.write_bit(false).unwrap(); // still_picture
+        bits.write_bit(true).unwrap(); // still_picture
         bits.write_bit(true).unwrap(); // reduced_still_picture_header
         bits.write_bits(11, 5).unwrap(); // seq_lvl_idx
 
@@ -1812,7 +1835,7 @@ mod tests {
                 extension_header: None,
             },
             seq_profile: 1,
-            still_picture: false,
+            still_picture: true,
             reduced_still_picture_header: true,
             timing_info: None,
             decoder_model_info: None,

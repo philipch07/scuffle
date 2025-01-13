@@ -483,7 +483,6 @@ fn test_demux_flv_av1_aac() {
             _ => panic!("expected av1 sequence header found {:?}", video_data),
         };
 
-        assert_eq!(config.version, 1);
         assert_eq!(config.chroma_sample_position, 0);
         assert!(config.chroma_subsampling_x); // 5.1
         assert!(config.chroma_subsampling_y);

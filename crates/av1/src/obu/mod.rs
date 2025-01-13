@@ -35,10 +35,7 @@ impl ObuHeader {
         let extension_flag = bit_reader.read_bit()?;
         let has_size_field = bit_reader.read_bit()?;
 
-        let reserved_1bit = bit_reader.read_bit()?;
-        if reserved_1bit {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "obu_reserved_1bit is not 0"));
-        }
+        bit_reader.read_bit()?; // reserved_1bit
 
         let extension_header = if extension_flag {
             let temporal_id = bit_reader.read_bits(3)?;
@@ -197,17 +194,6 @@ mod tests {
         Custom {
             kind: InvalidData,
             error: "obu_forbidden_bit is not 0",
-        }
-        "#);
-    }
-
-    #[test]
-    fn test_obu_header_parse_invalid_obu_type() {
-        let err = ObuHeader::parse(&mut std::io::Cursor::new(b"\x01")).unwrap_err();
-        insta::assert_debug_snapshot!(err, @r#"
-        Custom {
-            kind: InvalidData,
-            error: "obu_reserved_1bit is not 0",
         }
         "#);
     }

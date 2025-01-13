@@ -7,8 +7,6 @@ use scuffle_bytes_util::{BitReader, BitWriter, BytesCursorExt};
 /// AV1 Codec Configuration Record
 /// https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-syntax
 pub struct AV1CodecConfigurationRecord {
-    pub marker: bool,
-    pub version: u8,
     pub seq_profile: u8,
     pub seq_level_idx_0: u8,
     pub seq_tier_0: bool,
@@ -27,7 +25,14 @@ impl AV1CodecConfigurationRecord {
         let mut bit_reader = BitReader::new(reader);
 
         let marker = bit_reader.read_bit()?;
+        if !marker {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "marker is not set"));
+        }
+
         let version = bit_reader.read_bits(7)? as u8;
+        if version != 1 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "version is not 1"));
+        }
 
         let seq_profile = bit_reader.read_bits(3)? as u8;
         let seq_level_idx_0 = bit_reader.read_bits(5)? as u8;
@@ -56,8 +61,6 @@ impl AV1CodecConfigurationRecord {
         let reader = bit_reader.into_inner();
 
         Ok(AV1CodecConfigurationRecord {
-            marker,
-            version,
             seq_profile,
             seq_level_idx_0,
             seq_tier_0,
@@ -83,8 +86,8 @@ impl AV1CodecConfigurationRecord {
     pub fn mux<T: io::Write>(&self, writer: &mut T) -> io::Result<()> {
         let mut bit_writer = BitWriter::new(writer);
 
-        bit_writer.write_bit(self.marker)?;
-        bit_writer.write_bits(self.version as u64, 7)?;
+        bit_writer.write_bit(true)?; // marker
+        bit_writer.write_bits(1, 7)?; // version
 
         bit_writer.write_bits(self.seq_profile as u64, 3)?;
         bit_writer.write_bits(self.seq_level_idx_0 as u64, 5)?;
@@ -127,8 +130,6 @@ mod tests {
 
         insta::assert_debug_snapshot!(config, @r#"
         AV1CodecConfigurationRecord {
-            marker: true,
-            version: 1,
             seq_profile: 0,
             seq_level_idx_0: 13,
             seq_tier_0: false,
@@ -145,6 +146,26 @@ mod tests {
     }
 
     #[test]
+    fn test_marker_is_not_set() {
+        let data = vec![0b00000000];
+
+        let err = AV1CodecConfigurationRecord::demux(&mut io::Cursor::new(data.into())).unwrap_err();
+
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(err.to_string(), "marker is not set");
+    }
+
+    #[test]
+    fn test_version_is_not_1() {
+        let data = vec![0b10000000];
+
+        let err = AV1CodecConfigurationRecord::demux(&mut io::Cursor::new(data.into())).unwrap_err();
+
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(err.to_string(), "version is not 1");
+    }
+
+    #[test]
     fn test_config_demux_with_initial_presentation_delay() {
         let data = b"\x81\r\x0c\x3f\n\x0f\0\0\0j\xef\xbf\xe1\xbc\x02\x19\x90\x10\x10\x10@".to_vec();
 
@@ -152,8 +173,6 @@ mod tests {
 
         insta::assert_debug_snapshot!(config, @r#"
         AV1CodecConfigurationRecord {
-            marker: true,
-            version: 1,
             seq_profile: 0,
             seq_level_idx_0: 13,
             seq_tier_0: false,
@@ -174,8 +193,6 @@ mod tests {
     #[test]
     fn test_config_mux() {
         let config = AV1CodecConfigurationRecord {
-            marker: true,
-            version: 1,
             seq_profile: 0,
             seq_level_idx_0: 0,
             seq_tier_0: false,
@@ -198,8 +215,6 @@ mod tests {
     #[test]
     fn test_config_mux_with_delay() {
         let config = AV1CodecConfigurationRecord {
-            marker: true,
-            version: 1,
             seq_profile: 0,
             seq_level_idx_0: 0,
             seq_tier_0: false,
