@@ -8,10 +8,6 @@ pub type BytesCursor = io::Cursor<Bytes>;
 ///
 /// Allowing for zero copy reads from a `Cursor<Bytes>` type.
 pub trait BytesCursorExt {
-    /// Returns the remaining bytes in the cursor.
-    #[must_use]
-    fn remaining(&self) -> usize;
-
     /// Extracts the remaining bytes from the cursor.
     ///
     /// This does not do a copy of the bytes, and is O(1) time.
@@ -34,18 +30,16 @@ pub trait BytesCursorExt {
     fn extract_bytes(&mut self, size: usize) -> io::Result<Bytes>;
 }
 
-impl BytesCursorExt for BytesCursor {
-    fn remaining(&self) -> usize {
-        // We have to use a saturating sub here because the position can be
-        // greater than the length of the bytes.
-        self.get_ref().len().saturating_sub(self.position() as usize)
-    }
+fn remaining(cursor: &BytesCursor) -> usize {
+    cursor.get_ref().len().saturating_sub(cursor.position() as usize)
+}
 
+impl BytesCursorExt for BytesCursor {
     fn extract_remaining(&mut self) -> Bytes {
         // We don't really care if we fail here since the desired behavior is
         // to return all bytes remaining in the cursor. If we fail its because
         // there are not enough bytes left in the cursor to read.
-        self.extract_bytes(self.remaining()).unwrap_or_default()
+        self.extract_bytes(remaining(self)).unwrap_or_default()
     }
 
     fn extract_bytes(&mut self, size: usize) -> io::Result<Bytes> {
@@ -56,7 +50,7 @@ impl BytesCursorExt for BytesCursor {
 
         // If the size is greater than the remaining bytes we can just return an
         // error.
-        if size > self.remaining() {
+        if size > remaining(self) {
             return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "not enough bytes"));
         }
 
@@ -90,29 +84,29 @@ mod tests {
         let mut cursor = io::Cursor::new(Bytes::from_static(&[1, 2, 3, 4, 5]));
         let bytes = cursor.extract_bytes(3).unwrap();
         assert_eq!(bytes, Bytes::from_static(&[1, 2, 3]));
-        assert_eq!(cursor.remaining(), 2);
+        assert_eq!(remaining(&cursor), 2);
 
         let bytes = cursor.extract_bytes(2).unwrap();
         assert_eq!(bytes, Bytes::from_static(&[4, 5]));
-        assert_eq!(cursor.remaining(), 0);
+        assert_eq!(remaining(&cursor), 0);
 
         let bytes = cursor.extract_bytes(1).unwrap_err();
         assert_eq!(bytes.kind(), io::ErrorKind::UnexpectedEof);
 
         let bytes = cursor.extract_bytes(0).unwrap();
         assert_eq!(bytes, Bytes::from_static(&[]));
-        assert_eq!(cursor.remaining(), 0);
+        assert_eq!(remaining(&cursor), 0);
 
         let bytes = cursor.extract_remaining();
         assert_eq!(bytes, Bytes::from_static(&[]));
-        assert_eq!(cursor.remaining(), 0);
+        assert_eq!(remaining(&cursor), 0);
     }
 
     #[test]
     fn seek_out_of_bounds() {
         let mut cursor = io::Cursor::new(Bytes::from_static(&[1, 2, 3, 4, 5]));
         cursor.set_position(10);
-        assert_eq!(cursor.remaining(), 0);
+        assert_eq!(remaining(&cursor), 0);
 
         let bytes = cursor.extract_remaining();
         assert_eq!(bytes, Bytes::from_static(&[]));

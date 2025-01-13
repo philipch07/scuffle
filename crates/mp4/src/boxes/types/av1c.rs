@@ -1,7 +1,7 @@
 use std::io;
 
-use av1::AV1CodecConfigurationRecord;
 use bytes::Bytes;
+use scuffle_av1::AV1CodecConfigurationRecord;
 
 use crate::boxes::header::BoxHeader;
 use crate::boxes::traits::BoxType;

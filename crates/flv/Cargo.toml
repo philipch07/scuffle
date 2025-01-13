@@ -10,7 +10,7 @@ bytes = "1.5"
 num-traits = "0.2"
 num-derive = "0.4"
 
-av1 = { path = "../av1" }
+scuffle-av1.workspace = true
 h264 = { path = "../h264" }
 h265 = { path = "../h265" }
 scuffle-aac = { path = "../aac" }

@@ -40,6 +40,10 @@ impl<W: io::Write> BitWriter<W> {
     pub fn write_bits(&mut self, bits: u64, count: u8) -> io::Result<()> {
         let count = count.min(64);
 
+        if count != 64 && bits > (1 << count as u64) - 1 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "bits too large to write"));
+        }
+
         for i in 0..count {
             let bit = (bits >> (count - i - 1)) & 1 == 1;
             self.write_bit(bit)?;
@@ -148,6 +152,10 @@ mod tests {
         bit_writer.write_bit(true).unwrap();
         assert_eq!(bit_writer.bit_pos(), 1);
         assert!(!bit_writer.is_aligned());
+
+        let err = bit_writer.write_bits(0b10000, 4).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(err.to_string(), "bits too large to write");
 
         assert_eq!(
             bit_writer.finish().unwrap(),

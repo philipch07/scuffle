@@ -2,13 +2,13 @@ use std::io::{
     Read, {self},
 };
 
-use av1::AV1CodecConfigurationRecord;
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
 use h264::AVCDecoderConfigurationRecord;
 use h265::HEVCDecoderConfigurationRecord;
 use num_traits::FromPrimitive;
 use scuffle_amf0::{Amf0Decoder, Amf0Value};
+use scuffle_av1::AV1CodecConfigurationRecord;
 use scuffle_bytes_util::BytesCursorExt;
 
 use crate::define::Flv;
