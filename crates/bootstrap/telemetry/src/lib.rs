@@ -487,15 +487,15 @@ pub mod opentelemetry {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use std::sync::Arc;
+    use std::{net::SocketAddr, sync::Arc};
 
     use opentelemetry_sdk::metrics::SdkMeterProvider;
     use scuffle_bootstrap::{GlobalWithoutConfig, Service};
 
     use crate::{TelemetryConfig, TelemetrySvc};
 
-    async fn request_metrics() -> String {
-        reqwest::get("http://127.0.0.1:3001/metrics")
+    async fn request_metrics(addr: SocketAddr) -> String {
+        reqwest::get(format!("http://{addr}/metrics"))
             .await
             .unwrap()
             .error_for_status()
@@ -505,8 +505,8 @@ mod tests {
             .expect("metrics check text")
     }
 
-    async fn request_health() -> String {
-        reqwest::get("http://127.0.0.1:3001/health")
+    async fn request_health(addr: SocketAddr) -> String {
+        reqwest::get(format!("http://{addr}/health"))
             .await
             .unwrap()
             .error_for_status()
@@ -519,12 +519,16 @@ mod tests {
     #[tokio::test]
     async fn telemetry_http_server() {
         struct TestGlobal {
+            bind_addr: SocketAddr,
             prometheus: prometheus_client::registry::Registry,
             open_telemetry: crate::opentelemetry::OpenTelemetry,
         }
 
         impl GlobalWithoutConfig for TestGlobal {
             async fn init() -> anyhow::Result<Arc<Self>> {
+                let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+                let bind_addr = listener.local_addr()?;
+
                 let mut prometheus = prometheus_client::registry::Registry::default();
 
                 let exporter = scuffle_metrics::prometheus::exporter().build();
@@ -533,6 +537,7 @@ mod tests {
                 opentelemetry::global::set_meter_provider(provider);
 
                 Ok(Arc::new(TestGlobal {
+                    bind_addr,
                     prometheus,
                     open_telemetry: crate::opentelemetry::OpenTelemetry::new(),
                 }))
@@ -541,7 +546,7 @@ mod tests {
 
         impl TelemetryConfig for TestGlobal {
             fn bind_address(&self) -> Option<std::net::SocketAddr> {
-                Some(([127, 0, 0, 1], 3001).into())
+                Some(self.bind_addr)
             }
 
             fn prometheus_metrics_registry(&self) -> Option<&prometheus_client::registry::Registry> {
@@ -569,14 +574,16 @@ mod tests {
 
         let global = <TestGlobal as GlobalWithoutConfig>::init().await.unwrap();
 
+        let bind_addr = global.bind_addr;
+
         let task_handle = tokio::spawn(TelemetrySvc.run(global, scuffle_context::Context::global()));
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        let health = request_health().await;
+        let health = request_health(bind_addr).await;
         assert_eq!(health, "ok");
 
-        let metrics = request_metrics().await;
+        let metrics = request_metrics(bind_addr).await;
         assert!(metrics.starts_with("# HELP target Information about the target\n"));
         assert!(metrics.contains("# TYPE target info\n"));
         assert!(metrics.contains("service_name=\"unknown_service\""));
@@ -588,7 +595,7 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        let metrics = request_metrics().await;
+        let metrics = request_metrics(bind_addr).await;
         assert!(metrics.contains("# UNIT example_request_requests requests\n"));
         assert!(metrics.contains("example_request_requests_total{"));
         assert!(metrics.contains("otel_scope_name=\"scuffle-bootstrap-telemetry\""));
@@ -601,7 +608,7 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        let metrics = request_metrics().await;
+        let metrics = request_metrics(bind_addr).await;
         assert!(metrics.contains("# UNIT example_request_requests requests\n"));
         assert!(metrics.contains("example_request_requests_total{"));
         assert!(metrics.contains("otel_scope_name=\"scuffle-bootstrap-telemetry\""));
