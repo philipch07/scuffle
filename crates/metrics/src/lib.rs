@@ -39,6 +39,7 @@
 //! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 /// A copy of the opentelemetry-prometheus crate, updated to work with the
@@ -57,3 +58,39 @@ pub use collector::{
 };
 pub use opentelemetry;
 pub use scuffle_metrics_derive::{metrics, MetricEnum};
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    #[test]
+    fn derive_enum() {
+        insta::assert_snapshot!(postcompile::compile! {
+            use scuffle_metrics::MetricEnum;
+
+            #[derive(MetricEnum)]
+            pub enum Kind {
+                Http,
+                Grpc,
+            }
+        });
+    }
+
+    #[test]
+    fn derive_module() {
+        insta::assert_snapshot!(postcompile::compile! {
+            #[scuffle_metrics::metrics]
+            mod example {
+                use scuffle_metrics::{MetricEnum, collector::CounterU64};
+
+                #[derive(MetricEnum)]
+                pub enum Kind {
+                    Http,
+                    Grpc,
+                }
+
+                #[metrics(unit = "requests")]
+                pub fn request(kind: Kind) -> CounterU64;
+            }
+        });
+    }
+}

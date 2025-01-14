@@ -2712,9 +2712,11 @@ dependencies = [
 name = "scuffle-metrics"
 version = "0.0.4"
 dependencies = [
+ "insta",
  "opentelemetry",
  "opentelemetry_sdk",
  "parking_lot",
+ "postcompile",
  "prometheus-client",
  "scuffle-metrics-derive",
  "scuffle-workspace-hack",
