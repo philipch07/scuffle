@@ -489,6 +489,7 @@ pub mod opentelemetry {
 mod tests {
     use std::{net::SocketAddr, sync::Arc};
 
+    use bytes::Bytes;
     use opentelemetry_sdk::metrics::SdkMeterProvider;
     use scuffle_bootstrap::{GlobalWithoutConfig, Service};
 
@@ -514,6 +515,25 @@ mod tests {
             .text()
             .await
             .expect("health check text")
+    }
+
+    async fn request_pprof(addr: SocketAddr) -> Bytes {
+        reqwest::get(format!("http://{addr}/pprof/cpu"))
+            .await
+            .unwrap()
+            .error_for_status()
+            .expect("pprof check failed")
+            .bytes()
+            .await
+            .expect("pprof check text")
+    }
+
+    async fn flush_opentelemetry(addr: SocketAddr) {
+        reqwest::get(format!("http://{addr}/opentelemetry/flush"))
+            .await
+            .unwrap()
+            .error_for_status()
+            .expect("opentelemetry flush check failed");
     }
 
     #[tokio::test]
@@ -616,6 +636,9 @@ mod tests {
         assert!(metrics.contains("kind=\"Http\""));
         assert!(metrics.contains("} 2\n"));
         assert!(metrics.ends_with("# EOF\n"));
+
+        assert!(!request_pprof(bind_addr).await.is_empty());
+        flush_opentelemetry(bind_addr).await;
 
         scuffle_context::Handler::global().shutdown().await;
 
