@@ -34,7 +34,7 @@ mod metrics_impl;
 ///
 /// Attributes:
 ///
-/// - `crate`: The `scuffle_metrics` crate path. Valid on modules & functions.
+/// - `crate_path`: The `scuffle_metrics` crate path. Valid on modules & functions.
 /// - `builder`: The builder to use for the metric. Valid on functions.
 /// - `unit`: The unit of the metric. Valid on functions.
 /// - `rename`: The name of the metric. Valid on modules, functions & function

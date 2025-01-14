@@ -30,6 +30,7 @@
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
 use anyhow::Context;
 use bytes::Bytes;
@@ -480,5 +481,137 @@ pub mod opentelemetry {
 
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use std::sync::Arc;
+
+    use opentelemetry_sdk::metrics::SdkMeterProvider;
+    use scuffle_bootstrap::{GlobalWithoutConfig, Service};
+
+    use crate::{TelemetryConfig, TelemetrySvc};
+
+    async fn request_metrics() -> String {
+        reqwest::get("http://127.0.0.1:3001/metrics")
+            .await
+            .unwrap()
+            .error_for_status()
+            .expect("metrics check failed")
+            .text()
+            .await
+            .expect("metrics check text")
+    }
+
+    async fn request_health() -> String {
+        reqwest::get("http://127.0.0.1:3001/health")
+            .await
+            .unwrap()
+            .error_for_status()
+            .expect("health check failed")
+            .text()
+            .await
+            .expect("health check text")
+    }
+
+    #[tokio::test]
+    async fn telemetry_http_server() {
+        struct TestGlobal {
+            prometheus: prometheus_client::registry::Registry,
+            open_telemetry: crate::opentelemetry::OpenTelemetry,
+        }
+
+        impl GlobalWithoutConfig for TestGlobal {
+            async fn init() -> anyhow::Result<Arc<Self>> {
+                let mut prometheus = prometheus_client::registry::Registry::default();
+
+                let exporter = scuffle_metrics::prometheus::exporter().build();
+                prometheus.register_collector(exporter.collector());
+                let provider = SdkMeterProvider::builder().with_reader(exporter).build();
+                opentelemetry::global::set_meter_provider(provider);
+
+                Ok(Arc::new(TestGlobal {
+                    prometheus,
+                    open_telemetry: crate::opentelemetry::OpenTelemetry::new(),
+                }))
+            }
+        }
+
+        impl TelemetryConfig for TestGlobal {
+            fn bind_address(&self) -> Option<std::net::SocketAddr> {
+                Some(([127, 0, 0, 1], 3001).into())
+            }
+
+            fn prometheus_metrics_registry(&self) -> Option<&prometheus_client::registry::Registry> {
+                Some(&self.prometheus)
+            }
+
+            fn opentelemetry(&self) -> Option<&crate::opentelemetry::OpenTelemetry> {
+                Some(&self.open_telemetry)
+            }
+        }
+
+        #[scuffle_metrics::metrics]
+        mod example {
+            use scuffle_metrics::{CounterU64, MetricEnum};
+
+            #[derive(MetricEnum)]
+            pub enum Kind {
+                Http,
+                Grpc,
+            }
+
+            #[metrics(unit = "requests")]
+            pub fn request(kind: Kind) -> CounterU64;
+        }
+
+        let global = <TestGlobal as GlobalWithoutConfig>::init().await.unwrap();
+
+        let task_handle = tokio::spawn(TelemetrySvc.run(global, scuffle_context::Context::global()));
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let health = request_health().await;
+        assert_eq!(health, "ok");
+
+        let metrics = request_metrics().await;
+        assert!(metrics.starts_with("# HELP target Information about the target\n"));
+        assert!(metrics.contains("# TYPE target info\n"));
+        assert!(metrics.contains("service_name=\"unknown_service\""));
+        assert!(metrics.contains("telemetry_sdk_language=\"rust\""));
+        assert!(metrics.contains("telemetry_sdk_name=\"opentelemetry\""));
+        assert!(metrics.ends_with("# EOF\n"));
+
+        example::request(example::Kind::Http).incr();
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let metrics = request_metrics().await;
+        assert!(metrics.contains("# UNIT example_request_requests requests\n"));
+        assert!(metrics.contains("example_request_requests_total{"));
+        assert!(metrics.contains("otel_scope_name=\"scuffle-bootstrap-telemetry\""));
+        assert!(metrics.contains("otel_scope_version=\"0.0.3\""));
+        assert!(metrics.contains("kind=\"Http\""));
+        assert!(metrics.contains("} 1\n"));
+        assert!(metrics.ends_with("# EOF\n"));
+
+        example::request(example::Kind::Http).incr();
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let metrics = request_metrics().await;
+        assert!(metrics.contains("# UNIT example_request_requests requests\n"));
+        assert!(metrics.contains("example_request_requests_total{"));
+        assert!(metrics.contains("otel_scope_name=\"scuffle-bootstrap-telemetry\""));
+        assert!(metrics.contains("otel_scope_version=\"0.0.3\""));
+        assert!(metrics.contains("kind=\"Http\""));
+        assert!(metrics.contains("} 2\n"));
+        assert!(metrics.ends_with("# EOF\n"));
+
+        scuffle_context::Handler::global().shutdown().await;
+
+        task_handle.await.unwrap().unwrap();
     }
 }
