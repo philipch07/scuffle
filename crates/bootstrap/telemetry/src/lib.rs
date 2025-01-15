@@ -361,15 +361,13 @@ mod tests {
 
     use crate::{TelemetryConfig, TelemetrySvc};
 
-    async fn request_metrics(addr: SocketAddr) -> String {
+    async fn request_metrics(addr: SocketAddr) -> reqwest::Result<String> {
         reqwest::get(format!("http://{addr}/metrics"))
             .await
             .unwrap()
-            .error_for_status()
-            .expect("metrics check failed")
+            .error_for_status()?
             .text()
             .await
-            .expect("metrics check text")
     }
 
     async fn request_health(addr: SocketAddr) -> String {
@@ -392,12 +390,11 @@ mod tests {
             .await
     }
 
-    async fn flush_opentelemetry(addr: SocketAddr) {
+    async fn flush_opentelemetry(addr: SocketAddr) -> reqwest::Result<reqwest::Response> {
         reqwest::get(format!("http://{addr}/opentelemetry/flush"))
             .await
             .unwrap()
             .error_for_status()
-            .expect("opentelemetry flush check failed");
     }
 
     #[tokio::test]
@@ -479,7 +476,7 @@ mod tests {
         let health = request_health(bind_addr).await;
         assert_eq!(health, "ok");
 
-        let metrics = request_metrics(bind_addr).await;
+        let metrics = request_metrics(bind_addr).await.expect("metrics failed");
         assert!(metrics.starts_with("# HELP target Information about the target\n"));
         assert!(metrics.contains("# TYPE target info\n"));
         assert!(metrics.contains("service_name=\"unknown_service\""));
@@ -491,7 +488,7 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        let metrics = request_metrics(bind_addr).await;
+        let metrics = request_metrics(bind_addr).await.expect("metrics failed");
         assert!(metrics.contains("# UNIT example_request_requests requests\n"));
         assert!(metrics.contains("example_request_requests_total{"));
         assert!(metrics.contains("otel_scope_name=\"scuffle-bootstrap-telemetry\""));
@@ -504,7 +501,7 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        let metrics = request_metrics(bind_addr).await;
+        let metrics = request_metrics(bind_addr).await.expect("metrics failed");
         assert!(metrics.contains("# UNIT example_request_requests requests\n"));
         assert!(metrics.contains("example_request_requests_total{"));
         assert!(metrics.contains("otel_scope_name=\"scuffle-bootstrap-telemetry\""));
@@ -525,11 +522,61 @@ mod tests {
         assert!(res.is_status());
         assert_eq!(res.status(), Some(reqwest::StatusCode::BAD_REQUEST));
 
-        flush_opentelemetry(bind_addr).await;
+        assert!(flush_opentelemetry(bind_addr).await.is_ok());
 
         // Not found
         let res = reqwest::get(format!("http://{bind_addr}/not_found")).await.unwrap();
         assert_eq!(res.status(), reqwest::StatusCode::NOT_FOUND);
+
+        scuffle_context::Handler::global().shutdown().await;
+
+        task_handle.await.unwrap().unwrap();
+    }
+
+    #[tokio::test]
+    async fn empty_telemetry_http_server() {
+        struct TestGlobal {
+            bind_addr: SocketAddr,
+        }
+
+        impl GlobalWithoutConfig for TestGlobal {
+            async fn init() -> anyhow::Result<Arc<Self>> {
+                let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+                let bind_addr = listener.local_addr()?;
+
+                Ok(Arc::new(TestGlobal { bind_addr }))
+            }
+        }
+
+        impl TelemetryConfig for TestGlobal {
+            fn bind_address(&self) -> Option<std::net::SocketAddr> {
+                Some(self.bind_addr)
+            }
+        }
+
+        let global = <TestGlobal as GlobalWithoutConfig>::init().await.unwrap();
+
+        let bind_addr = global.bind_addr;
+
+        assert!(TelemetrySvc.enabled(&global).await.unwrap());
+
+        let task_handle = tokio::spawn(TelemetrySvc.run(global, scuffle_context::Context::global()));
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let health = request_health(bind_addr).await;
+        assert_eq!(health, "ok");
+
+        let res = request_metrics(bind_addr).await.expect_err("error expected");
+        assert!(res.is_status());
+        assert_eq!(res.status(), Some(reqwest::StatusCode::NOT_FOUND));
+
+        let timer = std::time::Instant::now();
+        assert!(!request_pprof(bind_addr, "100", "2").await.expect("pprof failed").is_empty());
+        assert!(timer.elapsed() > std::time::Duration::from_secs(2));
+
+        let err = flush_opentelemetry(bind_addr).await.expect_err("error expected");
+        assert!(err.is_status());
+        assert_eq!(err.status(), Some(reqwest::StatusCode::NOT_FOUND));
 
         scuffle_context::Handler::global().shutdown().await;
 
