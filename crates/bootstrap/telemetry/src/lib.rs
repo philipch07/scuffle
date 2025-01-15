@@ -383,15 +383,13 @@ mod tests {
             .expect("health check text")
     }
 
-    async fn request_pprof(addr: SocketAddr) -> Bytes {
-        reqwest::get(format!("http://{addr}/pprof/cpu"))
+    async fn request_pprof(addr: SocketAddr, freq: &str, duration: &str) -> reqwest::Result<Bytes> {
+        reqwest::get(format!("http://{addr}/pprof/cpu?freq={freq}&duration={duration}"))
             .await
             .unwrap()
-            .error_for_status()
-            .expect("pprof check failed")
+            .error_for_status()?
             .bytes()
             .await
-            .expect("pprof check text")
     }
 
     async fn flush_opentelemetry(addr: SocketAddr) {
@@ -472,6 +470,8 @@ mod tests {
 
         let bind_addr = global.bind_addr;
 
+        assert!(TelemetrySvc.enabled(&global).await.unwrap());
+
         let task_handle = tokio::spawn(TelemetrySvc.run(global, scuffle_context::Context::global()));
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -513,8 +513,23 @@ mod tests {
         assert!(metrics.contains("} 2\n"));
         assert!(metrics.ends_with("# EOF\n"));
 
-        assert!(!request_pprof(bind_addr).await.is_empty());
+        let timer = std::time::Instant::now();
+        assert!(!request_pprof(bind_addr, "100", "2").await.expect("pprof failed").is_empty());
+        assert!(timer.elapsed() > std::time::Duration::from_secs(2));
+
+        let res = request_pprof(bind_addr, "invalid", "2").await.expect_err("error expected");
+        assert!(res.is_status());
+        assert_eq!(res.status(), Some(reqwest::StatusCode::BAD_REQUEST));
+
+        let res = request_pprof(bind_addr, "100", "invalid").await.expect_err("error expected");
+        assert!(res.is_status());
+        assert_eq!(res.status(), Some(reqwest::StatusCode::BAD_REQUEST));
+
         flush_opentelemetry(bind_addr).await;
+
+        // Not found
+        let res = reqwest::get(format!("http://{bind_addr}/not_found")).await.unwrap();
+        assert_eq!(res.status(), reqwest::StatusCode::NOT_FOUND);
 
         scuffle_context::Handler::global().shutdown().await;
 
