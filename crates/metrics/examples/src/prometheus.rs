@@ -29,7 +29,10 @@ async fn main() {
     registry.register_collector(exporter.collector());
 
     let provider = SdkMeterProvider::builder()
-        .with_resource(Resource::new(vec![KeyValue::new("service.name", env!("CARGO_BIN_NAME"))]))
+        .with_resource(Resource::new_with_defaults(vec![KeyValue::new(
+            "service.name",
+            env!("CARGO_BIN_NAME"),
+        )]))
         .with_reader(exporter)
         .build();
 
