@@ -272,4 +272,13 @@ mod tests {
         assert_eq!(values[1], Amf0Value::Boolean(true));
         assert_eq!(values[2], Amf0Value::String(Cow::Borrowed("Hello World")));
     }
+
+    #[test]
+    fn test_reader_invalid_marker() {
+        let amf0_unsupported_marker = vec![Amf0Marker::Unsupported as u8];
+        let mut amf_reader = Amf0Decoder::new(&amf0_unsupported_marker);
+        let result = amf_reader.decode();
+
+        assert!(matches!(result, Err(Amf0ReadError::UnsupportedType(Amf0Marker::Unsupported))));
+    }
 }

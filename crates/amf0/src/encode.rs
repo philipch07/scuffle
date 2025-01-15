@@ -142,4 +142,46 @@ mod tests {
 
         assert_eq!(vec, amf0_object);
     }
+
+    #[test]
+    fn test_encode_boolean() {
+        let amf0_boolean_true = vec![Amf0Marker::Boolean as u8, 0x01];
+        let amf0_boolean_false = vec![Amf0Marker::Boolean as u8, 0x00];
+
+        let mut vec_true = Vec::<u8>::new();
+        let mut vec_false = Vec::<u8>::new();
+
+        Amf0Encoder::encode(&mut vec_true, &Amf0Value::Boolean(true)).unwrap();
+        assert_eq!(vec_true, amf0_boolean_true);
+        Amf0Encoder::encode(&mut vec_false, &Amf0Value::Boolean(false)).unwrap();
+        assert_eq!(vec_false, amf0_boolean_false);
+    }
+
+    #[test]
+    fn test_encode_object() {
+        let mut amf0_object = vec![Amf0Marker::Object as u8, 0x00, 0x04];
+        amf0_object.extend_from_slice(b"test");
+        amf0_object.push(Amf0Marker::Null as u8);
+        amf0_object.extend_from_slice(&[0x00, 0x00, 0x09]);
+        let mut vec = Vec::<u8>::new();
+
+        Amf0Encoder::encode(&mut vec, &Amf0Value::Object(vec![("test".into(), Amf0Value::Null)].into())).unwrap();
+        assert_eq!(vec, amf0_object);
+    }
+
+    #[test]
+    fn test_encode_generic_error_unsupported_type() {
+        let mut writer = Vec::<u8>::new();
+        let unsupported_marker = Amf0Value::ObjectEnd;
+        let result = Amf0Encoder::encode(&mut writer, &unsupported_marker);
+        assert!(matches!(result, Err(Amf0WriteError::UnsupportedType(_))));
+    }
+
+    #[test]
+    fn test_encode_string_too_long() {
+        let long_string = "a".repeat(u16::MAX as usize + 1);
+        let mut writer = Vec::<u8>::new();
+        let result = Amf0Encoder::encode_string(&mut writer, &long_string);
+        assert!(matches!(result, Err(Amf0WriteError::NormalStringTooLong)));
+    }
 }
