@@ -354,7 +354,9 @@ mod tests {
     use std::sync::Arc;
 
     use bytes::Bytes;
-    use opentelemetry_sdk::{logs::LoggerProvider, metrics::SdkMeterProvider, trace::TracerProvider};
+    use opentelemetry_sdk::logs::LoggerProvider;
+    use opentelemetry_sdk::metrics::SdkMeterProvider;
+    use opentelemetry_sdk::trace::TracerProvider;
     use scuffle_bootstrap::{GlobalWithoutConfig, Service};
 
     use crate::{TelemetryConfig, TelemetrySvc};
