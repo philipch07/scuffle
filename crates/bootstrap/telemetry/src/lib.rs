@@ -354,7 +354,7 @@ mod tests {
     use std::sync::Arc;
 
     use bytes::Bytes;
-    use opentelemetry_sdk::metrics::SdkMeterProvider;
+    use opentelemetry_sdk::{logs::LoggerProvider, metrics::SdkMeterProvider, trace::TracerProvider};
     use scuffle_bootstrap::{GlobalWithoutConfig, Service};
 
     use crate::{TelemetryConfig, TelemetrySvc};
@@ -417,10 +417,18 @@ mod tests {
 
                 let exporter = scuffle_metrics::prometheus::exporter().build();
                 prometheus.register_collector(exporter.collector());
-                let provider = SdkMeterProvider::builder().with_reader(exporter).build();
-                opentelemetry::global::set_meter_provider(provider.clone());
+                let metrics = SdkMeterProvider::builder().with_reader(exporter).build();
+                opentelemetry::global::set_meter_provider(metrics.clone());
 
-                let open_telemetry = crate::opentelemetry::OpenTelemetry::new().with_metrics(provider);
+                let tracer = TracerProvider::default();
+                opentelemetry::global::set_tracer_provider(tracer.clone());
+
+                let logger = LoggerProvider::builder().build();
+
+                let open_telemetry = crate::opentelemetry::OpenTelemetry::new()
+                    .with_metrics(metrics)
+                    .with_traces(tracer)
+                    .with_logs(logger);
 
                 Ok(Arc::new(TestGlobal {
                     bind_addr,
