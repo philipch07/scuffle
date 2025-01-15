@@ -418,12 +418,14 @@ mod tests {
                 let exporter = scuffle_metrics::prometheus::exporter().build();
                 prometheus.register_collector(exporter.collector());
                 let provider = SdkMeterProvider::builder().with_reader(exporter).build();
-                opentelemetry::global::set_meter_provider(provider);
+                opentelemetry::global::set_meter_provider(provider.clone());
+
+                let open_telemetry = crate::opentelemetry::OpenTelemetry::new().with_metrics(provider);
 
                 Ok(Arc::new(TestGlobal {
                     bind_addr,
                     prometheus,
-                    open_telemetry: crate::opentelemetry::OpenTelemetry::new(),
+                    open_telemetry,
                 }))
             }
         }
