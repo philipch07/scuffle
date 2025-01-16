@@ -14,6 +14,10 @@ concurrency:
 
 env:
   RUST_TOOLCHAIN: nightly
+  # By default, when a action is run against a PR it will use a merge commit from the target branch & the PR branch. We want to use just the PR branch.
+  # So this changes the SHA to the PR branch SHA or falls back to the current SHA (if its not a PR)
+  # https://github.com/actions/checkout/issues/426
+  SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   clippy:
@@ -21,6 +25,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
 
       - name: Setup nasm
         run: |
@@ -48,6 +54,8 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
@@ -63,6 +71,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
@@ -86,6 +96,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
 
       - name: Setup nasm
         run: |
@@ -149,7 +161,7 @@ jobs:
           files: ./lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           override_pr: ${{ env.PR_NUMBER || github.event.pull_request.number || '' }}
-          override_commit: ${{ env.RUN_COMMIT_SHA || github.sha }}
+          override_commit: ${{ env.RUN_COMMIT_SHA || env.SHA }}
           verbose: true
 
       - name: Upload test results to Codecov
@@ -158,12 +170,63 @@ jobs:
         with:
           files: ./target/nextest/ci/junit.xml
           override_pr: ${{ env.PR_NUMBER || github.event.pull_request.number || '' }}
-          override_commit: ${{ env.RUN_COMMIT_SHA || github.sha }}
+          override_commit: ${{ env.RUN_COMMIT_SHA || env.SHA }}
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+
+      - name: Setup nasm
+        run: |
+          sudo apt-get install nasm
+
+      - uses: dtolnay/rust-toolchain@stable
+        id: setup-rust
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rust-docs
+
+      - uses: Swatinem/rust-cache@v2
+        id: cache-rust
+        with:
+          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
+          shared-key: docs
+
+      - name: Build docs
+        run: |
+          RUSTDOCFLAGS="-D warnings --cfg docsrs --enable-index-page -Zunstable-options" cargo +${{ env.RUST_TOOLCHAIN }} doc --no-deps --all-features
+
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: target/doc
+
+      - name: Get PR Number
+        if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
+        run: |
+          PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+
+      - name: Deploy
+        if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') || github.event.pull_request.head.repo.full_name == github.repository }}
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_DOCS_API_KEY }}
+          accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
+          command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ env.PR_NUMBER || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} ./target/doc
 
   brawl-done:
     runs-on: ubuntu-24.04
-    needs: [hakari, test, clippy, fmt]
+    needs: [hakari, test, clippy, fmt, docs]
     if: ${{ !cancelled() && github.event_name == 'push' }}
     steps:
       - name: calculate the correct exit status

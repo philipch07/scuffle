@@ -36,15 +36,14 @@ pub trait Service<Global>: Send + Sync + 'static + Sized {
     /// service should stop as soon as the provided context is done.
     ///
     /// Note: Adding the
-    /// <a href="../../scuffle_signal/struct.SignalSvc.html">`scuffle_signal::SignalSvc`</a>
-    /// service to the list of services when calling
-    /// [`main`](crate::main) will cancel the context as soon as a shutdown
-    /// signal is received.
+    /// [`scuffle_signal::SignalSvc`](../../scuffle_signal/struct.SignalSvc.html)
+    /// service to the list of services when calling [`main`](crate::main) will
+    /// cancel the context as soon as a shutdown signal is received.
     ///
     /// # See Also
     ///
     /// - [`Context`](scuffle_context::Context)
-    /// - <a href="../../scuffle_signal/struct.SignalSvc.html">`scuffle_signal::SignalSvc`</a>
+    /// - [`scuffle_signal::SignalSvc`](../../scuffle_signal/struct.SignalSvc.html)
     fn run(
         self,
         global: Arc<Global>,
