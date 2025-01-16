@@ -341,9 +341,13 @@ mod tests {
     fn test_output_options_get_format_ffi_null() {
         let format_name = CString::new("mp4").unwrap();
         let format_mime_type = CString::new("").unwrap();
-        let format_ptr = unsafe { ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr()) };
+        let format_ptr =
+            unsafe { ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr()) };
 
-        assert!(!format_ptr.is_null(), "Failed to retrieve AVOutputFormat for the given format name");
+        assert!(
+            !format_ptr.is_null(),
+            "Failed to retrieve AVOutputFormat for the given format name"
+        );
 
         let output_options = OutputOptions::new().format_ffi(format_ptr);
         let result = output_options.get_format_ffi();
@@ -471,11 +475,7 @@ mod tests {
             "Start times should match"
         );
         assert_eq!(copied_stream.duration(), source_stream.duration(), "Durations should match");
-        assert_eq!(
-            copied_stream.duration(),
-            source_stream.duration(),
-            "Durations should match"
-        );
+        assert_eq!(copied_stream.duration(), source_stream.duration(), "Durations should match");
         assert!(!copied_stream.as_ptr().is_null(), "Copied stream pointer should not be null");
     }
 

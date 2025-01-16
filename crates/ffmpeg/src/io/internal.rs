@@ -265,12 +265,12 @@ impl Inner<()> {
 mod tests {
     use std::ffi::CString;
     use std::io::Cursor;
-    use tempfile::Builder;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Once;
 
     use ffmpeg_sys_next::{av_guess_format, AVSEEK_FORCE};
     use libc::{c_void, SEEK_CUR, SEEK_END};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Once;
+    use tempfile::Builder;
 
     use crate::error::FfmpegError;
     use crate::io::internal::{read_packet, seek, write_packet, Inner, InnerOptions, AVERROR_EOF};
@@ -351,11 +351,7 @@ mod tests {
             CALL_COUNT.store(0, Ordering::SeqCst);
         });
 
-        unsafe extern "C" fn dummy_write_fn(
-            _opaque: *mut libc::c_void,
-            _buf: *const u8,
-            _buf_size: i32,
-        ) -> i32 {
+        unsafe extern "C" fn dummy_write_fn(_opaque: *mut libc::c_void, _buf: *const u8, _buf_size: i32) -> i32 {
             CALL_COUNT.fetch_add(1, Ordering::SeqCst);
             BUF_SIZE_TRACKER.store(_buf_size as usize, Ordering::SeqCst);
             0 // simulate success
@@ -408,10 +404,7 @@ mod tests {
 
     #[test]
     fn test_open_output_avformat_alloc_error() {
-        let test_path = tempfile::tempdir()
-            .unwrap()
-            .path()
-            .join("restricted_output.mp4");
+        let test_path = tempfile::tempdir().unwrap().path().join("restricted_output.mp4");
         let test_path_str = test_path.to_str().unwrap();
         let result = Inner::open_output(test_path_str);
         if let Err(error) = &result {

@@ -151,6 +151,7 @@ impl Input<()> {
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
     use std::io::Cursor;
+
     use super::{FfmpegError, Input, InputOptions, DEFAULT_BUFFER_SIZE};
 
     #[test]
