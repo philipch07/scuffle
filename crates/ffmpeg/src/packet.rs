@@ -4,6 +4,7 @@ use crate::error::FfmpegError;
 use crate::smart_object::SmartPtr;
 use crate::utils::check_i64;
 
+#[derive(Debug)]
 pub struct Packets<'a> {
     context: &'a mut AVFormatContext,
 }

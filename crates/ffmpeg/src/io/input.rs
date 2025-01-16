@@ -151,7 +151,6 @@ impl Input<()> {
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
     use std::io::Cursor;
-
     use super::{FfmpegError, Input, InputOptions, DEFAULT_BUFFER_SIZE};
 
     #[test]
@@ -233,9 +232,108 @@ mod tests {
     fn test_streams() {
         let valid_file_path = "../../assets/avc_aac_large.mp4";
         let input = Input::open(valid_file_path).expect("Failed to open valid file");
-
         let streams = input.streams();
-        assert!(streams.len() > 0, "Expected at least one stream");
+
+        assert!(!streams.is_empty(), "Expected at least one stream");
+
+        let mut settings = insta::Settings::new();
+        settings.add_filter(r"av_class: 0x[0-9a-f]+", "av_class: [Pointer]");
+        settings.add_filter(r"iformat: 0x[0-9a-f]+", "iformat: [Pointer]");
+        settings.add_filter(r"priv_data: 0x[0-9a-f]+", "priv_data: [Pointer]");
+        settings.add_filter(r"pb: 0x[0-9a-f]+", "pb: [Pointer]");
+        settings.add_filter(r"streams: 0x[0-9a-f]+", "streams: [Pointer]");
+        settings.add_filter(r"url: 0x[0-9a-f]+", "url: [Pointer]");
+        settings.add_filter(r"metadata: 0x[0-9a-f]+", "metadata: [Pointer]");
+        settings.add_filter(r"protocol_whitelist: 0x[0-9a-f]+", "protocol_whitelist: [Pointer]");
+        settings.add_filter(r"dump_separator: 0x[0-9a-f]+", "dump_separator: [Pointer]");
+        settings.add_filter(r"io_open:\s*Some\(\s*0x[0-9a-f]+,\s*\)", "io_open: Some([Pointer])");
+        settings.add_filter(r"io_close2:\s*Some\(\s*0x[0-9a-f]+,\s*\)", "io_close2: Some([Pointer])");
+
+        settings.bind(|| {
+            insta::assert_debug_snapshot!(streams, @r"
+            Streams {
+                input: AVFormatContext {
+                    av_class: [Pointer],
+                    iformat: [Pointer],
+                    oformat: 0x0000000000000000,
+                    priv_data: [Pointer],
+                    pb: [Pointer],
+                    ctx_flags: 0,
+                    nb_streams: 2,
+                    streams: [Pointer],
+                    nb_stream_groups: 0,
+                    stream_groups: 0x0000000000000000,
+                    nb_chapters: 0,
+                    chapters: 0x0000000000000000,
+                    url: [Pointer],
+                    start_time: 0,
+                    duration: 1066667,
+                    bit_rate: 1900416,
+                    packet_size: 0,
+                    max_delay: -1,
+                    flags: 2097152,
+                    probesize: 5000000,
+                    max_analyze_duration: 0,
+                    key: 0x0000000000000000,
+                    keylen: 0,
+                    nb_programs: 0,
+                    programs: 0x0000000000000000,
+                    video_codec_id: AV_CODEC_ID_NONE,
+                    audio_codec_id: AV_CODEC_ID_NONE,
+                    subtitle_codec_id: AV_CODEC_ID_NONE,
+                    data_codec_id: AV_CODEC_ID_NONE,
+                    metadata: [Pointer],
+                    start_time_realtime: -9223372036854775808,
+                    fps_probe_size: -1,
+                    error_recognition: 1,
+                    interrupt_callback: AVIOInterruptCB {
+                        callback: None,
+                        opaque: 0x0000000000000000,
+                    },
+                    debug: 0,
+                    max_streams: 1000,
+                    max_index_size: 1048576,
+                    max_picture_buffer: 3041280,
+                    max_interleave_delta: 10000000,
+                    max_ts_probe: 50,
+                    max_chunk_duration: 0,
+                    max_chunk_size: 0,
+                    max_probe_packets: 2500,
+                    strict_std_compliance: 0,
+                    event_flags: 1,
+                    avoid_negative_ts: -1,
+                    audio_preload: 0,
+                    use_wallclock_as_timestamps: 0,
+                    skip_estimate_duration_from_pts: 0,
+                    avio_flags: 0,
+                    duration_estimation_method: AVFMT_DURATION_FROM_STREAM,
+                    skip_initial_bytes: 0,
+                    correct_ts_overflow: 1,
+                    seek2any: 0,
+                    flush_packets: -1,
+                    probe_score: 100,
+                    format_probesize: 1048576,
+                    codec_whitelist: 0x0000000000000000,
+                    format_whitelist: 0x0000000000000000,
+                    protocol_whitelist: [Pointer],
+                    protocol_blacklist: 0x0000000000000000,
+                    io_repositioned: 0,
+                    video_codec: 0x0000000000000000,
+                    audio_codec: 0x0000000000000000,
+                    subtitle_codec: 0x0000000000000000,
+                    data_codec: 0x0000000000000000,
+                    metadata_header_padding: -1,
+                    opaque: 0x0000000000000000,
+                    control_message_cb: None,
+                    output_ts_offset: 0,
+                    dump_separator: [Pointer],
+                    io_open: Some([Pointer]),
+                    io_close2: Some([Pointer]),
+                    duration_probesize: 0,
+                },
+            }
+            ");
+        });
     }
 
     #[test]
@@ -251,6 +349,105 @@ mod tests {
                 None => break,
             }
         }
+
+        let mut settings = insta::Settings::new();
+        settings.add_filter(r"av_class: 0x[0-9a-f]+", "av_class: [Pointer]");
+        settings.add_filter(r"iformat: 0x[0-9a-f]+", "iformat: [Pointer]");
+        settings.add_filter(r"priv_data: 0x[0-9a-f]+", "priv_data: [Pointer]");
+        settings.add_filter(r"pb: 0x[0-9a-f]+", "pb: [Pointer]");
+        settings.add_filter(r"streams: 0x[0-9a-f]+", "streams: [Pointer]");
+        settings.add_filter(r"url: 0x[0-9a-f]+", "url: [Pointer]");
+        settings.add_filter(r"metadata: 0x[0-9a-f]+", "metadata: [Pointer]");
+        settings.add_filter(r"protocol_whitelist: 0x[0-9a-f]+", "protocol_whitelist: [Pointer]");
+        settings.add_filter(r"dump_separator: 0x[0-9a-f]+", "dump_separator: [Pointer]");
+        settings.add_filter(r"io_open:\s*Some\(\s*0x[0-9a-f]+,\s*\)", "io_open: Some([Pointer])");
+        settings.add_filter(r"io_close2:\s*Some\(\s*0x[0-9a-f]+,\s*\)", "io_close2: Some([Pointer])");
+
+        settings.bind(|| {
+            insta::assert_debug_snapshot!(packets, @r"
+            Packets {
+                context: AVFormatContext {
+                    av_class: [Pointer],
+                    iformat: [Pointer],
+                    oformat: 0x0000000000000000,
+                    priv_data: [Pointer],
+                    pb: [Pointer],
+                    ctx_flags: 0,
+                    nb_streams: 2,
+                    streams: [Pointer],
+                    nb_stream_groups: 0,
+                    stream_groups: 0x0000000000000000,
+                    nb_chapters: 0,
+                    chapters: 0x0000000000000000,
+                    url: [Pointer],
+                    start_time: 0,
+                    duration: 1066667,
+                    bit_rate: 1900416,
+                    packet_size: 0,
+                    max_delay: -1,
+                    flags: 2097152,
+                    probesize: 5000000,
+                    max_analyze_duration: 0,
+                    key: 0x0000000000000000,
+                    keylen: 0,
+                    nb_programs: 0,
+                    programs: 0x0000000000000000,
+                    video_codec_id: AV_CODEC_ID_NONE,
+                    audio_codec_id: AV_CODEC_ID_NONE,
+                    subtitle_codec_id: AV_CODEC_ID_NONE,
+                    data_codec_id: AV_CODEC_ID_NONE,
+                    metadata: [Pointer],
+                    start_time_realtime: -9223372036854775808,
+                    fps_probe_size: -1,
+                    error_recognition: 1,
+                    interrupt_callback: AVIOInterruptCB {
+                        callback: None,
+                        opaque: 0x0000000000000000,
+                    },
+                    debug: 0,
+                    max_streams: 1000,
+                    max_index_size: 1048576,
+                    max_picture_buffer: 3041280,
+                    max_interleave_delta: 10000000,
+                    max_ts_probe: 50,
+                    max_chunk_duration: 0,
+                    max_chunk_size: 0,
+                    max_probe_packets: 2500,
+                    strict_std_compliance: 0,
+                    event_flags: 1,
+                    avoid_negative_ts: -1,
+                    audio_preload: 0,
+                    use_wallclock_as_timestamps: 0,
+                    skip_estimate_duration_from_pts: 0,
+                    avio_flags: 0,
+                    duration_estimation_method: AVFMT_DURATION_FROM_STREAM,
+                    skip_initial_bytes: 0,
+                    correct_ts_overflow: 1,
+                    seek2any: 0,
+                    flush_packets: -1,
+                    probe_score: 100,
+                    format_probesize: 1048576,
+                    codec_whitelist: 0x0000000000000000,
+                    format_whitelist: 0x0000000000000000,
+                    protocol_whitelist: [Pointer],
+                    protocol_blacklist: 0x0000000000000000,
+                    io_repositioned: 0,
+                    video_codec: 0x0000000000000000,
+                    audio_codec: 0x0000000000000000,
+                    subtitle_codec: 0x0000000000000000,
+                    data_codec: 0x0000000000000000,
+                    metadata_header_padding: -1,
+                    opaque: 0x0000000000000000,
+                    control_message_cb: None,
+                    output_ts_offset: 0,
+                    dump_separator: [Pointer],
+                    io_open: Some([Pointer]),
+                    io_close2: Some([Pointer]),
+                    duration_probesize: 0,
+                },
+            }
+            ");
+        });
     }
 
     #[test]
@@ -262,6 +459,28 @@ mod tests {
             Ok(Some(packet)) => {
                 assert!(!packet.data().is_empty(), "Expected a non-empty packet");
                 assert!(packet.stream_index() >= 0, "Expected a valid stream index");
+                insta::assert_debug_snapshot!(packet, @r"
+                Packet {
+                    stream_index: 0,
+                    pts: Some(
+                        0,
+                    ),
+                    dts: Some(
+                        -512,
+                    ),
+                    duration: Some(
+                        256,
+                    ),
+                    pos: Some(
+                        48,
+                    ),
+                    is_key: true,
+                    is_corrupt: false,
+                    is_discard: false,
+                    is_trusted: false,
+                    is_disposable: false,
+                }
+                ");
             }
             Ok(None) => panic!("Expected a packet but received None"),
             Err(e) => panic!("Error encountered while receiving packet: {:?}", e),

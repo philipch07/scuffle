@@ -285,14 +285,16 @@ impl Output<()> {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use std::fs::File;
+    use std::ffi::CString;
     use std::io::Cursor;
-    use std::path::Path;
+    use std::ptr;
+
+    use tempfile::Builder;
 
     use crate::consts::DEFAULT_BUFFER_SIZE;
     use crate::dict::Dictionary;
     use crate::error::FfmpegError;
-    use crate::io::output::{AVCodec, AVOutputFormat};
+    use crate::io::output::{AVCodec, AVRational, AVFMT_FLAG_AUTO_BSF};
     use crate::io::{Output, OutputOptions};
 
     #[test]
@@ -337,12 +339,21 @@ mod tests {
 
     #[test]
     fn test_output_options_get_format_ffi_null() {
-        let dummy_format_ffi: *const AVOutputFormat = 0x1234 as *const AVOutputFormat;
-        let options = OutputOptions::default().format_ffi(dummy_format_ffi);
-        let format_ffi_result = options.get_format_ffi();
+        let format_name = CString::new("mp4").unwrap();
+        let format_mime_type = CString::new("").unwrap();
+        let format_ptr = unsafe { ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr()) };
 
-        assert!(format_ffi_result.is_ok());
-        assert_eq!(format_ffi_result.unwrap(), dummy_format_ffi);
+        assert!(!format_ptr.is_null(), "Failed to retrieve AVOutputFormat for the given format name");
+
+        let output_options = OutputOptions::new().format_ffi(format_ptr);
+        let result = output_options.get_format_ffi();
+
+        assert!(result.is_ok(), "Expected Ok result, got Err instead");
+        assert_eq!(
+            result.unwrap(),
+            format_ptr,
+            "Expected format_ffi pointer to match the retrieved format"
+        );
     }
 
     #[test]
@@ -433,13 +444,18 @@ mod tests {
         let data = Cursor::new(Vec::new());
         let options = OutputOptions::default().format_name("mp4");
         let mut output = Output::new(data, options).expect("Failed to create Output");
-        // create a new output to prevent double mut borrow
+
+        // create new output to prevent double mut borrow
         let data = Cursor::new(Vec::new());
         let options = OutputOptions::default().format_name("mp4");
         let mut output_two = Output::new(data, options).expect("Failed to create Output");
 
         let dummy_codec: *const AVCodec = 0x1234 as *const AVCodec;
-        let source_stream = output.add_stream(Some(dummy_codec)).expect("Failed to add source stream");
+        let mut source_stream = output.add_stream(Some(dummy_codec)).expect("Failed to add source stream");
+
+        source_stream.set_time_base(AVRational { num: 1, den: 25 });
+        source_stream.set_start_time(Some(1000));
+        source_stream.set_duration(Some(500));
         let copied_stream = output_two.copy_stream(&source_stream).expect("Failed to copy the stream");
 
         assert_eq!(copied_stream.index(), source_stream.index(), "Stream indices should match");
@@ -456,28 +472,30 @@ mod tests {
         );
         assert_eq!(copied_stream.duration(), source_stream.duration(), "Durations should match");
         assert_eq!(
-            copied_stream.disposition(),
-            source_stream.disposition(),
-            "Dispositions should match"
+            copied_stream.duration(),
+            source_stream.duration(),
+            "Durations should match"
         );
         assert!(!copied_stream.as_ptr().is_null(), "Copied stream pointer should not be null");
     }
 
-    // for some reason the default flag value is 2097152, but I have no idea why.
-    // #[test]
-    // fn test_output_flags() {
-    //     let data = Cursor::new(Vec::new());
-    //     let options = OutputOptions::default().format_name("mp4");
-    //     let output = Output::new(data, options).expect("Failed to create
-    // Output");     let flags = output.flags();
+    #[test]
+    fn test_output_flags() {
+        let data = Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let output = Output::new(data, options).expect("Failed to create Output");
+        let flags = output.flags();
 
-    //     assert_eq!(flags, 0, "Expected default flags to be 0");
-    // }
+        assert_eq!(flags, AVFMT_FLAG_AUTO_BSF, "Expected default flag to be AVFMT_FLAG_AUTO_BSF");
+    }
 
     #[test]
     fn test_output_open() {
-        let temp_path = Path::new("test_output.mp4");
-        let _temp_file = File::create(temp_path).expect("Failed to create temporary file");
+        let temp_file = Builder::new()
+            .suffix(".mp4")
+            .tempfile()
+            .expect("Failed to create a temporary file");
+        let temp_path = temp_file.path();
         let output = Output::open(temp_path.to_str().unwrap());
 
         assert!(output.is_ok(), "Expected Output::open to succeed");

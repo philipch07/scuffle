@@ -4,6 +4,7 @@ use crate::consts::{Const, Mut};
 use crate::dict::Dictionary;
 use crate::utils::check_i64;
 
+#[derive(Debug)]
 pub struct Streams<'a> {
     input: &'a AVFormatContext,
 }

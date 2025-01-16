@@ -263,25 +263,26 @@ impl Inner<()> {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use std::fs;
+    use std::ffi::CString;
     use std::io::Cursor;
-    use std::path::Path;
+    use tempfile::Builder;
 
-    use ffmpeg_sys_next::AVSEEK_FORCE;
+    use ffmpeg_sys_next::{av_guess_format, AVSEEK_FORCE};
     use libc::{c_void, SEEK_CUR, SEEK_END};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Once;
 
     use crate::error::FfmpegError;
     use crate::io::internal::{read_packet, seek, write_packet, Inner, InnerOptions, AVERROR_EOF};
 
     #[test]
     fn test_read_packet_eof() {
-        let data: Cursor<Vec<u8>> = Cursor::new(vec![]);
-        let mut opaque = Box::new(data);
+        let mut data: Cursor<Vec<u8>> = Cursor::new(vec![]);
         let mut buf = [0u8; 10];
 
         unsafe {
             let result =
-                read_packet::<Cursor<Vec<u8>>>(&mut *opaque as *mut _ as *mut c_void, buf.as_mut_ptr(), buf.len() as i32);
+                read_packet::<Cursor<Vec<u8>>>((&raw mut data) as *mut libc::c_void, buf.as_mut_ptr(), buf.len() as i32);
 
             assert_eq!(result, AVERROR_EOF);
         }
@@ -289,16 +290,15 @@ mod tests {
 
     #[test]
     fn test_write_packet_success() {
-        let data = Cursor::new(vec![0u8; 10]);
-        let mut opaque = Box::new(data);
+        let mut data = Cursor::new(vec![0u8; 10]);
         let buf = [1u8, 2, 3, 4, 5];
 
         unsafe {
             let result =
-                write_packet::<Cursor<Vec<u8>>>(&mut *opaque as *mut _ as *mut c_void, buf.as_ptr(), buf.len() as i32);
+                write_packet::<Cursor<Vec<u8>>>((&raw mut data) as *mut _ as *mut c_void, buf.as_ptr(), buf.len() as i32);
             assert_eq!(result, buf.len() as i32);
 
-            let written_data = opaque.get_ref();
+            let written_data = data.get_ref();
             assert_eq!(&written_data[..buf.len()], &buf);
         }
     }
@@ -315,6 +315,7 @@ mod tests {
         assert_eq!(result, { offset });
         whence &= !AVSEEK_FORCE;
         assert_eq!(whence, SEEK_CUR);
+        assert_eq!(cursor.position(), offset as u64);
     }
 
     #[test]
@@ -326,6 +327,7 @@ mod tests {
         let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, whence) };
 
         assert_eq!(result, 90);
+        assert_eq!(cursor.position(), 90);
     }
 
     #[test]
@@ -335,24 +337,44 @@ mod tests {
         let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, 0, 999) };
 
         assert_eq!(result, -1);
+        assert_eq!(cursor.position(), 0);
     }
 
     #[test]
     fn test_avformat_alloc_output_context2_error() {
-        unsafe extern "C" fn dummy_write_fn(_opaque: *mut libc::c_void, _buf: *const u8, _buf_size: i32) -> i32 {
+        static BUF_SIZE_TRACKER: AtomicUsize = AtomicUsize::new(0);
+        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+        static INIT: Once = Once::new();
+
+        INIT.call_once(|| {
+            BUF_SIZE_TRACKER.store(0, Ordering::SeqCst);
+            CALL_COUNT.store(0, Ordering::SeqCst);
+        });
+
+        unsafe extern "C" fn dummy_write_fn(
+            _opaque: *mut libc::c_void,
+            _buf: *const u8,
+            _buf_size: i32,
+        ) -> i32 {
+            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
+            BUF_SIZE_TRACKER.store(_buf_size as usize, Ordering::SeqCst);
             0 // simulate success
         }
 
+        let invalid_format = CString::new("invalid_format").expect("Failed to create CString");
         let options = InnerOptions {
             buffer_size: 4096,
             write_fn: Some(dummy_write_fn),
-            output_format: std::ptr::null(),
+            output_format: unsafe { av_guess_format(invalid_format.as_ptr(), std::ptr::null(), std::ptr::null()) },
             ..Default::default()
         };
         let data = ();
         let result = Inner::new(data, options);
 
         assert!(result.is_err(), "Expected an error but got Ok");
+
+        let call_count = CALL_COUNT.load(Ordering::SeqCst);
+        assert_eq!(call_count, 0, "Expected dummy_write_fn to not be called.");
 
         if let Err(error) = result {
             match error {
@@ -366,17 +388,14 @@ mod tests {
 
     #[test]
     fn test_open_output_valid_path() {
-        let test_path = "test_output_file.mp4";
-        if Path::new(test_path).exists() {
-            fs::remove_file(test_path).unwrap();
-        }
+        let temp_file = Builder::new()
+            .suffix(".mp4")
+            .tempfile()
+            .expect("Failed to create a temporary file");
+        let test_path = temp_file.path();
+        let result = Inner::open_output(test_path.to_str().unwrap());
 
-        let result = Inner::open_output(test_path);
         assert!(result.is_ok(), "Expected success but got error");
-
-        if Path::new(test_path).exists() {
-            fs::remove_file(test_path).unwrap();
-        }
     }
 
     #[test]
@@ -389,8 +408,12 @@ mod tests {
 
     #[test]
     fn test_open_output_avformat_alloc_error() {
-        let test_path = "/root/restricted_output.mp4";
-        let result = Inner::open_output(test_path);
+        let test_path = tempfile::tempdir()
+            .unwrap()
+            .path()
+            .join("restricted_output.mp4");
+        let test_path_str = test_path.to_str().unwrap();
+        let result = Inner::open_output(test_path_str);
         if let Err(error) = &result {
             eprintln!("Function returned an error: {:?}", error);
         }
