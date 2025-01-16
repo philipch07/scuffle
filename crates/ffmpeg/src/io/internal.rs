@@ -259,3 +259,145 @@ impl Inner<()> {
         Ok(this)
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use std::fs;
+    use std::io::Cursor;
+    use std::path::Path;
+
+    use ffmpeg_sys_next::AVSEEK_FORCE;
+    use libc::{c_void, SEEK_CUR, SEEK_END};
+
+    use crate::error::FfmpegError;
+    use crate::io::internal::{read_packet, seek, write_packet, Inner, InnerOptions, AVERROR_EOF};
+
+    #[test]
+    fn test_read_packet_eof() {
+        let data: Cursor<Vec<u8>> = Cursor::new(vec![]);
+        let mut opaque = Box::new(data);
+        let mut buf = [0u8; 10];
+
+        unsafe {
+            let result =
+                read_packet::<Cursor<Vec<u8>>>(&mut *opaque as *mut _ as *mut c_void, buf.as_mut_ptr(), buf.len() as i32);
+
+            assert_eq!(result, AVERROR_EOF);
+        }
+    }
+
+    #[test]
+    fn test_write_packet_success() {
+        let data = Cursor::new(vec![0u8; 10]);
+        let mut opaque = Box::new(data);
+        let buf = [1u8, 2, 3, 4, 5];
+
+        unsafe {
+            let result =
+                write_packet::<Cursor<Vec<u8>>>(&mut *opaque as *mut _ as *mut c_void, buf.as_ptr(), buf.len() as i32);
+            assert_eq!(result, buf.len() as i32);
+
+            let written_data = opaque.get_ref();
+            assert_eq!(&written_data[..buf.len()], &buf);
+        }
+    }
+
+    #[test]
+    fn test_seek_force() {
+        let mut cursor = Cursor::new(vec![0u8; 100]);
+        let opaque = &mut cursor as *mut _ as *mut c_void;
+        assert_eq!(cursor.position(), 0);
+        let offset = 10;
+        let mut whence = SEEK_CUR | AVSEEK_FORCE;
+        let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, whence) };
+
+        assert_eq!(result, { offset });
+        whence &= !AVSEEK_FORCE;
+        assert_eq!(whence, SEEK_CUR);
+    }
+
+    #[test]
+    fn test_seek_seek_end() {
+        let mut cursor = Cursor::new(vec![0u8; 100]);
+        let opaque = &mut cursor as *mut _ as *mut libc::c_void;
+        let offset = -10;
+        let whence = SEEK_END;
+        let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, whence) };
+
+        assert_eq!(result, 90);
+    }
+
+    #[test]
+    fn test_seek_invalid_whence() {
+        let mut cursor = Cursor::new(vec![0u8; 100]);
+        let opaque = &mut cursor as *mut _ as *mut libc::c_void;
+        let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, 0, 999) };
+
+        assert_eq!(result, -1);
+    }
+
+    #[test]
+    fn test_avformat_alloc_output_context2_error() {
+        unsafe extern "C" fn dummy_write_fn(_opaque: *mut libc::c_void, _buf: *const u8, _buf_size: i32) -> i32 {
+            0 // simulate success
+        }
+
+        let options = InnerOptions {
+            buffer_size: 4096,
+            write_fn: Some(dummy_write_fn),
+            output_format: std::ptr::null(),
+            ..Default::default()
+        };
+        let data = ();
+        let result = Inner::new(data, options);
+
+        assert!(result.is_err(), "Expected an error but got Ok");
+
+        if let Err(error) = result {
+            match error {
+                FfmpegError::Code(_) => {
+                    eprintln!("Expected avformat_alloc_output_context2 error occurred.");
+                }
+                _ => panic!("Unexpected error variant: {:?}", error),
+            }
+        }
+    }
+
+    #[test]
+    fn test_open_output_valid_path() {
+        let test_path = "test_output_file.mp4";
+        if Path::new(test_path).exists() {
+            fs::remove_file(test_path).unwrap();
+        }
+
+        let result = Inner::open_output(test_path);
+        assert!(result.is_ok(), "Expected success but got error");
+
+        if Path::new(test_path).exists() {
+            fs::remove_file(test_path).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_open_output_invalid_path() {
+        let test_path = "";
+        let result = Inner::open_output(test_path);
+
+        assert!(result.is_err(), "Expected Err, got Ok");
+    }
+
+    #[test]
+    fn test_open_output_avformat_alloc_error() {
+        let test_path = "/root/restricted_output.mp4";
+        let result = Inner::open_output(test_path);
+        if let Err(error) = &result {
+            eprintln!("Function returned an error: {:?}", error);
+        }
+
+        assert!(
+            matches!(result, Err(FfmpegError::Code(_))),
+            "Expected FfmpegError::Code but received a different error."
+        );
+    }
+}

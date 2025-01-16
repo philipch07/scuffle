@@ -10,6 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "FFmpeg bindings for Rust."
 keywords = ["ffmpeg", "video", "audio", "media"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [dependencies]
 libc = "0.2"
 bytes = { optional = true, version = "1" }

@@ -1,3 +1,6 @@
+#![doc = include_str!("../README.md")]
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
+
 pub mod codec;
 pub mod consts;
 pub mod decoder;
