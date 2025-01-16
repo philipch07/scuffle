@@ -24,7 +24,7 @@ scuffle-bootstrap-derive.workspace = true
 scuffle-workspace-hack.workspace = true
 
 [dev-dependencies]
-insta = "1.42.0"
+insta = "1.42"
 postcompile = { workspace = true, features = ["prettyplease"] }
 scuffle-future-ext.workspace = true
 scuffle-signal = { workspace = true, features = ["bootstrap"] }
