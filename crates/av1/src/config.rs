@@ -5,7 +5,7 @@ use bytes::Bytes;
 use scuffle_bytes_util::{BitReader, BitWriter, BytesCursorExt};
 
 /// AV1 Video Descriptor
-/// https://aomediacodec.github.io/av1-mpeg2-ts/#av1-video-descriptor
+/// <https://aomediacodec.github.io/av1-mpeg2-ts/#av1-video-descriptor>
 #[derive(Debug, Clone, PartialEq)]
 pub struct AV1VideoDescriptor {
     pub codec_configuration_record: AV1CodecConfigurationRecord,
