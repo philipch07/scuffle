@@ -294,8 +294,7 @@ mod tests {
         let buf = [1u8, 2, 3, 4, 5];
 
         unsafe {
-            let result =
-                write_packet::<Cursor<Vec<u8>>>((&raw mut data) as *mut _ as *mut c_void, buf.as_ptr(), buf.len() as i32);
+            let result = write_packet::<Cursor<Vec<u8>>>((&raw mut data) as *mut c_void, buf.as_ptr(), buf.len() as i32);
             assert_eq!(result, buf.len() as i32);
 
             let written_data = data.get_ref();
@@ -306,7 +305,7 @@ mod tests {
     #[test]
     fn test_seek_force() {
         let mut cursor = Cursor::new(vec![0u8; 100]);
-        let opaque = &mut cursor as *mut _ as *mut c_void;
+        let opaque = &raw mut cursor as *mut c_void;
         assert_eq!(cursor.position(), 0);
         let offset = 10;
         let mut whence = SEEK_CUR | AVSEEK_FORCE;
@@ -321,7 +320,7 @@ mod tests {
     #[test]
     fn test_seek_seek_end() {
         let mut cursor = Cursor::new(vec![0u8; 100]);
-        let opaque = &mut cursor as *mut _ as *mut libc::c_void;
+        let opaque = &raw mut cursor as *mut libc::c_void;
         let offset = -10;
         let whence = SEEK_END;
         let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, whence) };
@@ -333,7 +332,7 @@ mod tests {
     #[test]
     fn test_seek_invalid_whence() {
         let mut cursor = Cursor::new(vec![0u8; 100]);
-        let opaque = &mut cursor as *mut _ as *mut libc::c_void;
+        let opaque = &raw mut cursor as *mut libc::c_void;
         let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, 0, 999) };
 
         assert_eq!(result, -1);
