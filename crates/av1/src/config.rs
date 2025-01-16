@@ -5,7 +5,7 @@ use scuffle_bytes_util::{BitReader, BitWriter, BytesCursorExt};
 
 #[derive(Debug, Clone, PartialEq)]
 /// AV1 Codec Configuration Record
-/// https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-syntax
+/// <https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-syntax>
 pub struct AV1CodecConfigurationRecord {
     pub seq_profile: u8,
     pub seq_level_idx_0: u8,

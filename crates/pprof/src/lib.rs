@@ -1,5 +1,3 @@
-#![doc = include_str!("../README.md")]
-
 mod cpu;
 
 #[derive(Debug, thiserror::Error)]

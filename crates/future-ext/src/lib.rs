@@ -1,6 +1,6 @@
 /// The [`FutureExt`] trait is a trait that provides a more ergonomic way to
-/// extend futures with additional functionality. Similar to the [`IteratorExt`]
-/// trait, but for futures.
+/// extend futures with additional functionality. Similar to the `IteratorExt`
+/// trait from the `itertools` crate, but for futures.
 pub trait FutureExt {
     /// Attach a timeout to the future.
     ///

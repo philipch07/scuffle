@@ -1,0 +1,33 @@
+name: Docs Release
+
+on:
+  push:
+    branches:
+      - main
+      - test-deploy
+
+jobs:
+  docs:
+    name: Docs
+    runs-on: ubuntu-24.04
+    environment: docs.scuffle.rs
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v7
+        with:
+          workflow: ci.yaml
+          workflow_conclusion: success
+          commit: ${{ github.sha }}
+          name: docs
+          path: target/doc
+
+      - name: Deploy
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_DOCS_API_KEY }}
+          accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
+          command: pages deploy --project-name=scuffle-docrs --branch=main --commit-hash=${{ github.sha }} ./target/doc
