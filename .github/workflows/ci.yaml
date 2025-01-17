@@ -203,17 +203,21 @@ jobs:
         run: |
           RUSTDOCFLAGS="-D warnings --cfg docsrs --enable-index-page -Zunstable-options" cargo +${{ env.RUST_TOOLCHAIN }} doc --no-deps --all-features
 
-      - name: Upload docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs
-          path: target/doc
-
       - name: Get PR Number
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
         run: |
           PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+
+      - name: Insert custom html
+        run: |
+          sed -i 's/<\/nav><div class=\"sidebar-resizer\"/<div class=\"version\">Deployed from<br><a href=\"${{ github.event.pull_request.html_url }}\">Pull Request ${{ env.PR_NUMBER || github.event.pull_request.number }}<\/a><br><a href=\"${{ github.event.pull_request.html_url }}\/commits\/${{ env.SHA }}\">Commit <code>${{ env.SHA }}<\/code><\/a><\/div><\/nav><div class=\"sidebar-resizer\"/' target/doc/index.html
+
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: target/doc
 
       - name: Deploy
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') || github.event.pull_request.head.repo.full_name == github.repository }}
