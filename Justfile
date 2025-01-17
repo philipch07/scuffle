@@ -23,7 +23,7 @@ test *args:
     INSTA_FORCE_PASS=1 cargo +{{RUST_TOOLCHAIN}} llvm-cov nextest --include-build-script --no-report --all-features -- {{args}}
     # Coverage for doctests is currently broken in llvm-cov.
     # Once it fully works we can add the `--doctests` flag to the test and report command again.
-    cargo +{{RUST_TOOLCHAIN}} llvm-cov test --doc --no-report -- {{args}}
+    cargo +{{RUST_TOOLCHAIN}} llvm-cov test --doc --no-report --all-features -- {{args}}
 
     # Do not generate the coverage report on CI
     cargo insta review
