@@ -1,5 +1,8 @@
 pub use ::opentelemetry::*;
 
+/// OpenTelemetry error.
+///
+/// This enum represents all possible errors that can occur when working with OpenTelemetry.
 #[derive(Debug, thiserror::Error)]
 pub enum OpenTelemetryError {
     #[error("metrics: {0}")]
@@ -28,10 +31,12 @@ pub struct OpenTelemetry {
 }
 
 impl OpenTelemetry {
+    /// Creates a new empty OpenTelemetry configuration.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Checks if any of the providers are enabled.
     pub fn is_enabled(&self) -> bool {
         #[cfg_attr(
             not(any(
@@ -57,6 +62,7 @@ impl OpenTelemetry {
         enabled
     }
 
+    /// Sets the metrics provider.
     #[cfg(feature = "opentelemetry-metrics")]
     #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-metrics")))]
     pub fn with_metrics(self, metrics: impl Into<Option<opentelemetry_sdk::metrics::SdkMeterProvider>>) -> Self {
@@ -69,6 +75,7 @@ impl OpenTelemetry {
         }
     }
 
+    /// Sets the traces provider.
     #[cfg(feature = "opentelemetry-traces")]
     #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-traces")))]
     pub fn with_traces(self, traces: impl Into<Option<opentelemetry_sdk::trace::TracerProvider>>) -> Self {
@@ -81,6 +88,7 @@ impl OpenTelemetry {
         }
     }
 
+    /// Sets the logs provider.
     #[cfg(feature = "opentelemetry-logs")]
     #[cfg_attr(docsrs, doc(cfg(feature = "opentelemetry-logs")))]
     pub fn with_logs(self, logs: impl Into<Option<opentelemetry_sdk::logs::LoggerProvider>>) -> Self {
@@ -93,8 +101,9 @@ impl OpenTelemetry {
         }
     }
 
-    /// Flushes all metrics, traces, and logs, warning.
-    /// This blocks the current thread.
+    /// Flushes all metrics, traces, and logs.
+    ///
+    /// <div class="warning">Warning: This blocks the current thread.</div>
     pub fn flush(&self) -> Result<(), OpenTelemetryError> {
         #[cfg(feature = "opentelemetry-metrics")]
         if let Some(metrics) = &self.metrics {
