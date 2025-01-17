@@ -88,25 +88,6 @@ mod tests {
         });
     }
 
-    // #[test]
-    // fn derive_module() {
-    //     insta::assert_snapshot!(postcompile::compile! {
-    //         #[scuffle_metrics::metrics]
-    //         mod example {
-    //             use scuffle_metrics::{MetricEnum, collector::CounterU64};
-
-    //             #[derive(MetricEnum)]
-    //             pub enum Kind {
-    //                 Http,
-    //                 Grpc,
-    //             }
-
-    //             #[metrics(unit = "requests")]
-    //             pub fn request(kind: Kind) -> CounterU64;
-    //         }
-    //     });
-    // }
-
     #[test]
     fn opentelemetry() {
         #[derive(Debug, Clone)]
