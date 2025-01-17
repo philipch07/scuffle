@@ -3,6 +3,11 @@
 //! A wrapper around opentelemetry to provide a more ergonomic interface for
 //! creating metrics.
 //!
+//! This crate can be used together with the
+//! [`scuffle-bootstrap-telemetry`](../scuffle_bootstrap_telemetry) crate
+//! which provides a service that integrates with the
+//! [`scuffle-bootstrap`](../scuffle_bootstrap) ecosystem.
+//!
 //! ## Example
 //!
 //! ```rust

@@ -30,7 +30,7 @@ mod metrics_impl;
 
 /// A macro used to create metric handlers.
 ///
-/// You can change the crate by specifying `#[metrics(crate = "...")]`.
+/// You can change the crate by specifying `#[metrics(crate_path = "...")]`.
 ///
 /// Attributes:
 ///
@@ -90,6 +90,13 @@ pub fn metrics(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// Implements a conversion `Into<opentelemetry::Value>` for the enum.
 /// This allows the enum to be used as a metric label.
+///
+/// You can change the crate by specifying `#[metrics(crate_path = "...")]`.
+///
+/// Attributes:
+///
+/// - `crate_path`: The `scuffle_metrics` crate path. Valid on modules &
+///   functions.
 #[proc_macro_derive(MetricEnum, attributes(metrics))]
 pub fn metric_enum(input: TokenStream) -> TokenStream {
     match metric_enum_impl(input.into()) {
