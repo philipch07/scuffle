@@ -29,7 +29,7 @@
 //! example::request(example::Kind::Http).incr();
 //! ```
 //!
-//! For details see [`metrics`].
+//! For details see [`metrics!`].
 //!
 //! ## Status
 //!

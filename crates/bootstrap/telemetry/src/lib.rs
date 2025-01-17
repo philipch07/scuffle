@@ -18,6 +18,82 @@
 //!
 //! See [`TelemetrySvc`] for more details.
 //!
+//! ## Example
+//!
+//! ```rust
+//! use std::net::SocketAddr;
+//! use std::sync::Arc;
+//!
+//! use scuffle_bootstrap::global::GlobalWithoutConfig;
+//! use scuffle_bootstrap_telemetry::{prometheus_client, opentelemetry, opentelemetry_sdk, TelemetryConfig, TelemetrySvc};
+//!
+//! struct Global {
+//!     prometheus: prometheus_client::registry::Registry,
+//!     open_telemetry: opentelemetry::OpenTelemetry,
+//! }
+//!
+//! impl GlobalWithoutConfig for Global {
+//!     async fn init() -> anyhow::Result<Arc<Self>> {
+//!         // Initialize the Prometheus metrics registry.
+//!         let mut prometheus = prometheus_client::registry::Registry::default();
+//!         // The exporter converts opentelemetry metrics into the Prometheus format.
+//!         let exporter = scuffle_metrics::prometheus::exporter().build();
+//!         // Register the exporter as a data source for the Prometheus registry.
+//!         prometheus.register_collector(exporter.collector());
+//!
+//!         // Initialize the OpenTelemetry metrics provider and add the Prometheus exporter as a reader.
+//!         let metrics = opentelemetry_sdk::metrics::SdkMeterProvider::builder().with_reader(exporter).build();
+//!         opentelemetry::global::set_meter_provider(metrics.clone());
+//!
+//!         // Initialize the OpenTelemetry configuration instance.
+//!         let open_telemetry = opentelemetry::OpenTelemetry::new().with_metrics(metrics);
+//!
+//!         Ok(Arc::new(Self {
+//!             prometheus,
+//!             open_telemetry,
+//!         }))
+//!     }
+//! }
+//!
+//! impl TelemetryConfig for Global {
+//!     fn bind_address(&self) -> Option<SocketAddr> {
+//!         // Tells the http server to bind to port 8080 on localhost.
+//!         Some(SocketAddr::from(([127, 0, 0, 1], 8080)))
+//!     }
+//!
+//!     fn prometheus_metrics_registry(&self) -> Option<&prometheus_client::registry::Registry> {
+//!         Some(&self.prometheus)
+//!     }
+//!
+//!     fn opentelemetry(&self) -> Option<&opentelemetry::OpenTelemetry> {
+//!         Some(&self.open_telemetry)
+//!     }
+//! }
+//!
+//! #[scuffle_metrics::metrics]
+//! mod example {
+//!     use scuffle_metrics::{CounterU64, MetricEnum};
+//!
+//!     #[derive(MetricEnum)]
+//!     pub enum Kind {
+//!         Http,
+//!         Grpc,
+//!     }
+//!
+//!     #[metrics(unit = "requests")]
+//!     pub fn request(kind: Kind) -> CounterU64;
+//! }
+//!
+//! // Now emit metrics from anywhere in your code using the `example` module.
+//! example::request(example::Kind::Http).incr();
+//!
+//! scuffle_bootstrap::main! {
+//!     Global {
+//!         TelemetrySvc,
+//!     }
+//! };
+//! ```
+//!
 //! ## Status
 //!
 //! This crate is currently under development and is not yet stable, unit tests

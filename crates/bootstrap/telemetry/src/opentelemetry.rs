@@ -10,6 +10,10 @@ pub enum OpenTelemetryError {
     Logs(#[from] opentelemetry_sdk::logs::LogError),
 }
 
+/// OpenTelemetry configuration.
+///
+/// This struct contains different OpenTelemetry providers for metrics, traces, and logs.
+/// If set, these providers will be used to collect and export telemetry data.
 #[derive(Debug, Default, Clone)]
 pub struct OpenTelemetry {
     #[cfg(feature = "opentelemetry-metrics")]
@@ -89,8 +93,8 @@ impl OpenTelemetry {
         }
     }
 
-    /// Flushes all metrics, traces, and logs, warning; this blocks the
-    /// current thread.
+    /// Flushes all metrics, traces, and logs, warning.
+    /// This blocks the current thread.
     pub fn flush(&self) -> Result<(), OpenTelemetryError> {
         #[cfg(feature = "opentelemetry-metrics")]
         if let Some(metrics) = &self.metrics {
