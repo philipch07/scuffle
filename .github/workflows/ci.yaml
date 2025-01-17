@@ -211,7 +211,7 @@ jobs:
 
       - name: Insert custom html
         run: |
-          sed -i 's/<\/nav><div class=\"sidebar-resizer\"/<div class=\"version\">Deployed from<br><a href=\"${{ toJson(github.event.pull_request.html_url) }}\">Pull Request ${{ env.PR_NUMBER || github.event.pull_request.number }}<\/a><br><a href=\"${{ toJson(github.event.pull_request.html_url) }}\/commits\/${{ env.SHA }}\">Commit <code>${{ env.SHA }}<\/code><\/a><\/div><\/nav><div class=\"sidebar-resizer\"/' target/doc/index.html
+          sed -i 's/<\/nav><div class=\"sidebar-resizer\"/<div class=\"version\">Deployed from<br><a href=\"https:\/\/github.com\/ScuffleCloud\/scuffle\/pull\/${{ env.PR_NUMBER || github.event.pull_request.number }}\">Pull Request ${{ env.PR_NUMBER || github.event.pull_request.number }}<\/a><br><a href=\"https:\/\/github.com\/ScuffleCloud\/scuffle\/pull\/${{ env.PR_NUMBER || github.event.pull_request.number }}\/commits\/${{ env.SHA }}\">Commit <code>${{ env.SHA }}<\/code><\/a><\/div><\/nav><div class=\"sidebar-resizer\"/' target/doc/index.html
 
       - name: Upload docs
         uses: actions/upload-artifact@v4
