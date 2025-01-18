@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - test-deploy
 
 jobs:
   docs:
@@ -13,36 +12,16 @@ jobs:
     environment: docs.scuffle.rs
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download Artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v7
         with:
-          ref: ${{ env.SHA }}
-
-      - name: Setup nasm
-        run: |
-          sudo apt-get install nasm
-
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rust-docs
-
-      - uses: Swatinem/rust-cache@v2
-        id: cache-rust
-        with:
-          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
-          shared-key: docs
-
-      - name: Build docs
-        run: |
-          RUSTDOCFLAGS="-D warnings --cfg docsrs --enable-index-page -Zunstable-options" cargo +${{ env.RUST_TOOLCHAIN }} doc --no-deps --all-features
-
-      - name: Get short commit SHA
-        run: |
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c 1-7)
-          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-
-      - name: Insert custom html
-        run: .github/patch-docs.sh ${{ github.event.repository.html_url }} ${{ github.sha }} ${{ env.SHORT_SHA }}
+          workflow: ci.yaml
+          workflow_conclusion: success
+          commit: ${{ github.sha }}
+          name: docs
+          path: target/doc
 
       - name: Deploy
         id: deploy
