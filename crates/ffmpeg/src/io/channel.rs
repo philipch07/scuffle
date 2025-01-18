@@ -159,6 +159,14 @@ impl<D: From<Vec<u8>> + Send> ChannelCompatSend for std::sync::mpsc::Sender<D> {
     }
 }
 
+impl<D: From<Vec<u8>> + Send> ChannelCompatSend for std::sync::mpsc::SyncSender<D> {
+    type Data = D;
+
+    fn channel_send(&mut self, data: Self::Data) -> bool {
+        self.send(data).is_ok()
+    }
+}
+
 impl<T: ChannelCompatRecv> std::io::Read for ChannelCompat<T> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.buffer.len() >= buf.len() {
@@ -218,6 +226,9 @@ impl<T: ChannelCompatSend> std::io::Write for ChannelCompat<T> {
 mod tests {
     use std::io::{Read, Write};
 
+    use rand::distributions::Standard;
+    use rand::{thread_rng, Rng};
+
     use crate::io::channel::{ChannelCompat, ChannelCompatRecv, ChannelCompatSend};
 
     macro_rules! make_test {
@@ -249,8 +260,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_read_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_read_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
@@ -259,10 +284,12 @@ mod tests {
             cfg(feature = "crossbeam-channel")
         )]
         |tx, rx| {
-            let mut reader = ChannelCompat::new(rx);
+            let mut reader = rx.into_compat();
 
-            // write 1000 bytes
-            let data = vec![42u8; 1000];
+            // generate 1000 bytes of random data
+            let mut rng = thread_rng();
+            let data: Vec<u8> = (0..1000).map(|_| rng.sample(Standard)).collect();
+
             let mut tx = tx;
             let write_result = tx.channel_send(data.clone());
             assert!(write_result);
@@ -285,8 +312,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_write_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_write_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_write_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_write_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
@@ -295,27 +336,29 @@ mod tests {
             cfg(feature = "crossbeam-channel")
         )]
         |tx, rx| {
-            let mut writer = ChannelCompat::new(tx);
+            let mut writer = tx.into_compat();
 
-            // write 1000 bytes
-            let data = vec![42u8; 1000];
-            let write_result = writer.write(&data);
-            assert!(write_result.is_ok(), "Failed to write data to the channel");
-            assert_eq!(write_result.unwrap(), data.len(), "Written byte count mismatch");
+        // generate 1000 bytes of random data
+        let mut rng = thread_rng();
+        let data: Vec<u8> = (0..1000).map(|_| rng.sample(Standard)).collect();
 
-            // read 1000 bytes
-            let mut rx = rx;
-            let read_result = rx.channel_recv();
-            assert!(read_result.is_some(), "No data received from the channel");
+        let write_result = writer.write(&data);
+        assert!(write_result.is_ok(), "Failed to write data to the channel");
+        assert_eq!(write_result.unwrap(), data.len(), "Written byte count mismatch");
 
-            let received_data = read_result.unwrap();
-            assert_eq!(received_data.len(), data.len(), "Received byte count mismatch");
+        // read 1000 bytes
+        let mut rx = rx;
+        let read_result = rx.channel_recv();
+        assert!(read_result.is_some(), "No data received from the channel");
 
-            // data read must match data written
-            assert_eq!(
-                received_data, data,
-                "Mismatch between written data and received data"
-            );
+        let received_data = read_result.unwrap();
+        assert_eq!(received_data.len(), data.len(), "Received byte count mismatch");
+
+        // data read must match data written
+        assert_eq!(
+            received_data, data,
+            "Mismatch between written data and received data"
+        );
         }
     }
 
@@ -326,8 +369,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_read_smaller_buffer_than_data_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_read_smaller_buffer_than_data_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_smaller_buffer_than_data_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_smaller_buffer_than_data_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
@@ -364,8 +421,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_read_no_data_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_read_no_data_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_no_data_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_no_data_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
@@ -393,8 +464,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_read_else_case_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_read_else_case_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_else_case_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_else_case_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
@@ -449,8 +534,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_read_while_case_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_read_while_case_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_while_case_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_read_while_case_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
@@ -504,8 +603,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_write_eof_error_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_write_eof_error_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_write_eof_error_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_write_eof_error_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
@@ -533,8 +646,22 @@ mod tests {
             std::sync::mpsc::channel::<Vec<u8>>()
         )]
         #[variant(
+            test_flush_std_sync_mpsc,
+            std::sync::mpsc::sync_channel::<Vec<u8>>(1)
+        )]
+        #[variant(
             test_flush_tokio_mpsc,
             tokio::sync::mpsc::channel::<Vec<u8>>(1),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_flush_tokio_unbounded,
+            tokio::sync::mpsc::unbounded_channel::<Vec<u8>>(),
+            cfg(feature = "tokio-channel")
+        )]
+        #[variant(
+            test_flush_tokio_broadcast,
+            tokio::sync::broadcast::channel::<Vec<u8>>(1),
             cfg(feature = "tokio-channel")
         )]
         #[variant(
