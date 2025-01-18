@@ -126,6 +126,10 @@ impl Dictionary {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.iter().next().is_none()
+    }
+
     pub fn iter(&self) -> DictionaryIterator {
         DictionaryIterator::new(self)
     }

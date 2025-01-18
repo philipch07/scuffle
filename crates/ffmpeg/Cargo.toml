@@ -10,6 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "FFmpeg bindings for Rust."
 keywords = ["ffmpeg", "video", "audio", "media"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [dependencies]
 libc = "0.2"
 bytes = { optional = true, version = "1" }
@@ -19,6 +22,11 @@ tracing = { optional = true, version = "0.1" }
 arc-swap = { version = "1.7" }
 ffmpeg-sys-next = { version = "7.1.0" }
 scuffle-workspace-hack.workspace = true
+rand = "0.8"
+
+[dev-dependencies]
+insta = {version = "1.42", features = ["filters"]}
+tempfile = "3.15"
 
 [features]
 channel = ["dep:bytes"]
