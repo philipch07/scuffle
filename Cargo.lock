@@ -2630,6 +2630,7 @@ dependencies = [
  "ffmpeg-sys-next",
  "insta",
  "libc",
+ "rand",
  "scuffle-workspace-hack",
  "tempfile",
  "tokio",

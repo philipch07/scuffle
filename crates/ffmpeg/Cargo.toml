@@ -22,6 +22,7 @@ tracing = { optional = true, version = "0.1" }
 arc-swap = { version = "1.7" }
 ffmpeg-sys-next = { version = "7.1.0" }
 scuffle-workspace-hack.workspace = true
+rand = "0.8"
 
 [dev-dependencies]
 insta = {version = "1.42", features = ["filters"]}
