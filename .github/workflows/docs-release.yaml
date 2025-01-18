@@ -42,7 +42,7 @@ jobs:
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
       - name: Insert custom html
-        run: .github/patch-docs.sh ${{ github.sha }} ${{ env.SHORT_SHA }}
+        run: .github/patch-docs.sh ${{ gtihub.event.repository.html_url }} ${{ github.sha }} ${{ env.SHORT_SHA }}
 
       - name: Deploy
         id: deploy

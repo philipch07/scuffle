@@ -215,7 +215,7 @@ jobs:
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
       - name: Insert custom html
-        run: .github/patch-docs.sh ${{ env.SHA }} ${{ env.SHORT_SHA }} ${{ env.PR_NUMBER || github.event.pull_request.number }}
+        run: .github/patch-docs.sh ${{ gtihub.event.repository.html_url }} ${{ env.SHA }} ${{ env.SHORT_SHA }} ${{ env.PR_NUMBER || github.event.pull_request.number }}
 
       - name: Deploy
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') || github.event.pull_request.head.repo.full_name == github.repository }}
