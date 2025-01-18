@@ -1,9 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ -n "$4" ]
-    then
-        sed -i "s#</nav><div class=\"sidebar-resizer\"#<div class=\"version\">Deployed from<br><a href=\"$1/pull/$4\">Pull Request $4</a><br><a href=\"$1/commit/$2\">Commit <code>$3</code></a></div></nav><div class=\"sidebar-resizer\"#" target/doc/index.html
-    else
-        sed -i "s#</nav><div class=\"sidebar-resizer\"#<div class=\"version\">Deployed from<br><a href=\"$1/commit/$2\">Commit <code>$3</code></a></div></nav><div class=\"sidebar-resizer\"#" target/doc/index.html
+repo_url=$1
+commit_hash=$2
+short_commit_hash=$3
+pull_request_number=$4
+
+pull_request_code=""
+if [ -n "$pull_request_number" ] then
+    pull_request_code="<br><a href=\"$repo_url/pull/$pull_request_number\">Pull Request $pull_request_number</a>"
 fi
+
+commit_code="<br><a href=\"$repo_url/commit/$commit_hash\">Commit <code>$short_commit_hash</code></a>"
+
+sed -i "s#</nav><div class=\"sidebar-resizer\"#<div class=\"version\">Deployed from$pull_request_code$commit_code</div></nav><div class=\"sidebar-resizer\"#" target/doc/index.html
