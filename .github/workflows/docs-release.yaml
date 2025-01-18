@@ -50,4 +50,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_DOCS_API_KEY }}
           accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
-          command: pages deploy --project-name=scuffle-docrs --branch=main --commit-hash=${{ github.sha }} ./target/doc
+          command: pages deploy --project-name=scuffle-docrs --branch=main --commit-hash=${{ github.sha }} --commit-dirty=true ./target/doc

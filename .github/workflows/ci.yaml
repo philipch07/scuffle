@@ -224,7 +224,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_DOCS_API_KEY }}
           accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
-          command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ env.PR_NUMBER || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} ./target/doc
+          command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ env.PR_NUMBER || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} --commit-dirty=true ./target/doc
 
   brawl-done:
     runs-on: ubuntu-24.04
