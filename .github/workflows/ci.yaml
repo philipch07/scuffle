@@ -215,14 +215,7 @@ jobs:
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
 
       - name: Insert custom html
-        run: |
-          sed -i 's/<\/nav><div class=\"sidebar-resizer\"/<div class=\"version\">Deployed from<br><a href=\"https:\/\/github.com\/ScuffleCloud\/scuffle\/pull\/${{ env.PR_NUMBER || github.event.pull_request.number }}\">Pull Request ${{ env.PR_NUMBER || github.event.pull_request.number }}<\/a><br><a href=\"https:\/\/github.com\/ScuffleCloud\/scuffle\/pull\/${{ env.PR_NUMBER || github.event.pull_request.number }}\/commits\/${{ env.SHA }}\">Commit <code>${{ env.SHORT_SHA }}<\/code><\/a><\/div><\/nav><div class=\"sidebar-resizer\"/' target/doc/index.html
-
-      - name: Upload docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs
-          path: target/doc
+        run: .github/patch-docs.sh ${{ env.SHA }} ${{ env.SHORT_SHA }} ${{ env.PR_NUMBER || github.event.pull_request.number }}
 
       - name: Deploy
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') || github.event.pull_request.head.repo.full_name == github.repository }}
