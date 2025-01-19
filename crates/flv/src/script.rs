@@ -40,9 +40,18 @@ mod tests {
 
     #[test]
     fn test_script_data() {
-        let mut reader = io::Cursor::new(Bytes::from_static(&[0x02, 0x00, 0x00, 0x00, 0x00]));
+        let mut reader = io::Cursor::new(Bytes::from_static(&[
+            0x02, // String marker
+            0x00, 0x0A, // Length (10 bytes)
+            b'o', b'n', b'M', b'e', b't', b'a', b'D', b'a', b't', b'a', // "onMetaData"
+            0x05, // null marker
+            0x05, // null marker
+
+        ]));
         let script_data = ScriptData::demux(&mut reader).unwrap();
         assert_eq!(script_data.name, "onMetaData");
-        assert_eq!(script_data.data.len(), 0);
+        assert_eq!(script_data.data.len(), 2);
+        assert_eq!(script_data.data[0], Amf0Value::Null);
+        assert_eq!(script_data.data[1], Amf0Value::Null);
     }
 }
