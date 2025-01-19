@@ -4,7 +4,7 @@ set -euo pipefail
 repo_url=$1
 commit_hash=$2
 short_commit_hash=$3
-pull_request_number=$4
+pull_request_number=${4:-}
 
 pull_request_code=""
 if [ -n "$pull_request_number" ]; then
