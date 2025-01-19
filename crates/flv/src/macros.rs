@@ -21,7 +21,7 @@ macro_rules! nutype_enum {
         $vis:vis enum $name:ident($type:ty) {
             $(
                 $(#[$variant_attr:meta])*
-                $variant:ident =  $value:expr
+                $variant:ident = $value:expr
             ),*$(,)?
         }
     ) => {

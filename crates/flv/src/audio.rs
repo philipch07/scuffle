@@ -12,8 +12,7 @@ use crate::macros::nutype_enum;
 /// This is the container for the audio data.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio
-///   tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.2.1 - AUDIODATA)
 #[derive(Debug, Clone, PartialEq)]
 pub struct AudioData {
@@ -94,8 +93,7 @@ nutype_enum! {
 /// This is the container for the audio data body.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio
-///   tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.2.1 - AUDIODATA)
 #[derive(Debug, Clone, PartialEq)]
 pub enum AudioDataBody {
@@ -106,13 +104,16 @@ pub enum AudioDataBody {
 }
 
 impl AudioDataBody {
+    /// Demux the audio data body from the given reader
+    ///
+    /// The reader will be entirely consumed.
     pub fn demux(sound_format: SoundFormat, reader: &mut io::Cursor<Bytes>) -> io::Result<Self> {
         match sound_format {
             SoundFormat::Aac => {
                 // For some reason the spec adds a specific byte before the AAC data.
                 // This byte is the AAC packet type.
                 let aac_packet_type = AacPacketType::from(reader.read_u8()?);
-                Ok(Self::Aac(AacPacket::demux(aac_packet_type, reader)?))
+                Ok(Self::Aac(AacPacket::new(aac_packet_type, reader.extract_remaining())))
             }
             _ => Ok(Self::Unknown {
                 sound_format,
@@ -171,5 +172,123 @@ nutype_enum! {
         Mono = 0,
         /// Stereo
         Stereo = 1,
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sound_format() {
+        let cases = [
+            (
+                0x00,
+                SoundFormat::LinearPcmPlatformEndian,
+                "SoundFormat::LinearPcmPlatformEndian",
+            ),
+            (0x01, SoundFormat::Adpcm, "SoundFormat::Adpcm"),
+            (0x02, SoundFormat::Mp3, "SoundFormat::Mp3"),
+            (0x03, SoundFormat::LinearPcmLittleEndian, "SoundFormat::LinearPcmLittleEndian"),
+            (0x04, SoundFormat::Nellymoser16KhzMono, "SoundFormat::Nellymoser16KhzMono"),
+            (0x05, SoundFormat::Nellymoser8KhzMono, "SoundFormat::Nellymoser8KhzMono"),
+            (0x06, SoundFormat::Nellymoser, "SoundFormat::Nellymoser"),
+            (0x07, SoundFormat::G711ALaw, "SoundFormat::G711ALaw"),
+            (0x08, SoundFormat::G711MuLaw, "SoundFormat::G711MuLaw"),
+            (0x0A, SoundFormat::Aac, "SoundFormat::Aac"),
+            (0x0B, SoundFormat::Speex, "SoundFormat::Speex"),
+            (0x0E, SoundFormat::Mp38Khz, "SoundFormat::Mp38Khz"),
+            (0x0F, SoundFormat::DeviceSpecificSound, "SoundFormat::DeviceSpecificSound"),
+        ];
+
+        for (value, expected, name) in cases {
+            let sound_format = SoundFormat::from(value);
+            assert_eq!(sound_format, expected);
+            assert_eq!(format!("{:?}", sound_format), name);
+        }
+    }
+
+    #[test]
+    fn test_sound_rate() {
+        let cases = [
+            (0x00, SoundRate::Hz5500, "SoundRate::Hz5500"),
+            (0x01, SoundRate::Hz11000, "SoundRate::Hz11000"),
+            (0x02, SoundRate::Hz22000, "SoundRate::Hz22000"),
+            (0x03, SoundRate::Hz44000, "SoundRate::Hz44000"),
+        ];
+
+        for (value, expected, name) in cases {
+            let sound_rate = SoundRate::from(value);
+            assert_eq!(sound_rate, expected);
+            assert_eq!(format!("{:?}", sound_rate), name);
+        }
+    }
+
+    #[test]
+    fn test_sound_size() {
+        let cases = [
+            (0x00, SoundSize::Bit8, "SoundSize::Bit8"),
+            (0x01, SoundSize::Bit16, "SoundSize::Bit16"),
+        ];
+
+        for (value, expected, name) in cases {
+            let sound_size = SoundSize::from(value);
+            assert_eq!(sound_size, expected);
+            assert_eq!(format!("{:?}", sound_size), name);
+        }
+    }
+
+    #[test]
+    fn test_sound_type() {
+        let cases = [
+            (0x00, SoundType::Mono, "SoundType::Mono"),
+            (0x01, SoundType::Stereo, "SoundType::Stereo"),
+        ];
+
+        for (value, expected, name) in cases {
+            let sound_type = SoundType::from(value);
+            assert_eq!(sound_type, expected);
+            assert_eq!(format!("{:?}", sound_type), name);
+        }
+    }
+
+    #[test]
+    fn test_audio_data_demux() {
+        let mut reader = io::Cursor::new(Bytes::from(vec![0b10101101, 0b00000000, 1, 2, 3]));
+
+        let audio_data = AudioData::demux(&mut reader).unwrap();
+        assert_eq!(audio_data.sound_rate, SoundRate::Hz44000);
+        assert_eq!(audio_data.sound_size, SoundSize::Bit8);
+        assert_eq!(audio_data.sound_type, SoundType::Stereo);
+        assert_eq!(
+            audio_data.body,
+            AudioDataBody::Aac(AacPacket::SequenceHeader(Bytes::from(vec![1, 2, 3])))
+        );
+
+        let mut reader = io::Cursor::new(Bytes::from(vec![0b10101101, 0b00100000, 1, 2, 3]));
+
+        let audio_data = AudioData::demux(&mut reader).unwrap();
+        assert_eq!(audio_data.sound_rate, SoundRate::Hz44000);
+        assert_eq!(audio_data.sound_size, SoundSize::Bit8);
+        assert_eq!(audio_data.sound_type, SoundType::Stereo);
+        assert_eq!(
+            audio_data.body,
+            AudioDataBody::Aac(AacPacket::Unknown {
+                aac_packet_type: AacPacketType(0b00100000),
+                data: Bytes::from(vec![1, 2, 3])
+            })
+        );
+
+        let mut reader = io::Cursor::new(Bytes::from(vec![0b10001101, 0b00000000, 1, 2, 3]));
+
+        let audio_data = AudioData::demux(&mut reader).unwrap();
+        assert_eq!(
+            audio_data.body,
+            AudioDataBody::Unknown {
+                sound_format: SoundFormat(8),
+                data: Bytes::from(vec![0, 1, 2, 3])
+            }
+        );
     }
 }

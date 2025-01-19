@@ -6,7 +6,9 @@ use scuffle_bytes_util::BytesCursorExt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScriptData {
+    /// The name of the script data
     pub name: String,
+    /// The data of the script data
     pub data: Vec<Amf0Value<'static>>,
 }
 
@@ -28,5 +30,19 @@ impl ScriptData {
             name: name.into_owned(),
             data: data.into_iter().map(|v| v.to_owned()).collect(),
         })
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_script_data() {
+        let mut reader = io::Cursor::new(Bytes::from_static(&[0x02, 0x00, 0x00, 0x00, 0x00]));
+        let script_data = ScriptData::demux(&mut reader).unwrap();
+        assert_eq!(script_data.name, "onMetaData");
+        assert_eq!(script_data.data.len(), 0);
     }
 }

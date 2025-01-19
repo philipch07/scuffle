@@ -43,7 +43,7 @@ use scuffle_flv::avc::AvcPacket;
 use scuffle_flv::hevc::HevcPacket;
 use scuffle_flv::script::ScriptData;
 use scuffle_flv::tag::{FlvTag, FlvTagData};
-use scuffle_flv::video::{EnhancedPacket, FrameType, VideoData, VideoDataBody};
+use scuffle_flv::video::{EnhancedPacket, FrameType, VideoTagBody, VideoTagHeader};
 
 mod codecs;
 mod define;
@@ -181,9 +181,9 @@ impl Transmuxer {
                     total_duration = duration;
                     is_audio = true;
                 }
-                FlvTagData::Video(VideoData {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type,
-                    body: VideoDataBody::Avc(AvcPacket::Nalu { composition_time, data }),
+                    body: VideoTagBody::Avc(AvcPacket::Nalu { composition_time, data }),
                     ..
                 }) => {
                     let composition_time = ((composition_time as f64 * video_settings.framerate) / 1000.0).floor() * 1000.0;
@@ -196,9 +196,9 @@ impl Transmuxer {
 
                     is_keyframe = frame_type == FrameType::Keyframe;
                 }
-                FlvTagData::Video(VideoData {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type,
-                    body: VideoDataBody::Enhanced(EnhancedPacket::Av1(Av1Packet::Raw(data))),
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Av1(Av1Packet::Raw(data))),
                     ..
                 }) => {
                     let sample = codecs::av1::trun_sample(frame_type, duration, &data)?;
@@ -209,9 +209,9 @@ impl Transmuxer {
 
                     is_keyframe = frame_type == FrameType::Keyframe;
                 }
-                FlvTagData::Video(VideoData {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type,
-                    body: VideoDataBody::Enhanced(EnhancedPacket::Hevc(HevcPacket::Nalu { composition_time, data })),
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Hevc(HevcPacket::Nalu { composition_time, data })),
                     ..
                 }) => {
                     let composition_time =
@@ -309,23 +309,23 @@ impl Transmuxer {
             }
 
             match &tag.data {
-                FlvTagData::Video(VideoData {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type: _,
-                    body: VideoDataBody::Avc(AvcPacket::SequenceHeader(data)),
+                    body: VideoTagBody::Avc(AvcPacket::SequenceHeader(data)),
                     ..
                 }) => {
                     video_sequence_header = Some(VideoSequenceHeader::Avc(data.clone()));
                 }
-                FlvTagData::Video(VideoData {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type: _,
-                    body: VideoDataBody::Enhanced(EnhancedPacket::Av1(Av1Packet::SequenceStart(config))),
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Av1(Av1Packet::SequenceStart(config))),
                     ..
                 }) => {
                     video_sequence_header = Some(VideoSequenceHeader::Av1(config.clone()));
                 }
-                FlvTagData::Video(VideoData {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type: _,
-                    body: VideoDataBody::Enhanced(EnhancedPacket::Hevc(HevcPacket::SequenceStart(config))),
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Hevc(HevcPacket::SequenceStart(config))),
                     ..
                 }) => {
                     video_sequence_header = Some(VideoSequenceHeader::Hevc(config.clone()));

@@ -17,6 +17,9 @@ pub struct FlvFile {
 }
 
 impl FlvFile {
+    /// Demux an FLV file from a reader.
+    /// The reader needs to be a [`std::io::Cursor`] with a [`Bytes`] buffer because we
+    /// take advantage of zero-copy reading.
     pub fn demux(reader: &mut std::io::Cursor<Bytes>) -> std::io::Result<Self> {
         let header = FlvHeader::demux(reader)?;
 

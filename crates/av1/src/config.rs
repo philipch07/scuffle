@@ -8,18 +8,19 @@ use scuffle_bytes_util::{BitReader, BitWriter, BytesCursorExt};
 /// <https://aomediacodec.github.io/av1-mpeg2-ts/#av1-video-descriptor>
 #[derive(Debug, Clone, PartialEq)]
 pub struct AV1VideoDescriptor {
+    pub tag: u8,
+    pub length: u8,
     pub codec_configuration_record: AV1CodecConfigurationRecord,
 }
 
 impl AV1VideoDescriptor {
     pub fn demux(reader: &mut io::Cursor<Bytes>) -> io::Result<Self> {
         let tag = reader.read_u8()?;
-        let length = reader.read_u8()?;
-
         if tag != 0x80 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid AV1 video descriptor tag"));
         }
 
+        let length = reader.read_u8()?;
         if length != 4 {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -28,6 +29,8 @@ impl AV1VideoDescriptor {
         }
 
         Ok(AV1VideoDescriptor {
+            tag,
+            length,
             codec_configuration_record: AV1CodecConfigurationRecord::demux(reader)?,
         })
     }
@@ -274,5 +277,55 @@ mod tests {
         config.mux(&mut buf).unwrap();
 
         insta::assert_snapshot!(format!("{:?}", Bytes::from(buf)), @r#"b"\x81\0\0\x10HELLO FROM THE OBU""#);
+    }
+
+    #[test]
+    fn test_video_descriptor_demux() {
+        let data = b"\x80\x04\x81\r\x0c\x3f\n\x0f\0\0\0j\xef\xbf\xe1\xbc\x02\x19\x90\x10\x10\x10@".to_vec();
+
+        let config = AV1VideoDescriptor::demux(&mut io::Cursor::new(data.into())).unwrap();
+
+        insta::assert_debug_snapshot!(config, @r#"
+        AV1VideoDescriptor {
+            tag: 128,
+            length: 4,
+            codec_configuration_record: AV1CodecConfigurationRecord {
+                seq_profile: 0,
+                seq_level_idx_0: 13,
+                seq_tier_0: false,
+                high_bitdepth: false,
+                twelve_bit: false,
+                monochrome: false,
+                chroma_subsampling_x: true,
+                chroma_subsampling_y: true,
+                chroma_sample_position: 0,
+                hdr_wcg_idc: 0,
+                initial_presentation_delay_minus_one: Some(
+                    15,
+                ),
+                config_obu: b"\n\x0f\0\0\0j\xef\xbf\xe1\xbc\x02\x19\x90\x10\x10\x10@",
+            },
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_video_descriptor_demux_invalid_tag() {
+        let data = b"\x81".to_vec();
+
+        let err = AV1VideoDescriptor::demux(&mut io::Cursor::new(data.into())).unwrap_err();
+
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(err.to_string(), "Invalid AV1 video descriptor tag");
+    }
+
+    #[test]
+    fn test_video_descriptor_demux_invalid_length() {
+        let data = b"\x80\x05ju".to_vec();
+
+        let err = AV1VideoDescriptor::demux(&mut io::Cursor::new(data.into())).unwrap_err();
+
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(err.to_string(), "Invalid AV1 video descriptor length");
     }
 }

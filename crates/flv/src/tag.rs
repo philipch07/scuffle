@@ -4,7 +4,7 @@ use scuffle_bytes_util::BytesCursorExt;
 
 use super::audio::AudioData;
 use super::script::ScriptData;
-use super::video::VideoData;
+use super::video::VideoTagHeader;
 use crate::macros::nutype_enum;
 
 /// An FLV Tag
@@ -35,7 +35,11 @@ pub struct FlvTag {
 
 impl FlvTag {
     /// Demux a FLV tag from the given reader.
-    /// The cursor will be advanced to the end of the tag.
+    ///
+    /// The reader will be advanced to the end of the tag.
+    ///
+    /// The reader needs to be a [`std::io::Cursor`] with a [`Bytes`] buffer because we
+    /// take advantage of zero-copy reading.
     pub fn demux(reader: &mut std::io::Cursor<Bytes>) -> std::io::Result<Self> {
         let tag_type = FlvTagType::from(reader.read_u8()?);
 
@@ -71,6 +75,11 @@ nutype_enum! {
     /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - FLV tags)
     /// - video_file_format_spec_v10_1.pdf (Annex E.4.1 - FLV Tag)
     ///
+    /// The 3 types that are supported are:
+    /// - Audio(8)
+    /// - Video(9)
+    /// - ScriptData(18)
+    ///
     pub enum FlvTagType(u8) {
         Audio = 8,
         Video = 9,
@@ -84,27 +93,23 @@ nutype_enum! {
 /// This enum contains the data for the different types of tags.
 ///
 /// Defined by:
-/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - FLV
-///   tags)
+/// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - FLV tags)
 /// - video_file_format_spec_v10_1.pdf (Annex E.4.1 - FLV Tag)
 #[derive(Debug, Clone, PartialEq)]
 pub enum FlvTagData {
     /// AudioData when the FlvTagType is Audio(8)
     /// Defined by:
-    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format -
-    ///   Audio tags)
+    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Audio tags)
     /// - video_file_format_spec_v10_1.pdf (Annex E.4.2.1 - AUDIODATA)
     Audio(AudioData),
     /// VideoData when the FlvTagType is Video(9)
     /// Defined by:
-    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format -
-    ///   Video tags)
+    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Video tags)
     /// - video_file_format_spec_v10_1.pdf (Annex E.4.3.1 - VIDEODATA)
-    Video(VideoData),
+    Video(VideoTagHeader),
     /// ScriptData when the FlvTagType is ScriptData(18)
     /// Defined by:
-    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Data
-    ///   tags)
+    /// - video_file_format_spec_v10.pdf (Chapter 1 - The FLV File Format - Data tags)
     /// - video_file_format_spec_v10_1.pdf (Annex E.4.4.1 - SCRIPTDATA)
     ScriptData(ScriptData),
     /// Any tag type that we dont know how to parse, with the corresponding data
@@ -113,10 +118,16 @@ pub enum FlvTagData {
 }
 
 impl FlvTagData {
+    /// Demux a FLV tag data from the given reader.
+    ///
+    /// The reader will be enirely consumed.
+    ///
+    /// The reader needs to be a [`std::io::Cursor`] with a [`Bytes`] buffer because we
+    /// take advantage of zero-copy reading.
     pub fn demux(tag_type: FlvTagType, reader: &mut std::io::Cursor<Bytes>) -> std::io::Result<Self> {
         match tag_type {
             FlvTagType::Audio => Ok(FlvTagData::Audio(AudioData::demux(reader)?)),
-            FlvTagType::Video => Ok(FlvTagData::Video(VideoData::demux(reader)?)),
+            FlvTagType::Video => Ok(FlvTagData::Video(VideoTagHeader::demux(reader)?)),
             FlvTagType::ScriptData => Ok(FlvTagData::ScriptData(ScriptData::demux(reader)?)),
             _ => Ok(FlvTagData::Unknown {
                 tag_type,

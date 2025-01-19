@@ -25,7 +25,8 @@ pub enum AvcPacket {
 }
 
 impl AvcPacket {
-    pub fn demux(avc_packet_type: AvcPacketType, reader: &mut io::Cursor<Bytes>) -> io::Result<Self> {
+    pub fn demux(reader: &mut io::Cursor<Bytes>) -> io::Result<Self> {
+        let avc_packet_type = AvcPacketType::from(reader.read_u8()?);
         let composition_time = reader.read_u24::<BigEndian>()?;
 
         match avc_packet_type {
