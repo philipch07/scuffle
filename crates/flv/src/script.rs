@@ -46,7 +46,6 @@ mod tests {
             b'o', b'n', b'M', b'e', b't', b'a', b'D', b'a', b't', b'a', // "onMetaData"
             0x05, // null marker
             0x05, // null marker
-
         ]));
         let script_data = ScriptData::demux(&mut reader).unwrap();
         assert_eq!(script_data.name, "onMetaData");
