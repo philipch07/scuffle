@@ -32,14 +32,21 @@ mod metrics_impl;
 ///
 /// You can change the crate by specifying `#[metrics(crate_path = "...")]`.
 ///
-/// Attributes:
+/// Module Attributes:
 ///
-/// - `crate_path`: The `scuffle_metrics` crate path. Valid on modules &
-///   functions.
-/// - `builder`: The builder to use for the metric. Valid on functions.
-/// - `unit`: The unit of the metric. Valid on functions.
-/// - `rename`: The name of the metric. Valid on modules, functions & function
-///   arguments.
+/// - `crate_path`: The `scuffle_metrics` crate path.
+/// - `rename`: The name of the metric container.
+///
+/// Function Attributes:
+///
+/// - `crate_path`: The `scuffle_metrics` crate path.
+/// - `builder`: The builder to use for the metric.
+/// - `unit`: The unit of the metric.
+/// - `rename`: The name of the metric.
+///
+/// Function Arguments Attributes:
+///
+/// - `rename`: The name of the argument.
 ///
 /// When using the module, you do not need to attribute each function with the
 /// `#[metrics]` attribute. All non function definitions are ignored.
@@ -93,10 +100,13 @@ pub fn metrics(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// You can change the crate by specifying `#[metrics(crate_path = "...")]`.
 ///
-/// Attributes:
+/// Enum Attributes:
 ///
-/// - `crate_path`: The `scuffle_metrics` crate path. Valid on modules &
-///   functions.
+/// - `crate_path`: The `scuffle_metrics` crate path.
+///
+/// Enum Variant Attributes:
+///
+/// - `rename`: The name of the metric.
 #[proc_macro_derive(MetricEnum, attributes(metrics))]
 pub fn metric_enum(input: TokenStream) -> TokenStream {
     match metric_enum_impl(input.into()) {
