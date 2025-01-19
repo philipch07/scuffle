@@ -7,7 +7,7 @@ short_commit_hash=$3
 pull_request_number=$4
 
 pull_request_code=""
-if [ -n "$pull_request_number" ] then
+if [ -n "$pull_request_number" ]; then
     pull_request_code="<br><a href=\"$repo_url/pull/$pull_request_number\">Pull Request $pull_request_number</a>"
 fi
 
