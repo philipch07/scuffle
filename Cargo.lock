@@ -2135,6 +2135,7 @@ version = "0.0.5"
 dependencies = [
  "cargo-platform",
  "cargo_metadata",
+ "insta",
  "prettyplease",
  "scuffle-workspace-hack",
  "serde",

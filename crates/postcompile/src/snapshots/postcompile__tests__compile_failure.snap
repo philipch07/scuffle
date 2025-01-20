@@ -1,0 +1,14 @@
+---
+source: crates/postcompile/src/lib.rs
+expression: out
+snapshot_kind: text
+---
+exit status: 1
+--- stderr 
+error: expected one of `!` or `::`, found `<eof>`
+ --> <postcompile>:1:1
+  |
+1 | invalid_rust_code
+  | ^^^^^^^^^^^^^^^^^ expected one of `!` or `::`
+
+error: aborting due to 1 previous error
