@@ -2,8 +2,8 @@ use std::io;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
-use scuffle_bytes_util::BytesCursorExt;
 use scuffle_h264::AVCDecoderConfigurationRecord;
+use scuffle_bytes_util::BytesCursorExt;
 
 use crate::macros::nutype_enum;
 

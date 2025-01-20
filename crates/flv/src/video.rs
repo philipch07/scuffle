@@ -2,9 +2,9 @@ use std::io::{self, Read};
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
+use scuffle_h265::HEVCDecoderConfigurationRecord;
 use scuffle_av1::{AV1CodecConfigurationRecord, AV1VideoDescriptor};
 use scuffle_bytes_util::BytesCursorExt;
-use scuffle_h265::HEVCDecoderConfigurationRecord;
 
 use super::av1::Av1Packet;
 use super::avc::AvcPacket;
