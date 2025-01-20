@@ -1,6 +1,5 @@
 mod? local
 
-
 # By default we use the nightly toolchain, however you can override this by setting the RUST_TOOLCHAIN environment variable.
 export RUST_TOOLCHAIN := env_var_or_default('RUST_TOOLCHAIN', 'nightly')
 

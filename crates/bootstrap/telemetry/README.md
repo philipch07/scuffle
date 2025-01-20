@@ -3,7 +3,7 @@
 > [!WARNING]  
 > This crate is under active development and may not be stable.
 
- [![crates.io](https://img.shields.io/crates/v/scuffle-bootstrap-telemetry.svg)](https://crates.io/crates/scuffle-bootstrap-telemetry) [![docs.rs](https://img.shields.io/docsrs/scuffle-bootstrap-telemetry)](https://docs.rs/scuffle-bootstrap-telemetry)
+[![crates.io](https://img.shields.io/crates/v/scuffle-bootstrap-telemetry.svg)](https://crates.io/crates/scuffle-bootstrap-telemetry) [![docs.rs](https://img.shields.io/docsrs/scuffle-bootstrap-telemetry)](https://docs.rs/scuffle-bootstrap-telemetry)
 
 ---
 

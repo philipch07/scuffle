@@ -196,6 +196,8 @@ impl Number for i64 {
 }
 
 /// A collector is a wrapper around a metric with some attributes.
+///
+/// Please use the [`#[metrics]`](crate::metrics) macro to create collectors.
 #[must_use = "Collectors do nothing by themselves, you must call them"]
 pub struct Collector<'a, T: IsCollector> {
     attributes: Vec<KeyValue>,
@@ -203,10 +205,15 @@ pub struct Collector<'a, T: IsCollector> {
 }
 
 impl<'a, T: IsCollector> Collector<'a, T> {
+    /// Wraps a given collector with the provided attributes.
+    ///
+    /// This is typically used internally for constructing types
+    /// when using the [`#[metrics]`](crate::metrics) module or function attribute.
     pub fn new(attributes: Vec<KeyValue>, collector: &'a T) -> Self {
         Self { attributes, collector }
     }
 
+    /// Returns the inner collector.
     pub fn inner(&self) -> &'a T {
         self.collector
     }

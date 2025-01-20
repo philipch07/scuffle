@@ -1,0 +1,26 @@
+---
+source: crates/metrics/src/lib.rs
+expression: "postcompile::compile!\n{\n    use scuffle_metrics::MetricEnum; #[derive(MetricEnum)] pub enum Kind\n    { Http, Grpc, }\n}"
+snapshot_kind: text
+---
+exit status: 0
+--- stdout 
+#![feature(prelude_import)]
+#[prelude_import]
+use std::prelude::rust_2021::*;
+#[macro_use]
+extern crate std;
+use scuffle_metrics::MetricEnum;
+pub enum Kind {
+    Http,
+    Grpc,
+}
+impl ::core::convert::From<Kind> for ::scuffle_metrics::opentelemetry::Value {
+    fn from(value: Kind) -> Self {
+        let value = match value {
+            Kind::Http => "Http",
+            Kind::Grpc => "Grpc",
+        };
+        ::scuffle_metrics::opentelemetry::Value::String(value.into())
+    }
+}

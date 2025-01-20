@@ -10,6 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "Telemetry utilities for scuffle-bootstrap."
 keywords = ["bootstrap", "telemetry"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [dependencies]
 tracing = "0.1"
 anyhow = "1"
@@ -19,7 +22,7 @@ http-body = "1"
 http-body-util = "0.1.2"
 bytes = "1"
 querystring = { version = "1", optional = true }
-tokio = { version = "1", optional = true, features = ["rt"], default-features = false}
+tokio = { version = "1", optional = true, features = [ "rt" ], default-features = false }
 thiserror = { version = "2", optional = true }
 
 opentelemetry = { version = "0.27", optional = true }
@@ -33,6 +36,10 @@ scuffle-http.workspace = true
 scuffle-pprof = { workspace = true, optional = true }
 scuffle-workspace-hack.workspace = true
 
+[dev-dependencies]
+scuffle-metrics = { workspace = true }
+reqwest = { version = "0.12.12", default-features = false, features = [ "rustls-tls" ] }
+
 [features]
 default = ["prometheus", "pprof", "opentelemetry-metrics", "opentelemetry-traces", "opentelemetry-logs"]
 prometheus = ["prometheus-client", "opentelemetry"]
@@ -41,6 +48,10 @@ opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "thiserror", "tok
 opentelemetry-metrics = ["opentelemetry"]
 opentelemetry-traces = ["opentelemetry", "tracing-opentelemetry"]
 opentelemetry-logs = ["opentelemetry", "opentelemetry-appender-tracing"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.xtask]
 additive-features = [

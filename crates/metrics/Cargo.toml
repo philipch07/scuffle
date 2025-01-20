@@ -10,6 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "Helper crate to instrument your code with metrics."
 keywords = ["metrics", "prometheus", "opentelemetry"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [dependencies]
 prometheus-client = { version = "0.22.3", optional = true }
 opentelemetry = { version = "0.27.0", default-features = false, features = ["metrics"] }
@@ -19,12 +22,20 @@ tracing = { version = "0.1", optional = true }
 parking_lot = "0.12"
 scuffle-workspace-hack.workspace = true
 
+[dev-dependencies]
+insta = "1.42.0"
+postcompile = { workspace = true, features = ["prettyplease"] }
+
 [features]
 internal-logs = ["dep:tracing"]
 prometheus = ["dep:prometheus-client"]
 default = ["prometheus"]
 tracing = ["internal-logs", "dep:tracing"]
 extended-numbers = []
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.xtask]
 additive-features = [

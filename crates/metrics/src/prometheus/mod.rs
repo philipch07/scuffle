@@ -10,6 +10,19 @@ use prometheus_client::encoding::{EncodeCounterValue, EncodeGaugeValue};
 use prometheus_client::metrics::MetricType;
 use prometheus_client::registry::Unit;
 
+/// A Prometheus exporter for OpenTelemetry metrics.
+///
+/// Responsible for encoding OpenTelemetry metrics into Prometheus format.
+/// The exporter implements the
+/// [`opentelemetry_sdk::metrics::reader::MetricReader`](https://docs.rs/opentelemetry_sdk/0.27.0/opentelemetry_sdk/metrics/reader/trait.MetricReader.html)
+/// trait and therefore can be passed to a
+/// [`opentelemetry_sdk::metrics::SdkMeterProvider`](https://docs.rs/opentelemetry_sdk/0.27.0/opentelemetry_sdk/metrics/struct.SdkMeterProvider.html).
+///
+/// Use [`collector`](PrometheusExporter::collector) to get a
+/// [`prometheus_client::collector::Collector`](https://docs.rs/prometheus-client/0.22.3/prometheus_client/collector/trait.Collector.html)
+/// that can be registered with a
+/// [`prometheus_client::registry::Registry`](https://docs.rs/prometheus-client/0.22.3/prometheus_client/registry/struct.Registry.html)
+/// to provide metrics to Prometheus.
 #[derive(Debug, Clone)]
 pub struct PrometheusExporter {
     reader: Arc<ManualReader>,
@@ -17,10 +30,13 @@ pub struct PrometheusExporter {
 }
 
 impl PrometheusExporter {
+    /// Returns a new [`PrometheusExporterBuilder`] to configure a [`PrometheusExporter`].
     pub fn builder() -> PrometheusExporterBuilder {
         PrometheusExporterBuilder::default()
     }
 
+    /// Returns a [`prometheus_client::collector::Collector`] that can be registered
+    /// with a [`prometheus_client::registry::Registry`] to provide metrics to Prometheus.
     pub fn collector(&self) -> Box<dyn prometheus_client::collector::Collector> {
         Box::new(self.clone())
     }
@@ -51,6 +67,7 @@ impl MetricReader for PrometheusExporter {
     }
 }
 
+/// Builder for [`PrometheusExporter`].
 #[derive(Default)]
 pub struct PrometheusExporterBuilder {
     reader: ManualReaderBuilder,
@@ -58,6 +75,7 @@ pub struct PrometheusExporterBuilder {
 }
 
 impl PrometheusExporterBuilder {
+    /// Set the reader temporality.
     pub fn with_temporality(mut self, temporality: opentelemetry_sdk::metrics::Temporality) -> Self {
         self.reader = self.reader.with_temporality(temporality);
         self
@@ -72,6 +90,7 @@ impl PrometheusExporterBuilder {
         self
     }
 
+    /// Build the [`PrometheusExporter`].
     pub fn build(self) -> PrometheusExporter {
         PrometheusExporter {
             reader: Arc::new(self.reader.build()),
@@ -80,6 +99,7 @@ impl PrometheusExporterBuilder {
     }
 }
 
+/// Returns a new [`PrometheusExporterBuilder`] to configure a [`PrometheusExporter`].
 pub fn exporter() -> PrometheusExporterBuilder {
     PrometheusExporter::builder()
 }
