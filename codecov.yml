@@ -73,12 +73,12 @@ component_management:
       name: scuffle-h3-webtransport
       paths:
         - crates/h3-webtransport/**
-    - component_id: scuffle-h264
-      name: scuffle-h264
+    - component_id: h264
+      name: h264
       paths:
         - crates/h264/**
-    - component_id: scuffle-h265
-      name: scuffle-h265
+    - component_id: h265
+      name: h265
       paths:
         - crates/h265/**
     - component_id: scuffle-http
@@ -89,8 +89,8 @@ component_management:
       name: scuffle-metrics
       paths:
         - crates/metrics/**
-    - component_id: scuffle-mp4
-      name: scuffle-mp4
+    - component_id: mp4
+      name: mp4
       paths:
         - crates/mp4/**
     - component_id: postcompile
@@ -101,8 +101,8 @@ component_management:
       name: scuffle-pprof
       paths:
         - crates/pprof/**
-    - component_id: scuffle-rtmp
-      name: scuffle-rtmp
+    - component_id: rtmp
+      name: rtmp
       paths:
         - crates/rtmp/**
     - component_id: scuffle-settings
@@ -113,7 +113,7 @@ component_management:
       name: scuffle-signal
       paths:
         - crates/signal/**
-    - component_id: scuffle-transmuxer
-      name: scuffle-transmuxer
+    - component_id: transmuxer
+      name: transmuxer
       paths:
         - crates/transmuxer/**

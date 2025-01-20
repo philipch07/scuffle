@@ -8,10 +8,10 @@ license = "MIT OR Apache-2.0"
 byteorder = "1.5"
 bytes = "1.5"
 
-scuffle-h264.workspace = true
-scuffle-h265.workspace = true
+h264.workspace = true
+h265.workspace = true
 scuffle-aac.workspace = true
-scuffle-mp4.workspace = true
+mp4.workspace = true
 scuffle-av1.workspace = true
 scuffle-flv.workspace = true
 scuffle-amf0.workspace = true

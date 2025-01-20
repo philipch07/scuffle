@@ -54,19 +54,21 @@ scuffle-ffmpeg = { path = "crates/ffmpeg", version = "0.0.2" }
 scuffle-flv = { path = "crates/flv", version = "0.0.1" }
 scuffle-future-ext = { path = "crates/future-ext", version = "0.0.1" }
 scuffle-h3-webtransport = { path = "crates/h3-webtransport", version = "0.0.2" }
-scuffle-h264 = { path = "crates/h264", version = "0.0.1" }
-scuffle-h265 = { path = "crates/h265", version = "0.0.1" }
 scuffle-http = { path = "crates/http", version = "0.0.4" }
 scuffle-metrics = { path = "crates/metrics", version = "0.0.4" }
 scuffle-metrics-derive = { path = "crates/metrics/derive", version = "0.0.2" }
-scuffle-mp4 = { path = "crates/mp4", version = "0.0.1" }
 postcompile = { path = "crates/postcompile", version = "0.0.5" }
 scuffle-pprof = { path = "crates/pprof", version = "0.0.2" }
-scuffle-rtmp = { path = "crates/rtmp", version = "0.0.1" }
 scuffle-settings = { path = "crates/settings", version = "0.0.2" }
 scuffle-signal = { path = "crates/signal", version = "0.0.2" }
-scuffle-transmuxer = { path = "crates/transmuxer", version = "0.0.1" }
 scuffle-workspace-hack = { path = "crates/workspace-hack", version = "0.1.0" }
+
+# To be renamed:
+h264 = { path = "crates/h264", version = "0.0.1" }
+h265 = { path = "crates/h265", version = "0.0.1" }
+mp4 = { path = "crates/mp4", version = "0.0.1" }
+rtmp = { path = "crates/rtmp", version = "0.0.1" }
+transmuxer = { path = "crates/transmuxer", version = "0.0.1" }
 
 [profile.release-debug]
 inherits = "release"
