@@ -1,0 +1,18 @@
+---
+source: crates/postcompile/src/lib.rs
+expression: out
+snapshot_kind: text
+---
+exit status: 0
+--- stdout 
+#![feature(prelude_import)]
+#[prelude_import]
+use std::prelude::rust_2021::*;
+#[macro_use]
+extern crate std;
+#[allow(unused)]
+fn main() {
+    let a = 1;
+    let b = 2;
+    let c = a + b;
+}

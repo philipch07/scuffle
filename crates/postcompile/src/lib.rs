@@ -1,5 +1,3 @@
-//! # postcompile
-//!
 //! A crate which allows you to compile Rust code at runtime (hence the name
 //! `postcompile`).
 //!
@@ -86,6 +84,7 @@
 //! them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
@@ -382,4 +381,71 @@ macro_rules! try_compile_str {
     ($expr:expr) => {
         $crate::compile_custom($expr, &$crate::_config!())
     };
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use insta::assert_snapshot;
+
+    use crate::ExitStatus;
+
+    #[test]
+    fn compile_success() {
+        let out = compile! {
+            #[allow(unused)]
+            fn main() {
+                let a = 1;
+                let b = 2;
+                let c = a + b;
+            }
+        };
+
+        assert_eq!(out.status, ExitStatus::Success);
+        assert!(out.stderr.is_empty());
+        assert_snapshot!(out);
+    }
+
+    #[test]
+    fn try_compile_success() {
+        let out = try_compile! {
+            #[allow(unused)]
+            fn main() {
+                let xd = 0xd;
+                let xdd = 0xdd;
+                let xddd = xd + xdd;
+                println!("{}", xddd);
+            }
+        };
+
+        assert!(out.is_ok());
+        let out = out.unwrap();
+        assert_eq!(out.status, ExitStatus::Success);
+        assert!(out.stderr.is_empty());
+        assert!(!out.stdout.is_empty());
+    }
+
+    #[test]
+    fn compile_failure() {
+        let out = compile! {
+            invalid_rust_code
+        };
+
+        assert_eq!(out.status, ExitStatus::Failure(1));
+        assert!(out.stdout.is_empty());
+        assert_snapshot!(out);
+    }
+
+    #[test]
+    fn try_compile_failure() {
+        let out = try_compile! {
+            invalid rust code
+        };
+
+        assert!(out.is_ok());
+        let out = out.unwrap();
+        assert_eq!(out.status, ExitStatus::Failure(1));
+        assert!(out.stdout.is_empty());
+        assert!(!out.stderr.is_empty());
+    }
 }
