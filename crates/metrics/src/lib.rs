@@ -202,7 +202,7 @@ mod tests {
             .downcast_ref()
             .expect("wrong data type");
         assert_eq!(sum.temporality, opentelemetry_sdk::metrics::Temporality::Cumulative);
-        assert_eq!(sum.is_monotonic, true);
+        assert!(sum.is_monotonic);
         assert_eq!(sum.data_points.len(), 1);
         assert_eq!(sum.data_points[0].value, 1);
         assert_eq!(sum.data_points[0].attributes.len(), 1);
