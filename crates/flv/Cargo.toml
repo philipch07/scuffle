@@ -20,8 +20,10 @@ num-traits = "0.2"
 num-derive = "0.4"
 thiserror = "2.0"
 
-h264.workspace = true
-h265.workspace = true
+# scuffle-h264.workspace = true
+# scuffle-h265.workspace = true
+h264 = { path = "../h264" }
+h265 = { path = "../h265" }
 scuffle-aac.workspace = true
 scuffle-bytes-util.workspace = true
 scuffle-av1.workspace = true

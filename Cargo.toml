@@ -64,11 +64,11 @@ scuffle-signal = { path = "crates/signal", version = "0.0.2" }
 scuffle-workspace-hack = { path = "crates/workspace-hack", version = "0.1.0" }
 
 # To be renamed:
-h264 = { path = "crates/h264", version = "0.0.1" }
-h265 = { path = "crates/h265", version = "0.0.1" }
-mp4 = { path = "crates/mp4", version = "0.0.1" }
-rtmp = { path = "crates/rtmp", version = "0.0.1" }
-transmuxer = { path = "crates/transmuxer", version = "0.0.1" }
+# h264 = { path = "crates/h264", version = "0.0.1" }
+# h265 = { path = "crates/h265", version = "0.0.1" }
+# mp4 = { path = "crates/mp4", version = "0.0.1" }
+# rtmp = { path = "crates/rtmp", version = "0.0.1" }
+# transmuxer = { path = "crates/transmuxer", version = "0.0.1" }
 
 [profile.release-debug]
 inherits = "release"

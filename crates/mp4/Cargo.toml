@@ -10,8 +10,11 @@ bytes = "1.5"
 fixed = "1.24"
 paste = "1.0"
 
-h264.workspace = true
-h265.workspace = true
+
+# scuffle-h264.workspace = true
+# scuffle-h265.workspace = true
+h264 = { path = "../h264" }
+h265 = { path = "../h265" }
 scuffle-av1.workspace = true
 scuffle-aac.workspace = true
 scuffle-bytes-util.workspace = true
