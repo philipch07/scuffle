@@ -1,69 +1,74 @@
 [workspace]
 
 members = [
+    "crates/aac",
+    "crates/amf0",
+    "crates/av1",
     "crates/batching",
     "crates/batching/examples",
     "crates/bootstrap",
     "crates/bootstrap/derive",
     "crates/bootstrap/examples",
     "crates/bootstrap/telemetry",
+    "crates/bytes-util",
     "crates/context",
+    "crates/expgolomb",
     "crates/ffmpeg",
+    "crates/flv",
+    "crates/future-ext",
     "crates/h3-webtransport",
+    "crates/h264",
+    "crates/h265",
     "crates/http",
     "crates/http/examples",
     "crates/metrics",
     "crates/metrics/derive",
     "crates/metrics/examples",
+    "crates/mp4",
     "crates/postcompile",
     "crates/pprof",
     "crates/pprof/examples",
+    "crates/rtmp",
     "crates/settings",
     "crates/settings/examples",
     "crates/signal",
-    "crates/workspace-hack",
-    "crates/aac",
-    "crates/amf0",
-    "crates/av1",
-    "crates/expgolomb",
-    "crates/flv",
-    "crates/h264",
-    "crates/h265",
-    "crates/mp4",
-    "crates/rtmp",
     "crates/transmuxer",
+    "crates/workspace-hack",
     "dev-tools/xtask",
-    "crates/future-ext",
-    "crates/bytes-util",
 ]
 
 resolver = "2"
 
 [workspace.dependencies]
-scuffle-workspace-hack = { path = "crates/workspace-hack", version = "0.1.0" }
+scuffle-aac = { path = "crates/aac", version = "0.0.1" }
+scuffle-amf0 = { path = "crates/amf0", version = "0.0.1" }
+scuffle-av1 = { path = "crates/av1", version = "0.0.1" }
+scuffle-batching = { path = "crates/batching", version = "0.0.4" }
 scuffle-bootstrap = { path = "crates/bootstrap", version = "0.0.2" }
 scuffle-bootstrap-derive = { path = "crates/bootstrap/derive", version = "0.0.2" }
 scuffle-bootstrap-telemetry = { path = "crates/bootstrap/telemetry", version = "0.0.3" }
-scuffle-image-processor-proto = { path = "apps/image-processor/proto", version = "0.0.2" }
-scuffle-image-processor = { path = "apps/image-processor", version = "0.0.2" }
+scuffle-bytes-util = { path = "crates/bytes-util", version = "0.0.1" }
 scuffle-context = { path = "crates/context", version = "0.0.2" }
-scuffle-settings = { path = "crates/settings", version = "0.0.2" }
-scuffle-signal = { path = "crates/signal", version = "0.0.2" }
+scuffle-expgolomb = { path = "crates/expgolomb", version = "0.0.1" }
+scuffle-ffmpeg = { path = "crates/ffmpeg", version = "0.0.2" }
+scuffle-flv = { path = "crates/flv", version = "0.0.1" }
+scuffle-future-ext = { path = "crates/future-ext", version = "0.0.1" }
+scuffle-h3-webtransport = { path = "crates/h3-webtransport", version = "0.0.2" }
 scuffle-http = { path = "crates/http", version = "0.0.4" }
 scuffle-metrics = { path = "crates/metrics", version = "0.0.4" }
-scuffle-pprof = { path = "crates/pprof", version = "0.0.2" }
-scuffle-batching = { path = "crates/batching", version = "0.0.4" }
-postcompile = { path = "crates/postcompile", version = "0.0.5" }
-scuffle-ffmpeg = { path = "crates/ffmpeg", version = "0.0.2" }
-scuffle-h3-webtransport = { path = "crates/h3-webtransport", version = "0.0.2" }
 scuffle-metrics-derive = { path = "crates/metrics/derive", version = "0.0.2" }
-scuffle-ffmpeg-sys = { path = "crates/ffmpeg-sys", version = "7.1.0" }
-scuffle-future-ext = { path = "crates/future-ext", version = "0.0.1" }
-scuffle-bytes-util = { path = "crates/bytes-util", version = "0.0.1" }
-scuffle-expgolomb = { path = "crates/expgolomb", version = "0.0.1" }
-scuffle-amf0 = { path = "crates/amf0", version = "0.0.1" }
-scuffle-av1 = { path = "crates/av1", version = "0.0.1" }
-scuffle-flv = { path = "crates/flv", version = "0.0.1" }
+postcompile = { path = "crates/postcompile", version = "0.0.5" }
+scuffle-pprof = { path = "crates/pprof", version = "0.0.2" }
+scuffle-settings = { path = "crates/settings", version = "0.0.2" }
+scuffle-signal = { path = "crates/signal", version = "0.0.2" }
+scuffle-workspace-hack = { path = "crates/workspace-hack", version = "0.1.0" }
+
+# To be renamed:
+# scuffle-h264 = { path = "crates/h264", version = "0.0.1" }
+# scuffle-h265 = { path = "crates/h265", version = "0.0.1" }
+# scuffle-mp4 = { path = "crates/mp4", version = "0.0.1" }
+# scuffle-rtmp = { path = "crates/rtmp", version = "0.0.1" }
+# scuffle-transmuxer = { path = "crates/transmuxer", version = "0.0.1" }
 
 [profile.release-debug]
 inherits = "release"

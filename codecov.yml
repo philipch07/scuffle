@@ -17,14 +17,26 @@ comment:
   layout: "header, diff, files, components"
   behavior: default
   require_changes: false
-  require_head: no
-  require_base: no
+  require_head: false
+  require_base: false
 
 ignore:
   - "dev-tools/**"
 
 component_management:
   individual_components:
+    - component_id: scuffle-aac
+      name: scuffle-aac
+      paths:
+        - crates/aac/**
+    - component_id: scuffle-amf0
+      name: scuffle-amf0
+      paths:
+        - crates/amf0/**
+    - component_id: scuffle-av1
+      name: scuffle-av1
+      paths:
+        - crates/av1/**
     - component_id: scuffle-batching
       name: scuffle-batching
       paths:
@@ -33,18 +45,42 @@ component_management:
       name: scuffle-bootstrap
       paths:
         - crates/bootstrap/**
+    - component_id: scuffle-bytes-util
+      name: scuffle-bytes-util
+      paths:
+        - crates/bytes-util/**
     - component_id: scuffle-context
       name: scuffle-context
       paths:
         - crates/context/**
+    - component_id: scuffle-expgolomb
+      name: scuffle-expgolomb
+      paths:
+        - crates/expgolomb/**
     - component_id: scuffle-ffmpeg
       name: scuffle-ffmpeg
       paths:
         - crates/ffmpeg/**
+    - component_id: scuffle-flv
+      name: scuffle-flv
+      paths:
+        - crates/flv/**
+    - component_id: scuffle-future-ext
+      name: scuffle-future-ext
+      paths:
+        - crates/future-ext/**
     - component_id: scuffle-h3-webtransport
       name: scuffle-h3-webtransport
       paths:
         - crates/h3-webtransport/**
+    # - component_id: scuffle-h264
+    #   name: scuffle-h264
+    #   paths:
+    #     - crates/h264/**
+    # - component_id: scuffle-h265
+    #   name: scuffle-h265
+    #   paths:
+    #     - crates/h265/**
     - component_id: scuffle-http
       name: scuffle-http
       paths:
@@ -53,10 +89,22 @@ component_management:
       name: scuffle-metrics
       paths:
         - crates/metrics/**
+    # - component_id: scuffle-mp4
+    #   name: scuffle-mp4
+    #   paths:
+    #     - crates/mp4/**
+    - component_id: postcompile
+      name: postcompile
+      paths:
+        - crates/postcompile/**
     - component_id: scuffle-pprof
       name: scuffle-pprof
       paths:
         - crates/pprof/**
+    # - component_id: scuffle-rtmp
+    #   name: scuffle-rtmp
+    #   paths:
+    #     - crates/rtmp/**
     - component_id: scuffle-settings
       name: scuffle-settings
       paths:
@@ -65,11 +113,7 @@ component_management:
       name: scuffle-signal
       paths:
         - crates/signal/**
-    - component_id: postcompile
-      name: postcompile
-      paths:
-        - crates/postcompile/**
-    - component_id: scuffle-image-processor
-      name: scuffle-image-processor
-      paths:
-        - crates/image-processor/**
+    # - component_id: scuffle-transmuxer
+    #   name: scuffle-transmuxer
+    #   paths:
+    #     - crates/transmuxer/**
