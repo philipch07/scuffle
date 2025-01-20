@@ -1,5 +1,5 @@
 [package]
-name = "h264"
+name = "scuffle-h264"
 version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"

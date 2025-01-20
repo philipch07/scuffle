@@ -1128,28 +1128,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "h264"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "scuffle-bytes-util",
- "scuffle-expgolomb",
- "scuffle-workspace-hack",
-]
-
-[[package]]
-name = "h265"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "scuffle-bytes-util",
- "scuffle-expgolomb",
- "scuffle-workspace-hack",
-]
-
-[[package]]
 name = "h3"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1759,24 +1737,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "mp4"
-version = "0.0.1"
-dependencies = [
- "byteorder",
- "bytes",
- "fixed",
- "h264",
- "h265",
- "paste",
- "scuffle-aac",
- "scuffle-av1",
- "scuffle-bytes-util",
- "scuffle-workspace-hack",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -2871,14 +2831,14 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "h264",
- "h265",
  "num-derive",
  "num-traits",
  "scuffle-aac",
  "scuffle-amf0",
  "scuffle-av1",
  "scuffle-bytes-util",
+ "scuffle-h264",
+ "scuffle-h265",
  "scuffle-workspace-hack",
  "thiserror 2.0.7",
 ]
@@ -2889,6 +2849,28 @@ version = "0.0.1"
 dependencies = [
  "scuffle-workspace-hack",
  "tokio",
+]
+
+[[package]]
+name = "scuffle-h264"
+version = "0.0.1"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "scuffle-bytes-util",
+ "scuffle-expgolomb",
+ "scuffle-workspace-hack",
+]
+
+[[package]]
+name = "scuffle-h265"
+version = "0.0.1"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "scuffle-bytes-util",
+ "scuffle-expgolomb",
+ "scuffle-workspace-hack",
 ]
 
 [[package]]
@@ -2992,6 +2974,24 @@ dependencies = [
  "scuffle-metrics",
  "scuffle-workspace-hack",
  "tokio",
+]
+
+[[package]]
+name = "scuffle-mp4"
+version = "0.0.1"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "fixed",
+ "paste",
+ "scuffle-aac",
+ "scuffle-av1",
+ "scuffle-bytes-util",
+ "scuffle-h264",
+ "scuffle-h265",
+ "scuffle-workspace-hack",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3693,14 +3693,14 @@ version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
- "h264",
- "h265",
- "mp4",
  "scuffle-aac",
  "scuffle-amf0",
  "scuffle-av1",
  "scuffle-bytes-util",
  "scuffle-flv",
+ "scuffle-h264",
+ "scuffle-h265",
+ "scuffle-mp4",
  "scuffle-workspace-hack",
  "serde",
  "serde_json",
