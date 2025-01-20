@@ -1,9 +1,9 @@
 use bytes::Bytes;
-use flv::{SoundSize, SoundType};
 use h264::AVCDecoderConfigurationRecord;
 use h265::HEVCDecoderConfigurationRecord;
 use mp4::codec::{AudioCodec, VideoCodec};
 use scuffle_av1::AV1CodecConfigurationRecord;
+use scuffle_flv::audio::{SoundSize, SoundType};
 
 pub(crate) enum VideoSequenceHeader {
     Avc(AVCDecoderConfigurationRecord),

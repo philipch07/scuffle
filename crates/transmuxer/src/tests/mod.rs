@@ -4,9 +4,9 @@ use std::io::{
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use flv::FlvHeader;
 use mp4::codec::{AudioCodec, VideoCodec};
 use scuffle_aac::AudioObjectType;
+use scuffle_flv::header::FlvHeader;
 
 use crate::define::{AudioSettings, VideoSettings};
 use crate::{TransmuxResult, Transmuxer};

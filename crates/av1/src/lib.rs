@@ -16,5 +16,5 @@
 mod config;
 mod obu;
 
-pub use config::AV1CodecConfigurationRecord;
+pub use config::{AV1CodecConfigurationRecord, AV1VideoDescriptor};
 pub use obu::{seq, ObuHeader, ObuType};

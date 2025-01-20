@@ -7,10 +7,6 @@ use std::io;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
-use flv::{
-    AacPacket, Av1Packet, AvcPacket, EnhancedPacket, FlvTag, FlvTagAudioData, FlvTagData, FlvTagVideoData, FrameType,
-    HevcPacket, SoundType,
-};
 use mp4::codec::{AudioCodec, VideoCodec};
 use mp4::types::ftyp::{FourCC, Ftyp};
 use mp4::types::hdlr::{HandlerType, Hdlr};
@@ -40,6 +36,14 @@ use mp4::types::trun::Trun;
 use mp4::types::vmhd::Vmhd;
 use mp4::BoxType;
 use scuffle_amf0::Amf0Value;
+use scuffle_flv::aac::AacPacket;
+use scuffle_flv::audio::{AudioData, AudioDataBody, SoundType};
+use scuffle_flv::av1::Av1Packet;
+use scuffle_flv::avc::AvcPacket;
+use scuffle_flv::hevc::HevcPacket;
+use scuffle_flv::script::ScriptData;
+use scuffle_flv::tag::{FlvTag, FlvTagData};
+use scuffle_flv::video::{EnhancedPacket, FrameType, VideoTagBody, VideoTagHeader};
 
 mod codecs;
 mod define;
@@ -94,7 +98,7 @@ impl Transmuxer {
                 break;
             }
 
-            let tag = flv::FlvTag::demux(&mut cursor)?;
+            let tag = FlvTag::demux(&mut cursor)?;
             self.tags.push_back(tag);
         }
 
@@ -143,7 +147,7 @@ impl Transmuxer {
             let mut is_keyframe = false;
 
             let duration =
-                if self.last_video_timestamp == 0 || tag.timestamp == 0 || tag.timestamp < self.last_video_timestamp {
+                if self.last_video_timestamp == 0 || tag.timestamp_ms == 0 || tag.timestamp_ms < self.last_video_timestamp {
                     1000 // the first frame is always 1000 ticks where the
                          // timescale is 1000 * fps.
                 } else {
@@ -156,7 +160,7 @@ impl Transmuxer {
                     // The reason we use a timescale which is 1000 * fps is because then we can
                     // always represent the delta as an integer. If we use a timescale of 1000, we
                     // would run into the same rounding errors.
-                    let delta = tag.timestamp as f64 - self.last_video_timestamp as f64;
+                    let delta = tag.timestamp_ms as f64 - self.last_video_timestamp as f64;
                     let expected_delta = 1000.0 / video_settings.framerate;
                     if (delta - expected_delta).abs() <= 1.0 {
                         1000
@@ -166,10 +170,10 @@ impl Transmuxer {
                 };
 
             match tag.data {
-                FlvTagData::Audio {
-                    data: FlvTagAudioData::Aac(AacPacket::Raw(data)),
+                FlvTagData::Audio(AudioData {
+                    body: AudioDataBody::Aac(AacPacket::Raw(data)),
                     ..
-                } => {
+                }) => {
                     let (sample, duration) = codecs::aac::trun_sample(&data)?;
 
                     trun_sample = sample;
@@ -177,10 +181,11 @@ impl Transmuxer {
                     total_duration = duration;
                     is_audio = true;
                 }
-                FlvTagData::Video {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type,
-                    data: FlvTagVideoData::Avc(AvcPacket::Nalu { composition_time, data }),
-                } => {
+                    body: VideoTagBody::Avc(AvcPacket::Nalu { composition_time, data }),
+                    ..
+                }) => {
                     let composition_time = ((composition_time as f64 * video_settings.framerate) / 1000.0).floor() * 1000.0;
 
                     let sample = codecs::avc::trun_sample(frame_type, composition_time as u32, duration, &data)?;
@@ -191,10 +196,11 @@ impl Transmuxer {
 
                     is_keyframe = frame_type == FrameType::Keyframe;
                 }
-                FlvTagData::Video {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type,
-                    data: FlvTagVideoData::Enhanced(EnhancedPacket::Av1(Av1Packet::Raw(data))),
-                } => {
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Av1(Av1Packet::Raw(data))),
+                    ..
+                }) => {
                     let sample = codecs::av1::trun_sample(frame_type, duration, &data)?;
 
                     trun_sample = sample;
@@ -203,10 +209,11 @@ impl Transmuxer {
 
                     is_keyframe = frame_type == FrameType::Keyframe;
                 }
-                FlvTagData::Video {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type,
-                    data: FlvTagVideoData::Enhanced(EnhancedPacket::Hevc(HevcPacket::Nalu { composition_time, data })),
-                } => {
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Hevc(HevcPacket::Nalu { composition_time, data })),
+                    ..
+                }) => {
                     let composition_time =
                         ((composition_time.unwrap_or_default() as f64 * video_settings.framerate) / 1000.0).floor() * 1000.0;
 
@@ -278,7 +285,7 @@ impl Transmuxer {
                 })));
             } else {
                 self.video_duration += total_duration as u64;
-                self.last_video_timestamp = tag.timestamp;
+                self.last_video_timestamp = tag.timestamp_ms;
                 return Ok(Some(TransmuxResult::MediaSegment(MediaSegment {
                     data: Bytes::from(writer),
                     ty: MediaType::Video,
@@ -302,37 +309,40 @@ impl Transmuxer {
             }
 
             match &tag.data {
-                FlvTagData::Video {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type: _,
-                    data: FlvTagVideoData::Avc(AvcPacket::SequenceHeader(data)),
-                } => {
+                    body: VideoTagBody::Avc(AvcPacket::SequenceHeader(data)),
+                    ..
+                }) => {
                     video_sequence_header = Some(VideoSequenceHeader::Avc(data.clone()));
                 }
-                FlvTagData::Video {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type: _,
-                    data: FlvTagVideoData::Enhanced(EnhancedPacket::Av1(Av1Packet::SequenceStart(config))),
-                } => {
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Av1(Av1Packet::SequenceStart(config))),
+                    ..
+                }) => {
                     video_sequence_header = Some(VideoSequenceHeader::Av1(config.clone()));
                 }
-                FlvTagData::Video {
+                FlvTagData::Video(VideoTagHeader {
                     frame_type: _,
-                    data: FlvTagVideoData::Enhanced(EnhancedPacket::Hevc(HevcPacket::SequenceStart(config))),
-                } => {
+                    body: VideoTagBody::Enhanced(EnhancedPacket::Hevc(HevcPacket::SequenceStart(config))),
+                    ..
+                }) => {
                     video_sequence_header = Some(VideoSequenceHeader::Hevc(config.clone()));
                 }
-                FlvTagData::Audio {
+                FlvTagData::Audio(AudioData {
+                    body: AudioDataBody::Aac(AacPacket::SequenceHeader(data)),
                     sound_size,
                     sound_type,
-                    sound_rate: _,
-                    data: FlvTagAudioData::Aac(AacPacket::SequenceHeader(data)),
-                } => {
+                    ..
+                }) => {
                     audio_sequence_header = Some(AudioSequenceHeader {
                         data: AudioSequenceHeaderData::Aac(data.clone()),
                         sound_size: *sound_size,
                         sound_type: *sound_type,
                     });
                 }
-                FlvTagData::ScriptData { data, name } => {
+                FlvTagData::ScriptData(ScriptData { data, name }) => {
                     if name == "@setDataFrame" || name == "onMetaData" {
                         let meta_object = data.iter().find(|v| matches!(v, Amf0Value::Object(_)));
 
@@ -492,6 +502,7 @@ impl Transmuxer {
                 audio_channels = match audio_sequence_header.sound_type {
                     SoundType::Mono => 1,
                     SoundType::Stereo => 2,
+                    _ => return Err(TransmuxError::InvalidAudioChannels),
                 };
 
                 entry
