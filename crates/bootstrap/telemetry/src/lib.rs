@@ -1,5 +1,3 @@
-//! # scuffle-bootstrap-telemetry
-//!
 //! A crate used to add telemetry to applications built with the
 //! [`scuffle-bootstrap`](../scuffle_bootstrap) crate.
 //!

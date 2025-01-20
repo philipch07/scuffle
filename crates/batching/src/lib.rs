@@ -1,5 +1,3 @@
-//! # scuffle-batching
-//!
 //! A crate designed to batch multiple requests into a single request.
 //!
 //! ## Why do we need this?

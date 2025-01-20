@@ -1,5 +1,3 @@
-//! # scuffle-metrics-derive
-//!
 //! A proc-macro to derive the `#[metrics]` attribute and the
 //! `#[derive(MetricEnum)]` attribute.
 //!

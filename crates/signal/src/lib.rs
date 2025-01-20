@@ -1,5 +1,3 @@
-//! # scuffle-signal
-//!
 //! A crate designed to provide a more user friendly interface to
 //! `tokio::signal`.
 //!

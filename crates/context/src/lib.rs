@@ -1,5 +1,3 @@
-//! # scuffle-context
-//!
 //! A crate designed to provide the ability to cancel futures using a context
 //! go-like approach, allowing for graceful shutdowns and cancellations.
 //!
