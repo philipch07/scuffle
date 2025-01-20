@@ -36,7 +36,7 @@ Welcome to **Scuffle**—a next-generation **open-source cloud provider**! 🚀
 
 We're on a mission to revolutionize **video streaming solutions** with cutting-edge tools and libraries. Dive in and explore what we have to offer! 🔗 [Visit our website](https://scuffle.cloud) to learn more.
 
-## 🛠️ Utility Crates
+## 🛠️ Crates
 
 This repository houses a collection of crates, purpose-built libraries designed to simplify development and enhance functionality:
 
