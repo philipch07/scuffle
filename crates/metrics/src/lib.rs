@@ -1,5 +1,3 @@
-//! # scuffle-metrics
-//!
 //! A wrapper around opentelemetry to provide a more ergonomic interface for
 //! creating metrics.
 //!

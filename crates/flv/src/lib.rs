@@ -1,5 +1,3 @@
-//! # scuffle-flv
-//!
 //! A pure Rust implementation of the FLV format, allowing for demuxing of FLV
 //! files or streams.
 //!

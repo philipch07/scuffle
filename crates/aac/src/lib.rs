@@ -1,5 +1,3 @@
-//! # scuffle-aac
-//!
 //! A crate for decoding AAC audio headers.
 //!
 //! ## License

@@ -1,5 +1,3 @@
-//! # scuffle-expgolomb
-//!
 //! A set of helper functions to encode and decode exponential-golomb values.
 //!
 //! This crate extends upon the [`BitReader`] and [`BitWriter`] from the

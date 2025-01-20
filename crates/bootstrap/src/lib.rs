@@ -1,5 +1,3 @@
-//! # scuffle-bootstrap
-//!
 //! A utility crate for creating binaries.
 //!
 //! Refer to [`Global`], [`Service`], and [`main`] for more information.
