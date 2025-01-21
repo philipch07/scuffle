@@ -27,6 +27,8 @@ rand = "0.8"
 [dev-dependencies]
 insta = {version = "1.42", features = ["filters"]}
 tempfile = "3.15"
+tracing-test = "0.2"
+tracing-subscriber = "0.3"
 
 [features]
 channel = ["dep:bytes"]
