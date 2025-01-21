@@ -257,3 +257,309 @@ impl std::ops::DerefMut for AudioFrame {
         &mut self.0
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use ffmpeg_sys_next::AVPixelFormat::AV_PIX_FMT_YUV420P;
+    use ffmpeg_sys_next::AVSampleFormat::AV_SAMPLE_FMT_S16;
+    use ffmpeg_sys_next::{av_channel_layout_default, av_frame_get_buffer, AVRational, AV_PIX_FMT_RGB32};
+    use insta::assert_debug_snapshot;
+    use rand::{thread_rng, Rng};
+
+    use crate::frame::Frame;
+
+    #[test]
+    fn test_frame_clone_snapshot() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+
+        unsafe {
+            let av_frame = frame.as_mut_ptr();
+            (*av_frame).width = 16;
+            (*av_frame).height = 16;
+
+            assert!(av_frame_get_buffer(av_frame, 32) >= 0, "Failed to allocate buffer for frame.");
+        }
+
+        frame.set_pts(Some(12));
+        frame.set_dts(Some(34));
+        frame.set_duration(Some(5));
+        frame.set_time_base(AVRational { num: 1, den: 30 });
+        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+
+        let cloned_frame = frame.clone();
+
+        assert_eq!(
+            format!("{:?}", frame),
+            format!("{:?}", cloned_frame),
+            "Cloned frame should be equal to the original frame."
+        );
+    }
+
+    #[test]
+    fn test_audio_conversion() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        let av_frame = frame.as_mut_ptr();
+        unsafe {
+            av_channel_layout_default(&mut (*av_frame).ch_layout, 2);
+        }
+        let audio_frame = frame.audio();
+
+        assert!(audio_frame.is_audio(), "The frame should be identified as audio.");
+        assert!(!audio_frame.is_video(), "The frame should not be identified as video.");
+    }
+
+    #[test]
+    fn test_set_format() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        assert_eq!(
+            frame.format(),
+            AV_PIX_FMT_YUV420P as i32,
+            "The format should match the set value."
+        );
+
+        frame.set_format(AV_PIX_FMT_RGB32 as i32);
+        assert_eq!(
+            frame.format(),
+            AV_PIX_FMT_RGB32 as i32,
+            "The format should match the updated value."
+        );
+    }
+
+    #[test]
+    fn test_linesize() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        let mut video_frame = frame.video();
+        video_frame.set_width(1920);
+        video_frame.set_height(1080);
+
+        unsafe {
+            let av_frame = video_frame.as_mut_ptr();
+            assert!(av_frame_get_buffer(av_frame, 32) >= 0, "Failed to allocate buffer for frame.");
+        }
+
+        assert!(
+            video_frame.linesize(0).unwrap_or(0) > 0,
+            "Linesize should be greater than zero for valid index."
+        );
+
+        assert!(
+            video_frame.linesize(100).is_none(),
+            "Linesize at an invalid index should return None."
+        );
+    }
+
+    #[test]
+    fn test_frame_debug() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_pts(Some(12345));
+        frame.set_dts(Some(67890));
+        frame.set_duration(Some(1000));
+        frame.set_time_base(AVRational { num: 1, den: 30 });
+        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+
+        assert_debug_snapshot!(frame, @r"
+        Frame {
+            pts: Some(
+                12345,
+            ),
+            dts: Some(
+                67890,
+            ),
+            duration: Some(
+                1000,
+            ),
+            best_effort_timestamp: Some(
+                12345,
+            ),
+            time_base: AVRational {
+                num: 1,
+                den: 30,
+            },
+            format: 0,
+            is_audio: false,
+            is_video: false,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_sample_aspect_ratio() {
+        let frame = Frame::new().expect("Failed to create frame");
+        let mut video_frame = frame.video();
+        let sample_aspect_ratio = AVRational { num: 16, den: 9 };
+        video_frame.set_sample_aspect_ratio(sample_aspect_ratio);
+
+        assert_eq!(
+            video_frame.sample_aspect_ratio(),
+            sample_aspect_ratio,
+            "Sample aspect ratio should match the set value."
+        );
+    }
+
+    #[test]
+    fn test_pict_type() {
+        use ffmpeg_sys_next::AVPictureType::AV_PICTURE_TYPE_I;
+        let frame = Frame::new().expect("Failed to create frame");
+        let mut video_frame = frame.video();
+        video_frame.set_pict_type(AV_PICTURE_TYPE_I);
+
+        assert_eq!(
+            video_frame.pict_type(),
+            AV_PICTURE_TYPE_I,
+            "Picture type should match the set value."
+        );
+    }
+
+    #[test]
+    fn test_data_allocation_and_access() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        let mut video_frame = frame.video();
+        video_frame.set_width(16);
+        video_frame.set_height(16);
+
+        let randomized_data: Vec<u8>;
+        unsafe {
+            let av_frame = video_frame.as_mut_ptr();
+            assert!(av_frame_get_buffer(av_frame, 32) >= 0, "Failed to allocate buffer for frame.");
+
+            // randomize y-plane (data[0])
+            let linesize = (*av_frame).linesize[0] as usize; // bytes per row
+            let height = (*av_frame).height as usize; // total rows
+            let data_ptr = (*av_frame).data[0]; // pointer to the Y-plane data
+
+            if !data_ptr.is_null() {
+                let data_slice = std::slice::from_raw_parts_mut(data_ptr, linesize * height);
+                randomized_data = (0..data_slice.len())
+                    .map(|_| thread_rng().gen()) // generate random data
+                    .collect();
+                data_slice.copy_from_slice(&randomized_data); // copy random data to the frame
+            } else {
+                panic!("Failed to get valid data pointer for Y-plane.");
+            }
+        }
+
+        if let Some(data) = video_frame.data(0) {
+            assert_eq!(data, randomized_data.as_slice(), "Data does not match randomized content.");
+        } else {
+            panic!("Data at index 0 should not be None.");
+        }
+    }
+
+    #[test]
+    fn test_video_frame_debug() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_pts(Some(12345));
+        frame.set_dts(Some(67890));
+        frame.set_duration(Some(1000));
+        frame.set_time_base(AVRational { num: 1, den: 30 });
+        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        let mut video_frame = frame.video();
+        video_frame.set_width(1920);
+        video_frame.set_height(1080);
+        video_frame.set_sample_aspect_ratio(AVRational { num: 16, den: 9 });
+
+        assert_debug_snapshot!(video_frame, @r"
+        VideoFrame {
+            width: 1920,
+            height: 1080,
+            sample_aspect_ratio: AVRational {
+                num: 16,
+                den: 9,
+            },
+            pts: Some(
+                12345,
+            ),
+            dts: Some(
+                67890,
+            ),
+            duration: Some(
+                1000,
+            ),
+            best_effort_timestamp: Some(
+                12345,
+            ),
+            time_base: AVRational {
+                num: 1,
+                den: 30,
+            },
+            format: 0,
+            is_audio: false,
+            is_video: true,
+            is_keyframe: false,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_nb_samples() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut audio_frame = frame.audio();
+        audio_frame.set_nb_samples(1024);
+
+        assert_eq!(
+            audio_frame.nb_samples(),
+            1024,
+            "The number of samples should match the set value."
+        );
+    }
+
+    #[test]
+    fn test_sample_rate() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut audio_frame = frame.audio();
+        audio_frame.set_sample_rate(44100);
+
+        assert_eq!(
+            audio_frame.sample_rate(),
+            44100,
+            "The sample rate should match the set value."
+        );
+    }
+
+    #[test]
+    fn test_audio_frame_debug() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut audio_frame = frame.audio();
+        audio_frame.set_nb_samples(1024);
+        audio_frame.set_sample_rate(44100);
+
+        audio_frame.set_pts(Some(12345));
+        audio_frame.set_dts(Some(67890));
+        audio_frame.set_duration(Some(512));
+        audio_frame.set_time_base(AVRational { num: 1, den: 44100 });
+
+        assert_debug_snapshot!(audio_frame, @r"
+        AudioFrame {
+            nb_samples: 1024,
+            sample_rate: 44100,
+            pts: Some(
+                12345,
+            ),
+            dts: Some(
+                67890,
+            ),
+            duration: Some(
+                512,
+            ),
+            best_effort_timestamp: Some(
+                12345,
+            ),
+            time_base: AVRational {
+                num: 1,
+                den: 44100,
+            },
+            format: 1,
+            is_audio: false,
+            is_video: false,
+        }
+        ");
+    }
+}
