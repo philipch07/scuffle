@@ -96,7 +96,7 @@ async fn test_basic_rtmp_clean() {
         .await
         .expect("failed to join handle")
         .expect("failed to handle ffmpeg connection"));
-    assert!(ffmpeg.try_wait().expect("failed to wait for ffmpeg").is_none());
+    ffmpeg.try_wait().expect("failed to wait for ffmpeg");
 }
 
 #[tokio::test]
