@@ -172,3 +172,143 @@ impl Packet {
         self.0.as_deref_except().flags & AV_PKT_FLAG_DISPOSABLE != 0
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use ffmpeg_sys_next::AVRational;
+    use insta::assert_debug_snapshot;
+
+    use crate::packet::Packet;
+
+    #[test]
+    fn test_packet_clone_snapshot() {
+        let mut original_packet = Packet::new().expect("Failed to create original Packet");
+        original_packet.set_stream_index(1);
+        original_packet.set_pts(Some(12345));
+        original_packet.set_dts(Some(54321));
+        original_packet.set_duration(Some(1000));
+        original_packet.set_pos(Some(2000));
+
+        let cloned_packet = original_packet.clone();
+
+        assert_debug_snapshot!(cloned_packet, @r"
+        Packet {
+            stream_index: 1,
+            pts: Some(
+                12345,
+            ),
+            dts: Some(
+                54321,
+            ),
+            duration: Some(
+                1000,
+            ),
+            pos: Some(
+                2000,
+            ),
+            is_key: false,
+            is_corrupt: false,
+            is_discard: false,
+            is_trusted: false,
+            is_disposable: false,
+        }
+        ");
+
+        // ensure cloned packet is independent
+        original_packet.set_pts(Some(99999));
+        assert_ne!(
+            cloned_packet.pts(),
+            original_packet.pts(),
+            "Expected cloned packet PTS to remain unchanged after modifying the original"
+        );
+
+        assert_debug_snapshot!(original_packet, @r"
+        Packet {
+            stream_index: 1,
+            pts: Some(
+                99999,
+            ),
+            dts: Some(
+                54321,
+            ),
+            duration: Some(
+                1000,
+            ),
+            pos: Some(
+                2000,
+            ),
+            is_key: false,
+            is_corrupt: false,
+            is_discard: false,
+            is_trusted: false,
+            is_disposable: false,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_packet_as_ptr() {
+        let packet = Packet::new().expect("Failed to create Packet");
+        let raw_ptr = packet.as_ptr();
+
+        assert!(!raw_ptr.is_null(), "Expected a non-null pointer from Packet::as_ptr");
+        unsafe {
+            assert_eq!(
+                (*raw_ptr).stream_index,
+                0,
+                "Expected the default stream_index to be 0 for a new Packet"
+            );
+        }
+    }
+
+    #[test]
+    fn test_packet_rescale_timebase() {
+        let mut packet = Packet::new().expect("Failed to create Packet");
+        packet.set_pts(Some(1000));
+        packet.set_dts(Some(900));
+        packet.set_duration(Some(100));
+        let from_time_base = AVRational { num: 1, den: 1000 };
+        let to_time_base = AVRational { num: 1, den: 48000 };
+
+        packet.rescale_timebase(from_time_base, to_time_base);
+        assert_debug_snapshot!(packet, @r"
+        Packet {
+            stream_index: 0,
+            pts: Some(
+                48000,
+            ),
+            dts: Some(
+                43200,
+            ),
+            duration: Some(
+                4800,
+            ),
+            pos: Some(
+                -1,
+            ),
+            is_key: false,
+            is_corrupt: false,
+            is_discard: false,
+            is_trusted: false,
+            is_disposable: false,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_packet_data_empty() {
+        let mut packet = Packet::new().expect("Failed to create Packet");
+        unsafe {
+            let av_packet = packet.as_mut_ptr().as_mut().unwrap();
+            av_packet.size = 0;
+        }
+
+        let data = packet.data();
+
+        assert!(
+            data.is_empty(),
+            "Expected the data slice to be empty when packet size is zero"
+        );
+    }
+}
