@@ -94,6 +94,12 @@ impl<T: Send + Sync> Input<T> {
         Const::new(Streams::new(self.inner.context.as_deref_except()))
     }
 
+    pub fn streams_mut(&mut self) -> Streams<'_> {
+        // Safety: We now take a mutable reference to the context
+        // so that we can call `best_mut()` etc.
+        Streams::new(self.inner.context.as_deref_mut_except())
+    }
+
     pub fn packets(&mut self) -> Packets<'_> {
         Packets::new(self.inner.context.as_deref_mut_except())
     }
