@@ -124,3 +124,36 @@ impl<T> SmartPtr<T> {
         self.0.mut_inner()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use crate::smart_object::{SmartObject, SmartPtr};
+
+    #[test]
+    fn test_smart_object_as_ref() {
+        let smart_object = SmartObject::new(42, |_value: &mut i32| {});
+        let as_ref_value: &i32 = smart_object.as_ref();
+
+        assert_eq!(*as_ref_value, 42, "Expected `as_ref` to return a reference to the value");
+    }
+
+    #[test]
+    fn test_smart_object_as_mut() {
+        let mut smart_object = SmartObject::new(42, |_value: &mut i32| {});
+        let as_mut_value: &mut i32 = smart_object.as_mut();
+        *as_mut_value = 100;
+
+        assert_eq!(*smart_object, 100, "Expected `as_mut` to allow modifying the value");
+    }
+
+    #[test]
+    fn test_smart_ptr_wrap_non_null_is_null() {
+        // no-op destructor function
+        fn noop_destructor<T>(_ptr: &mut *mut T) {}
+        let ptr: *mut i32 = std::ptr::null_mut();
+        let result = unsafe { SmartPtr::wrap_non_null(ptr, noop_destructor) };
+
+        assert!(result.is_none(), "Expected `wrap_non_null` to return None for a null pointer");
+    }
+}
