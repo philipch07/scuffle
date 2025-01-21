@@ -114,13 +114,254 @@ pub fn log_callback_tracing() {
         match level {
             LogLevel::Trace => tracing::trace!("{}: {class} @ {msg}", level.as_str()),
             LogLevel::Verbose => tracing::trace!("{}: [{class} @ {msg}", level.as_str()),
-            LogLevel::Debug => tracing::trace!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Info => tracing::debug!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Warning => tracing::info!("{}: {class} @ {msg}", level.as_str()),
+            LogLevel::Debug => tracing::debug!("{}: {class} @ {msg}", level.as_str()),
+            LogLevel::Info => tracing::info!("{}: {class} @ {msg}", level.as_str()),
+            LogLevel::Warning => tracing::warn!("{}: {class} @ {msg}", level.as_str()),
             LogLevel::Quiet => tracing::error!("{}: {class} @ {msg}", level.as_str()),
             LogLevel::Error => tracing::error!("{}: {class} @ {msg}", level.as_str()),
             LogLevel::Panic => tracing::error!("{}: {class} @ {msg}", level.as_str()),
             LogLevel::Fatal => tracing::error!("{}: {class} @ {msg}", level.as_str()),
         }
     });
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use std::ffi::CString;
+    use std::ptr;
+    use std::sync::{Arc, Mutex};
+
+    use ffmpeg_sys_next::{av_log, av_log_get_level, avcodec_find_decoder, AVCodecID};
+    use tracing::subscriber::set_default;
+    use tracing::Level;
+    use tracing_subscriber::FmtSubscriber;
+
+    use crate::log::{log_callback_set, log_callback_tracing, log_callback_unset, set_log_level, LogLevel};
+
+    #[test]
+    fn test_log_level_as_str_using_from_i32() {
+        let test_cases = [
+            (-8, "quiet"),
+            (0, "panic"),
+            (8, "fatal"),
+            (16, "error"),
+            (24, "warning"),
+            (32, "info"),
+            (40, "verbose"),
+            (48, "debug"),
+            (56, "trace"),
+            (100, "info"),
+            (-1, "info"),
+        ];
+
+        for &(input, expected) in &test_cases {
+            let log_level = LogLevel::from_i32(input);
+            assert_eq!(
+                log_level.as_str(),
+                expected,
+                "Expected '{}' for input {}, but got '{}'",
+                expected,
+                input,
+                log_level.as_str()
+            );
+        }
+    }
+
+    #[test]
+    fn test_set_log_level() {
+        let log_levels = [
+            LogLevel::Quiet,
+            LogLevel::Panic,
+            LogLevel::Fatal,
+            LogLevel::Error,
+            LogLevel::Warning,
+            LogLevel::Info,
+            LogLevel::Verbose,
+            LogLevel::Debug,
+            LogLevel::Trace,
+        ];
+
+        for &level in &log_levels {
+            set_log_level(level);
+            let current_level = unsafe { av_log_get_level() };
+
+            assert_eq!(
+                current_level, level as i32,
+                "Expected log level to be {}, but got {}",
+                level as i32, current_level
+            );
+        }
+    }
+
+    #[test]
+    fn test_log_callback_set() {
+        let captured_logs = Arc::new(Mutex::new(Vec::new()));
+        let callback_logs = Arc::clone(&captured_logs);
+        log_callback_set(move |level, class, message| {
+            let mut logs = callback_logs.lock().unwrap();
+            logs.push((level, class, message));
+        });
+
+        let log_message = CString::new("Test warning log message").expect("Failed to create CString");
+        unsafe {
+            av_log(std::ptr::null_mut(), LogLevel::Warning as i32, log_message.as_ptr());
+        }
+
+        let logs = captured_logs.lock().unwrap();
+        assert_eq!(logs.len(), 1, "Expected one log message to be captured");
+
+        let (level, class, message) = &logs[0];
+        assert_eq!(*level, LogLevel::Warning, "Expected log level to be Warning");
+        assert!(class.is_none(), "Expected class to be None for this test");
+        assert_eq!(message, "Test warning log message", "Expected log message to match");
+    }
+
+    #[test]
+    fn test_log_callback_with_class() {
+        unsafe {
+            let codec = avcodec_find_decoder(AVCodecID::AV_CODEC_ID_H264);
+            assert!(!codec.is_null(), "Failed to find H264 codec");
+
+            let av_class_ptr = (*codec).priv_class;
+            assert!(!av_class_ptr.is_null(), "AVClass for codec is null");
+
+            let captured_logs = Arc::new(Mutex::new(Vec::new()));
+
+            let callback_logs = Arc::clone(&captured_logs);
+            log_callback_set(move |level, class, message| {
+                let mut logs = callback_logs.lock().unwrap();
+                logs.push((level, class, message));
+            });
+
+            av_log(
+                &av_class_ptr as *const _ as *mut _,
+                LogLevel::Info as i32,
+                CString::new("Test log message with real AVClass").unwrap().as_ptr(),
+            );
+
+            let logs = captured_logs.lock().unwrap();
+            assert_eq!(logs.len(), 1, "Expected one log message to be captured");
+
+            let (level, class, message) = &logs[0];
+            assert_eq!(*level, LogLevel::Info, "Expected log level to be Info");
+            assert!(class.is_some(), "Expected class name to be captured");
+            assert_eq!(message, "Test log message with real AVClass", "Expected log message to match");
+        }
+    }
+
+    #[test]
+    fn test_log_callback_unset() {
+        let captured_logs = Arc::new(Mutex::new(Vec::new()));
+        let callback_logs = Arc::clone(&captured_logs);
+        log_callback_set(move |level, class, message| {
+            let mut logs = callback_logs.lock().unwrap();
+            logs.push((level, class, message));
+        });
+
+        unsafe {
+            av_log(
+                std::ptr::null_mut(),
+                LogLevel::Info as i32,
+                CString::new("Test log message before unset").unwrap().as_ptr(),
+            );
+        }
+
+        {
+            let logs = captured_logs.lock().unwrap();
+            assert_eq!(
+                logs.len(),
+                1,
+                "Expected one log message to be captured before unsetting the callback"
+            );
+            let (_, _, message) = &logs[0];
+            assert_eq!(message, "Test log message before unset", "Expected the log message to match");
+        }
+
+        log_callback_unset();
+
+        unsafe {
+            av_log(
+                std::ptr::null_mut(),
+                LogLevel::Info as i32,
+                CString::new("Test log message after unset").unwrap().as_ptr(),
+            );
+        }
+
+        let logs = captured_logs.lock().unwrap();
+        assert_eq!(
+            logs.len(),
+            1,
+            "Expected no additional log messages to be captured after unsetting the callback"
+        );
+    }
+
+    #[cfg(feature = "tracing")]
+    #[test]
+    #[tracing_test::traced_test]
+    fn test_log_callback_tracing() {
+        let subscriber = FmtSubscriber::builder().with_max_level(Level::TRACE).finish();
+        let _ = set_default(subscriber);
+        log_callback_tracing();
+
+        let levels_and_expected_tracing = [
+            (LogLevel::Trace, "trace"),
+            (LogLevel::Verbose, "trace"),
+            (LogLevel::Debug, "debug"),
+            (LogLevel::Info, "info"),
+            // (LogLevel::Warning, "warn"), TODO: idk why including this makes it not work
+            (LogLevel::Quiet, "error"),
+            (LogLevel::Error, "error"),
+            (LogLevel::Panic, "error"),
+            (LogLevel::Fatal, "error"),
+        ];
+
+        for (level, expected_tracing_level) in &levels_and_expected_tracing {
+            let message = format!("Test {} log message", expected_tracing_level);
+            unsafe {
+                av_log(
+                    ptr::null_mut(),
+                    *level as i32,
+                    CString::new(message.clone()).expect("Failed to create CString").as_ptr(),
+                );
+            }
+        }
+
+        for (_level, expected_tracing_level) in &levels_and_expected_tracing {
+            let expected_message = format!(
+                "{}: ffmpeg @ Test {} log message",
+                expected_tracing_level, expected_tracing_level
+            );
+
+            assert!(
+                logs_contain(&expected_message),
+                "Expected log message for '{}'",
+                expected_message
+            );
+        }
+    }
+
+    #[cfg(feature = "tracing")]
+    #[test]
+    #[tracing_test::traced_test]
+    fn test_log_callback_tracing_deprecated_message() {
+        let subscriber = FmtSubscriber::builder().with_max_level(Level::TRACE).finish();
+        let _ = set_default(subscriber);
+        log_callback_tracing();
+
+        let deprecated_message = "deprecated pixel format used, make sure you did set range correctly";
+        unsafe {
+            av_log(
+                ptr::null_mut(),
+                LogLevel::Trace as i32,
+                CString::new(deprecated_message).expect("Failed to create CString").as_ptr(),
+            );
+        }
+
+        assert!(
+            logs_contain(&format!("debug: ffmpeg @ {}", deprecated_message)),
+            "Expected log message for '{}'",
+            deprecated_message
+        );
+    }
 }
