@@ -30,7 +30,8 @@ pub enum PprofError {
 #[cfg(test)]
 #[cfg_attr(all(coverage_nightly, test), coverage(off))]
 mod tests {
-    use std::{io::Read, time::SystemTime};
+    use std::io::Read;
+    use std::time::SystemTime;
 
     use flate2::read::GzDecoder;
     use pprof::protos::Message;

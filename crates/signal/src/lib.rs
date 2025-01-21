@@ -198,8 +198,8 @@ impl std::future::Future for SignalHandler {
     }
 }
 
-#[cfg_attr(all(coverage_nightly, test), coverage(off))]
 #[cfg(test)]
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
 mod tests {
     use std::time::Duration;
 
