@@ -7,7 +7,7 @@
 
 ---
 
-A crate designed to provide a more ergonomic interface to the pprof crate.
+A crate designed to provide a more ergonomic interface to the `pprof` crate.
 
 ## Status
 

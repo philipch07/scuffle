@@ -7,10 +7,13 @@ use pprof::protos::Message;
 use crate::PprofError;
 
 /// A CPU profiler.
+///
+/// Call [`capture`] to capture a pprof profile for the given duration.
 pub struct Cpu(pprof::ProfilerGuardBuilder);
 
 impl Cpu {
     /// Create a new CPU profiler.
+    ///
     /// - `frequency` is the sampling frequency in Hz.
     /// - `blocklist` is a list of functions to exclude from the profile.
     pub fn new<S: AsRef<str>>(frequency: i32, blocklist: &[S]) -> Self {
@@ -22,10 +25,15 @@ impl Cpu {
     }
 
     /// Capture a pprof profile for the given duration.
+    ///
     /// The profile is compressed using gzip.
     /// The profile can be analyzed using the `pprof` tool.
+    ///
+    /// <div class="warning">
     /// Warning: This method is blocking and may take a long time to complete.
+    ///
     /// It is recommended to run it in a separate thread.
+    /// </div>
     pub fn capture(&self, duration: std::time::Duration) -> Result<Vec<u8>, PprofError> {
         let profiler = self.0.clone().build()?;
 

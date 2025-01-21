@@ -1,5 +1,24 @@
+//! A crate designed to provide a more ergonomic interface to the `pprof` crate.
+//!
+//! ## Status
+//!
+//! This crate is currently under development and is not yet stable.
+//!
+//! Unit tests are not yet fully implemented. Use at your own risk.
+//!
+//! ## License
+//!
+//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
+//! You can choose between one of them if you use this work.
+//!
+//! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
+
 mod cpu;
 
+pub use cpu::Cpu;
+
+/// An error that can occur while profiling.
 #[derive(Debug, thiserror::Error)]
 pub enum PprofError {
     #[error(transparent)]
@@ -8,4 +27,48 @@ pub enum PprofError {
     Pprof(#[from] pprof::Error),
 }
 
-pub use cpu::Cpu;
+#[cfg(test)]
+#[cfg_attr(all(coverage_nightly, test), coverage(off))]
+mod tests {
+    use std::{io::Read, time::SystemTime};
+
+    use flate2::read::GzDecoder;
+    use pprof::protos::Message;
+
+    use crate::Cpu;
+
+    #[test]
+    fn empty_profile() {
+        let before_nanos = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as i64;
+
+        let cpu = Cpu::new::<String>(1000, &[]);
+        let profile = cpu.capture(std::time::Duration::from_secs(1)).unwrap();
+
+        // Decode the profile
+        let mut reader = GzDecoder::new(profile.as_slice());
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf).unwrap();
+        let profile = pprof::protos::Profile::decode(buf.as_slice()).unwrap();
+
+        assert!(profile.duration_nanos > 1_000_000_000);
+        assert!(profile.time_nanos > before_nanos);
+        let now_nanos = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos() as i64;
+        assert!(profile.time_nanos < now_nanos);
+
+        assert_eq!(profile.string_table[profile.drop_frames as usize], "");
+        assert_eq!(profile.string_table[profile.keep_frames as usize], "");
+
+        let Some(period_type) = profile.period_type else {
+            panic!("missing period type");
+        };
+        assert_eq!(profile.string_table[period_type.ty as usize], "cpu");
+        assert_eq!(profile.string_table[period_type.unit as usize], "nanoseconds");
+
+        assert_eq!(profile.period, 1_000_000);
+
+        assert!(profile.sample.is_empty());
+        assert!(profile.mapping.is_empty());
+        assert!(profile.location.is_empty());
+        assert!(profile.function.is_empty());
+    }
+}
