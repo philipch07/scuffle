@@ -102,6 +102,7 @@ impl Dictionary {
         if key.is_empty() {
             return Err(FfmpegError::Arguments("Keys cannot be empty"));
         }
+
         let key = CString::new(key).expect("Failed to convert key to CString");
         let value = CString::new(value).expect("Failed to convert value to CString");
 
@@ -119,6 +120,7 @@ impl Dictionary {
         if key.is_empty() {
             return None;
         }
+
         let key = CString::new(key).expect("Failed to convert key to CString");
 
         // Safety: av_dict_get is safe to call

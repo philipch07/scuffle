@@ -1109,7 +1109,7 @@ mod tests {
 
         assert!(result.is_ok(), "Failed to apply settings: {:?}", result.err());
         assert_eq!(encoder.sample_rate, sample_rate);
-        assert!(encoder.ch_layout.nb_channels == channel_count);
+        assert_eq!(encoder.ch_layout.nb_channels, channel_count);
         assert_eq!(encoder.sample_fmt, sample_fmt);
         assert_eq!(encoder.thread_count, thread_count);
         assert_eq!(encoder.thread_type, thread_type);
