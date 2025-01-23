@@ -1,3 +1,22 @@
+//! A crate designed to provide a simple interface to load and manage settings for Scuffle.
+//!
+//! ## Why do we need this?
+//!
+//! TODO(troy): Add more details about why we need this.
+//!
+//! ## Status
+//!
+//! This crate is currently under development and is not yet stable.
+//!
+//! Unit tests are not yet fully implemented. Use at your own risk.
+//!
+//! ## License
+//!
+//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
+//! You can choose between one of them if you use this work.
+//!
+//! `SPDX-License-Identifier: MIT OR Apache-2.0`
+
 use std::path::Path;
 
 #[derive(Debug, thiserror::Error)]
@@ -52,6 +71,8 @@ struct FormatWrapper;
 
 use std::borrow::Cow;
 
+use config::FileStoredFormat;
+
 #[cfg(not(feature = "templates"))]
 fn template_text<'a>(
     text: &'a str,
@@ -88,79 +109,37 @@ impl config::Format for FormatWrapper {
         uri: Option<&String>,
         text: &str,
     ) -> Result<config::Map<String, config::Value>, Box<dyn std::error::Error + Send + Sync>> {
-        match uri.and_then(|s| Path::new(s.as_str()).extension()).and_then(|s| s.to_str()) {
+        let uri_ext = uri.and_then(|s| Path::new(s.as_str()).extension()).and_then(|s| s.to_str());
+
+        let mut formats: Vec<config::FileFormat> = vec![
             #[cfg(feature = "toml")]
-            Some("toml") => config::FileFormat::Toml.parse(uri, template_text(text, &config::FileFormat::Toml)?.as_ref()),
-            #[cfg(not(feature = "toml"))]
-            Some("toml") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "toml support is not enabled, consider building with the `toml` feature enabled",
-            ))),
+            config::FileFormat::Toml,
             #[cfg(feature = "json")]
-            Some("json") => config::FileFormat::Json.parse(uri, template_text(text, &config::FileFormat::Json)?.as_ref()),
-            #[cfg(not(feature = "json"))]
-            Some("json") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "json support is not enabled, consider building with the `json` feature enabled",
-            ))),
+            config::FileFormat::Json,
             #[cfg(feature = "yaml")]
-            Some("yaml") | Some("yml") => {
-                config::FileFormat::Yaml.parse(uri, template_text(text, &config::FileFormat::Yaml)?.as_ref())
-            }
-            #[cfg(not(feature = "yaml"))]
-            Some("yaml") | Some("yml") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "yaml support is not enabled, consider building with the `yaml` feature enabled",
-            ))),
+            config::FileFormat::Yaml,
             #[cfg(feature = "json5")]
-            Some("json5") => config::FileFormat::Json5.parse(uri, template_text(text, &config::FileFormat::Json5)?.as_ref()),
-            #[cfg(not(feature = "json5"))]
-            Some("json5") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "json5 support is not enabled, consider building with the `json5` feature enabled",
-            ))),
+            config::FileFormat::Json5,
             #[cfg(feature = "ini")]
-            Some("ini") => config::FileFormat::Ini.parse(uri, template_text(text, &config::FileFormat::Ini)?.as_ref()),
-            #[cfg(not(feature = "ini"))]
-            Some("ini") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "ini support is not enabled, consider building with the `ini` feature enabled",
-            ))),
+            config::FileFormat::Ini,
             #[cfg(feature = "ron")]
-            Some("ron") => config::FileFormat::Ron.parse(uri, template_text(text, &config::FileFormat::Ron)?.as_ref()),
-            #[cfg(not(feature = "ron"))]
-            Some("ron") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "ron support is not enabled, consider building with the `ron` feature enabled",
-            ))),
-            _ => {
-                let formats: &[config::FileFormat] = &[
-                    #[cfg(feature = "toml")]
-                    config::FileFormat::Toml,
-                    #[cfg(feature = "json")]
-                    config::FileFormat::Json,
-                    #[cfg(feature = "yaml")]
-                    config::FileFormat::Yaml,
-                    #[cfg(feature = "json5")]
-                    config::FileFormat::Json5,
-                    #[cfg(feature = "ini")]
-                    config::FileFormat::Ini,
-                    #[cfg(feature = "ron")]
-                    config::FileFormat::Ron,
-                ];
+            config::FileFormat::Ron,
+        ];
 
-                for format in formats {
-                    if let Ok(map) = format.parse(uri, template_text(text, format)?.as_ref()) {
-                        return Ok(map);
-                    }
-                }
+        if let Some(uri_ext) = uri_ext {
+            formats.sort_by_key(|f| if f.file_extensions().contains(&uri_ext) { 0 } else { 1 });
+        }
 
-                Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    format!("No supported format found for file: {:?}", uri),
-                )))
+        for format in formats {
+            if let Ok(map) = format.parse(uri, template_text(text, &format)?.as_ref()) {
+                return Ok(map);
             }
         }
+
+        Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("No supported format found for file: {:?}", uri),
+        )))
     }
 }
 
