@@ -123,3 +123,112 @@ impl std::fmt::Display for FfmpegError {
         }
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use super::{FfmpegError, FfmpegErrorCode};
+    use crate::error::*;
+
+    #[test]
+    fn test_ffmpeg_error_code_display() {
+        let cases = [
+            (FfmpegErrorCode::EndOfFile, "end of file"),
+            (FfmpegErrorCode::InvalidData, "invalid data"),
+            (FfmpegErrorCode::MuxerNotFound, "muxer not found"),
+            (FfmpegErrorCode::OptionNotFound, "option not found"),
+            (FfmpegErrorCode::PatchWelcome, "patch welcome"),
+            (FfmpegErrorCode::ProtocolNotFound, "protocol not found"),
+            (FfmpegErrorCode::StreamNotFound, "stream not found"),
+            (FfmpegErrorCode::BitstreamFilterNotFound, "bitstream filter not found"),
+            (FfmpegErrorCode::Bug, "bug"),
+            (FfmpegErrorCode::BufferTooSmall, "buffer too small"),
+            (FfmpegErrorCode::DecoderNotFound, "decoder not found"),
+            (FfmpegErrorCode::DemuxerNotFound, "demuxer not found"),
+            (FfmpegErrorCode::EncoderNotFound, "encoder not found"),
+            (FfmpegErrorCode::Exit, "exit"),
+            (FfmpegErrorCode::External, "external"),
+            (FfmpegErrorCode::FilterNotFound, "filter not found"),
+            (FfmpegErrorCode::HttpBadRequest, "http bad request"),
+            (FfmpegErrorCode::HttpForbidden, "http forbidden"),
+            (FfmpegErrorCode::HttpNotFound, "http not found"),
+            (FfmpegErrorCode::HttpOther4xx, "http other 4xx"),
+            (FfmpegErrorCode::HttpServerError, "http server error"),
+            (FfmpegErrorCode::HttpUnauthorized, "http unauthorized"),
+            (FfmpegErrorCode::Bug2, "bug2"),
+            (FfmpegErrorCode::Unknown, "unknown"),
+            (FfmpegErrorCode::UnknownError(123), "unknown error code: 123"),
+        ];
+
+        for (code, expected) in cases {
+            assert_eq!(code.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn test_ffmpeg_error_code_from_i32() {
+        // Define constants that map to the FfmpegErrorCode variants
+        const TEST_CASES: &[(i32, FfmpegErrorCode)] = &[
+            (AVERROR_EOF, FfmpegErrorCode::EndOfFile),
+            (AVERROR_INVALIDDATA, FfmpegErrorCode::InvalidData),
+            (AVERROR_MUXER_NOT_FOUND, FfmpegErrorCode::MuxerNotFound),
+            (AVERROR_OPTION_NOT_FOUND, FfmpegErrorCode::OptionNotFound),
+            (AVERROR_PATCHWELCOME, FfmpegErrorCode::PatchWelcome),
+            (AVERROR_PROTOCOL_NOT_FOUND, FfmpegErrorCode::ProtocolNotFound),
+            (AVERROR_STREAM_NOT_FOUND, FfmpegErrorCode::StreamNotFound),
+            (AVERROR_BSF_NOT_FOUND, FfmpegErrorCode::BitstreamFilterNotFound),
+            (AVERROR_BUG, FfmpegErrorCode::Bug),
+            (AVERROR_BUFFER_TOO_SMALL, FfmpegErrorCode::BufferTooSmall),
+            (AVERROR_DECODER_NOT_FOUND, FfmpegErrorCode::DecoderNotFound),
+            (AVERROR_DEMUXER_NOT_FOUND, FfmpegErrorCode::DemuxerNotFound),
+            (AVERROR_ENCODER_NOT_FOUND, FfmpegErrorCode::EncoderNotFound),
+            (AVERROR_EXIT, FfmpegErrorCode::Exit),
+            (AVERROR_EXTERNAL, FfmpegErrorCode::External),
+            (AVERROR_FILTER_NOT_FOUND, FfmpegErrorCode::FilterNotFound),
+            (AVERROR_HTTP_BAD_REQUEST, FfmpegErrorCode::HttpBadRequest),
+            (AVERROR_HTTP_FORBIDDEN, FfmpegErrorCode::HttpForbidden),
+            (AVERROR_HTTP_NOT_FOUND, FfmpegErrorCode::HttpNotFound),
+            (AVERROR_HTTP_OTHER_4XX, FfmpegErrorCode::HttpOther4xx),
+            (AVERROR_HTTP_SERVER_ERROR, FfmpegErrorCode::HttpServerError),
+            (AVERROR_HTTP_UNAUTHORIZED, FfmpegErrorCode::HttpUnauthorized),
+            (AVERROR_BUG2, FfmpegErrorCode::Bug2),
+            (AVERROR_UNKNOWN, FfmpegErrorCode::Unknown),
+        ];
+
+        // Test each case
+        for &(value, expected) in TEST_CASES {
+            let result: FfmpegErrorCode = value.into();
+            assert_eq!(result, expected, "Failed for value: {value}");
+        }
+
+        // Test an unknown error case
+        let unknown_value = 9999;
+        let result: FfmpegErrorCode = unknown_value.into();
+        assert_eq!(
+            result,
+            FfmpegErrorCode::UnknownError(unknown_value),
+            "Failed for unknown value: {unknown_value}"
+        );
+    }
+
+    #[test]
+    fn test_ffmpeg_error_display() {
+        let cases = [
+            (FfmpegError::Alloc, "failed to allocate memory"),
+            (FfmpegError::Code(FfmpegErrorCode::EndOfFile), "ffmpeg error: end of file"),
+            (FfmpegError::NoDecoder, "no decoder found"),
+            (FfmpegError::NoEncoder, "no encoder found"),
+            (FfmpegError::NoStream, "no stream found"),
+            (FfmpegError::NoFilter, "no filter found"),
+            (FfmpegError::NoFrame, "no frame found"),
+            (
+                FfmpegError::Arguments("invalid argument example"),
+                "invalid arguments: invalid argument example",
+            ),
+        ];
+
+        for (error, expected) in cases {
+            assert_eq!(error.to_string(), expected);
+        }
+    }
+}
