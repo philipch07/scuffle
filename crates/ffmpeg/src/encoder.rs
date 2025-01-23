@@ -69,7 +69,7 @@ impl Default for VideoEncoderSettings {
 impl VideoEncoderSettings {
     pub fn builder(width: i32, height: i32, frame_rate: i32, pixel_format: AVPixelFormat) -> VideoEncoderBuilder {
         VideoEncoderBuilder::default()
-            .dimentions(width, height)
+            .dimensions(width, height)
             .frame_rate(frame_rate)
             .pixel_format(pixel_format)
     }
@@ -79,7 +79,7 @@ impl VideoEncoderSettings {
 pub struct VideoEncoderBuilder(VideoEncoderSettings);
 
 impl VideoEncoderBuilder {
-    pub fn dimentions(mut self, width: i32, height: i32) -> Self {
+    pub fn dimensions(mut self, width: i32, height: i32) -> Self {
         self.0.width = width;
         self.0.height = height;
         self
@@ -121,7 +121,7 @@ impl VideoEncoderBuilder {
     }
 
     pub fn thread_type(mut self, thread_type: i32) -> Self {
-        self.0.thread_count = Some(thread_type);
+        self.0.thread_type = Some(thread_type);
         self
     }
 
@@ -205,6 +205,10 @@ impl VideoEncoderSettings {
     }
 
     fn average_duration(&self, timebase: AVRational) -> i64 {
+        if self.frame_rate <= 0 {
+            return 0;
+        }
+
         (timebase.den as i64) / (self.frame_rate as i64 * timebase.num as i64)
     }
 }
@@ -281,7 +285,7 @@ impl AudioEncoderBuilder {
     }
 
     pub fn thread_type(mut self, thread_type: i32) -> Self {
-        self.0.thread_count = Some(thread_type);
+        self.0.thread_type = Some(thread_type);
         self
     }
 
@@ -354,6 +358,10 @@ impl AudioEncoderSettings {
     }
 
     fn average_duration(&self, timebase: AVRational) -> i64 {
+        if self.sample_rate <= 0 {
+            return 0;
+        }
+
         (timebase.den as i64) / (self.sample_rate as i64 * timebase.num as i64)
     }
 }
@@ -722,5 +730,888 @@ impl<T: Send + Sync> std::ops::Deref for MuxerEncoder<T> {
 impl<T: Send + Sync> std::ops::DerefMut for MuxerEncoder<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.encoder
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+
+    use ffmpeg_sys_next::AVCodecID::AV_CODEC_ID_MPEG4;
+    use ffmpeg_sys_next::{av_channel_layout_uninit, AVCodecContext, AVPixelFormat, AVRational, AVSampleFormat};
+
+    use crate::codec::EncoderCodec;
+    use crate::dict::Dictionary;
+    use crate::encoder::{
+        AudioEncoderBuilder, AudioEncoderSettings, Encoder, EncoderSettings, MuxerEncoder, MuxerSettings,
+        VideoEncoderBuilder, VideoEncoderSettings,
+    };
+    use crate::error::FfmpegError;
+    use crate::io::{Output, OutputOptions};
+    use crate::smart_object::SmartObject;
+
+    #[test]
+    fn test_video_encoder_settings_default() {
+        let default_settings = VideoEncoderSettings::default();
+        assert_eq!(default_settings.width, 0);
+        assert_eq!(default_settings.height, 0);
+        assert_eq!(default_settings.frame_rate, 0);
+        assert_eq!(default_settings.pixel_format, AVPixelFormat::AV_PIX_FMT_NONE);
+        assert!(default_settings.gop_size.is_none());
+        assert!(default_settings.qmax.is_none());
+        assert!(default_settings.qmin.is_none());
+        assert!(default_settings.thread_count.is_none());
+        assert!(default_settings.thread_type.is_none());
+        assert!(default_settings.sample_aspect_ratio.is_none());
+        assert!(default_settings.bitrate.is_none());
+        assert!(default_settings.rc_min_rate.is_none());
+        assert!(default_settings.rc_max_rate.is_none());
+        assert!(default_settings.rc_buffer_size.is_none());
+        assert!(default_settings.max_b_frames.is_none());
+        assert!(default_settings.codec_specific_options.is_none());
+        assert!(default_settings.flags.is_none());
+        assert!(default_settings.flags2.is_none());
+    }
+
+    #[test]
+    fn test_video_encoder_settings_builder() {
+        let width = 1920;
+        let height = 1080;
+        let frame_rate = 30;
+        let pixel_format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+
+        let builder = VideoEncoderSettings::builder(width, height, frame_rate, pixel_format);
+        let settings = builder.build();
+
+        assert_eq!(settings.width, width);
+        assert_eq!(settings.height, height);
+        assert_eq!(settings.frame_rate, frame_rate);
+        assert_eq!(settings.pixel_format, pixel_format);
+
+        assert!(settings.gop_size.is_none());
+        assert!(settings.qmax.is_none());
+        assert!(settings.qmin.is_none());
+        assert!(settings.thread_count.is_none());
+        assert!(settings.thread_type.is_none());
+        assert!(settings.sample_aspect_ratio.is_none());
+        assert!(settings.bitrate.is_none());
+        assert!(settings.rc_min_rate.is_none());
+        assert!(settings.rc_max_rate.is_none());
+        assert!(settings.rc_buffer_size.is_none());
+        assert!(settings.max_b_frames.is_none());
+        assert!(settings.codec_specific_options.is_none());
+        assert!(settings.flags.is_none());
+        assert!(settings.flags2.is_none());
+    }
+
+    #[test]
+    fn test_video_encoder_builder_optional_fields() {
+        let sample_aspect_ratio = AVRational { num: 1, den: 1 };
+        let gop_size = 12;
+        let qmax = 31;
+        let qmin = 1;
+        let thread_count = 4;
+        let thread_type = 2;
+        let bitrate = 8_000;
+        let rc_min_rate = 500_000;
+        let rc_max_rate = 2_000_000;
+        let rc_buffer_size = 1024;
+        let max_b_frames = 3;
+        let mut codec_specific_options = Dictionary::new();
+        let _ = codec_specific_options.set("preset", "ultrafast");
+        let _ = codec_specific_options.set("crf", "23");
+        let flags = 0x01;
+        let flags2 = 0x02;
+
+        let settings = VideoEncoderBuilder::default()
+            .sample_aspect_ratio(sample_aspect_ratio)
+            .gop_size(gop_size)
+            .qmax(qmax)
+            .qmin(qmin)
+            .thread_count(thread_count)
+            .thread_type(thread_type)
+            .bitrate(bitrate)
+            .rc_min_rate(rc_min_rate)
+            .rc_max_rate(rc_max_rate)
+            .rc_buffer_size(rc_buffer_size)
+            .max_b_frames(max_b_frames)
+            .codec_specific_options(codec_specific_options.clone())
+            .flags(flags)
+            .flags2(flags2)
+            .build();
+
+        assert_eq!(settings.sample_aspect_ratio, Some(sample_aspect_ratio));
+        assert_eq!(settings.gop_size, Some(gop_size));
+        assert_eq!(settings.qmax, Some(qmax));
+        assert_eq!(settings.qmin, Some(qmin));
+        assert_eq!(settings.thread_count, Some(thread_count));
+        assert_eq!(settings.thread_type, Some(thread_type));
+        assert_eq!(settings.bitrate, Some(bitrate));
+        assert_eq!(settings.rc_min_rate, Some(rc_min_rate));
+        assert_eq!(settings.rc_max_rate, Some(rc_max_rate));
+        assert_eq!(settings.rc_buffer_size, Some(rc_buffer_size));
+        assert_eq!(settings.max_b_frames, Some(max_b_frames));
+        assert!(settings.codec_specific_options.is_some());
+        let actual_codec_specific_options = settings.codec_specific_options.unwrap();
+        assert_eq!(actual_codec_specific_options.get("preset").as_deref(), Some("ultrafast"));
+        assert_eq!(actual_codec_specific_options.get("crf").as_deref(), Some("23"));
+        assert_eq!(settings.flags, Some(flags));
+        assert_eq!(settings.flags2, Some(flags2));
+    }
+
+    #[test]
+    fn test_video_encoder_settings_apply() {
+        let sample_aspect_ratio = AVRational { num: 1, den: 1 };
+        let gop_size = 12;
+        let qmax = 31;
+        let qmin = 1;
+        let thread_count = 4;
+        let thread_type = 2;
+        let bitrate = 8_000;
+        let rc_min_rate = 500_000;
+        let rc_max_rate = 2_000_000;
+        let rc_buffer_size = 1024;
+        let max_b_frames = 3;
+        let pixel_format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+        let width = 1920;
+        let height = 1080;
+        let frame_rate = 30;
+        let flags = 0x01;
+        let flags2 = 0x02;
+
+        let settings = VideoEncoderSettings {
+            width,
+            height,
+            frame_rate,
+            pixel_format,
+            sample_aspect_ratio: Some(sample_aspect_ratio),
+            gop_size: Some(gop_size),
+            qmax: Some(qmax),
+            qmin: Some(qmin),
+            thread_count: Some(thread_count),
+            thread_type: Some(thread_type),
+            bitrate: Some(bitrate),
+            rc_min_rate: Some(rc_min_rate),
+            rc_max_rate: Some(rc_max_rate),
+            rc_buffer_size: Some(rc_buffer_size),
+            max_b_frames: Some(max_b_frames),
+            codec_specific_options: None,
+            flags: Some(flags),
+            flags2: Some(flags2),
+        };
+
+        let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
+        let result = settings.apply(&mut encoder);
+        assert!(result.is_ok(), "Failed to apply settings: {:?}", result.err());
+
+        assert_eq!(encoder.width, width);
+        assert_eq!(encoder.height, height);
+        assert_eq!(encoder.pix_fmt, pixel_format);
+        assert_eq!(encoder.sample_aspect_ratio, sample_aspect_ratio);
+        assert_eq!(encoder.framerate.num, frame_rate);
+        assert_eq!(encoder.framerate.den, 1);
+        assert_eq!(encoder.thread_count, thread_count);
+        assert_eq!(encoder.thread_type, thread_type);
+        assert_eq!(encoder.gop_size, gop_size);
+        assert_eq!(encoder.qmax, qmax);
+        assert_eq!(encoder.qmin, qmin);
+        assert_eq!(encoder.bit_rate, bitrate);
+        assert_eq!(encoder.rc_min_rate, rc_min_rate);
+        assert_eq!(encoder.rc_max_rate, rc_max_rate);
+        assert_eq!(encoder.rc_buffer_size, rc_buffer_size);
+        assert_eq!(encoder.max_b_frames, max_b_frames);
+        assert_eq!(encoder.flags, flags);
+        assert_eq!(encoder.flags2, flags2);
+    }
+
+    #[test]
+    fn test_video_encoder_settings_apply_error() {
+        let settings = VideoEncoderSettings::default();
+        let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
+        let result = settings.apply(&mut encoder);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            FfmpegError::Arguments("width, height, frame_rate and pixel_format must be set")
+        );
+    }
+
+    #[test]
+    fn test_video_encoder_average_duration() {
+        let frame_rate = 30;
+        let timebase = AVRational { num: 1, den: 30000 };
+        let settings = VideoEncoderSettings {
+            frame_rate,
+            ..VideoEncoderSettings::default()
+        };
+
+        let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
+        let actual_duration = settings.average_duration(timebase);
+
+        assert_eq!(actual_duration, expected_duration);
+    }
+
+    #[test]
+    fn test_video_encoder_average_duration_with_custom_timebase() {
+        let frame_rate = 60;
+        let timebase = AVRational { num: 1, den: 60000 };
+
+        let settings = VideoEncoderSettings {
+            frame_rate,
+            ..VideoEncoderSettings::default()
+        };
+
+        let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
+        let actual_duration = settings.average_duration(timebase);
+
+        assert_eq!(actual_duration, expected_duration);
+    }
+
+    #[test]
+    fn test_video_encoder_average_duration_with_zero_frame_rate() {
+        let frame_rate = 0;
+        let timebase = AVRational { num: 1, den: 30000 };
+        let settings = VideoEncoderSettings {
+            frame_rate,
+            ..VideoEncoderSettings::default()
+        };
+
+        let actual_duration = settings.average_duration(timebase);
+        assert_eq!(actual_duration, 0);
+    }
+
+    #[test]
+    fn test_audio_encoder_settings_default() {
+        let default_settings = AudioEncoderSettings::default();
+        assert_eq!(default_settings.sample_rate, 0);
+        assert!(default_settings.ch_layout.is_none());
+        assert_eq!(default_settings.sample_fmt, AVSampleFormat::AV_SAMPLE_FMT_NONE);
+        assert!(default_settings.thread_count.is_none());
+        assert!(default_settings.thread_type.is_none());
+        assert!(default_settings.bitrate.is_none());
+        assert!(default_settings.buffer_size.is_none());
+        assert!(default_settings.rc_min_rate.is_none());
+        assert!(default_settings.rc_max_rate.is_none());
+        assert!(default_settings.rc_buffer_size.is_none());
+        assert!(default_settings.codec_specific_options.is_none());
+        assert!(default_settings.flags.is_none());
+        assert!(default_settings.flags2.is_none());
+    }
+
+    #[test]
+    fn test_audio_encoder_settings_builder() {
+        let sample_rate = 48000;
+        let channel_count = 2;
+        let sample_fmt = AVSampleFormat::AV_SAMPLE_FMT_FLTP;
+        let builder = AudioEncoderSettings::builder(sample_rate, channel_count, sample_fmt);
+        let settings = builder.build();
+
+        assert_eq!(settings.sample_rate, sample_rate);
+        assert!(settings.ch_layout.is_some());
+        assert_eq!(settings.sample_fmt, sample_fmt);
+
+        assert!(settings.thread_count.is_none());
+        assert!(settings.thread_type.is_none());
+        assert!(settings.bitrate.is_none());
+        assert!(settings.buffer_size.is_none());
+        assert!(settings.rc_min_rate.is_none());
+        assert!(settings.rc_max_rate.is_none());
+        assert!(settings.rc_buffer_size.is_none());
+        assert!(settings.codec_specific_options.is_none());
+        assert!(settings.flags.is_none());
+        assert!(settings.flags2.is_none());
+    }
+
+    #[test]
+    fn test_audio_encoder_builder_all_fields() {
+        let sample_rate = 44100;
+        let channel_count = 2;
+        let sample_fmt = AVSampleFormat::AV_SAMPLE_FMT_S16;
+        let thread_count = 4;
+        let thread_type = 1;
+        let bitrate = 128_000;
+        let buffer_size = 64 * 1024;
+        let rc_min_rate = 64_000;
+        let rc_max_rate = 256_000;
+        let rc_buffer_size = 1024;
+        let flags = 0x01;
+        let flags2 = 0x02;
+
+        let mut codec_specific_options = Dictionary::new();
+        let _ = codec_specific_options.set("profile", "high");
+
+        let settings = AudioEncoderBuilder::default()
+            .sample_rate(sample_rate)
+            .channel_count(channel_count)
+            .sample_fmt(sample_fmt)
+            .thread_count(thread_count)
+            .thread_type(thread_type)
+            .bitrate(bitrate)
+            .buffer_size(buffer_size)
+            .rc_min_rate(rc_min_rate)
+            .rc_max_rate(rc_max_rate)
+            .rc_buffer_size(rc_buffer_size)
+            .codec_specific_options(codec_specific_options.clone())
+            .flags(flags)
+            .flags2(flags2)
+            .build();
+
+        assert_eq!(settings.sample_rate, sample_rate);
+        assert!(settings.ch_layout.is_some());
+        assert_eq!(settings.sample_fmt, sample_fmt);
+        assert_eq!(settings.thread_count, Some(thread_count));
+        assert_eq!(settings.thread_type, Some(thread_type));
+        assert_eq!(settings.bitrate, Some(bitrate));
+        assert_eq!(settings.buffer_size, Some(buffer_size));
+        assert_eq!(settings.rc_min_rate, Some(rc_min_rate));
+        assert_eq!(settings.rc_max_rate, Some(rc_max_rate));
+        assert_eq!(settings.rc_buffer_size, Some(rc_buffer_size));
+        assert!(settings.codec_specific_options.is_some());
+
+        let actual_codec_specific_options = settings.codec_specific_options.unwrap();
+        assert_eq!(actual_codec_specific_options.get("profile").as_deref(), Some("high"));
+
+        assert_eq!(settings.flags, Some(flags));
+        assert_eq!(settings.flags2, Some(flags2));
+    }
+
+    #[test]
+    fn test_audio_encoder_settings_apply() {
+        let sample_rate = 44100;
+        let channel_count = 2;
+        let sample_fmt = AVSampleFormat::AV_SAMPLE_FMT_FLTP;
+        let thread_count = 4;
+        let thread_type = 1;
+        let bitrate = 128_000;
+        let rc_min_rate = 64_000;
+        let rc_max_rate = 256_000;
+        let rc_buffer_size = 1024;
+        let flags = 0x01;
+        let flags2 = 0x02;
+
+        let settings = AudioEncoderBuilder::default()
+            .sample_rate(sample_rate)
+            .channel_count(channel_count)
+            .sample_fmt(sample_fmt)
+            .thread_count(thread_count)
+            .thread_type(thread_type)
+            .bitrate(bitrate)
+            .rc_min_rate(rc_min_rate)
+            .rc_max_rate(rc_max_rate)
+            .rc_buffer_size(rc_buffer_size)
+            .flags(flags)
+            .flags2(flags2)
+            .build();
+
+        let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
+        let result = settings.apply(&mut encoder);
+
+        assert!(result.is_ok(), "Failed to apply settings: {:?}", result.err());
+        assert_eq!(encoder.sample_rate, sample_rate);
+        assert!(encoder.ch_layout.nb_channels == channel_count);
+        assert_eq!(encoder.sample_fmt, sample_fmt);
+        assert_eq!(encoder.thread_count, thread_count);
+        assert_eq!(encoder.thread_type, thread_type);
+        assert_eq!(encoder.bit_rate, bitrate);
+        assert_eq!(encoder.rc_min_rate, rc_min_rate);
+        assert_eq!(encoder.rc_max_rate, rc_max_rate);
+        assert_eq!(encoder.rc_buffer_size, rc_buffer_size);
+        assert_eq!(encoder.flags, flags);
+        assert_eq!(encoder.flags2, flags2);
+    }
+
+    #[test]
+    fn test_audio_encoder_settings_apply_error() {
+        let settings = AudioEncoderSettings::default();
+        let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
+        let result = settings.apply(&mut encoder);
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            FfmpegError::Arguments("sample_rate, channel_layout and sample_fmt must be set")
+        );
+    }
+
+    #[test]
+    fn test_average_duration() {
+        let sample_rate = 48000;
+        let timebase = AVRational { num: 1, den: 48000 };
+        let settings = AudioEncoderSettings {
+            sample_rate,
+            ..AudioEncoderSettings::default()
+        };
+        let expected_duration = 1;
+        let actual_duration = settings.average_duration(timebase);
+
+        assert_eq!(actual_duration, expected_duration);
+    }
+
+    #[test]
+    fn test_average_duration_with_zero_sample_rate() {
+        let sample_rate = 0;
+        let timebase = AVRational { num: 1, den: 48000 };
+        let settings = AudioEncoderSettings {
+            sample_rate,
+            ..AudioEncoderSettings::default()
+        };
+        let actual_duration = settings.average_duration(timebase);
+
+        assert_eq!(actual_duration, 0);
+    }
+
+    #[test]
+    fn test_average_duration_with_custom_timebase() {
+        let sample_rate = 96000;
+        let timebase = AVRational { num: 1, den: 96000 };
+        let settings = AudioEncoderSettings {
+            sample_rate,
+            ..AudioEncoderSettings::default()
+        };
+        let expected_duration = 1;
+        let actual_duration = settings.average_duration(timebase);
+
+        assert_eq!(actual_duration, expected_duration);
+    }
+
+    #[test]
+    fn test_encoder_settings_apply_video() {
+        let sample_aspect_ratio = AVRational { num: 1, den: 1 };
+        let video_settings = VideoEncoderSettings {
+            width: 1920,
+            height: 1080,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            sample_aspect_ratio: Some(sample_aspect_ratio),
+            gop_size: Some(12),
+            ..VideoEncoderSettings::default()
+        };
+        let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
+        let encoder_settings = EncoderSettings::Video(video_settings);
+        let result = encoder_settings.apply(&mut encoder);
+
+        assert!(result.is_ok(), "Failed to apply video settings: {:?}", result.err());
+        assert_eq!(encoder.width, 1920);
+        assert_eq!(encoder.height, 1080);
+        assert_eq!(encoder.pix_fmt, AVPixelFormat::AV_PIX_FMT_YUV420P);
+        assert_eq!(encoder.sample_aspect_ratio.num, 1);
+        assert_eq!(encoder.sample_aspect_ratio.den, 1);
+    }
+
+    #[test]
+    fn test_encoder_settings_apply_audio() {
+        let audio_settings = AudioEncoderSettings {
+            sample_rate: 44100,
+            ch_layout: Some(SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe {
+                av_channel_layout_uninit(ptr)
+            })),
+            sample_fmt: AVSampleFormat::AV_SAMPLE_FMT_FLTP,
+            thread_count: Some(4),
+            ..AudioEncoderSettings::default()
+        };
+        let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
+        let encoder_settings = EncoderSettings::Audio(audio_settings);
+        let result = encoder_settings.apply(&mut encoder);
+
+        assert!(result.is_ok(), "Failed to apply audio settings: {:?}", result.err());
+        assert_eq!(encoder.sample_rate, 44100);
+        assert_eq!(encoder.sample_fmt, AVSampleFormat::AV_SAMPLE_FMT_FLTP);
+        assert_eq!(encoder.thread_count, 4);
+    }
+
+    #[test]
+    fn test_encoder_settings_codec_specific_options() {
+        let mut video_codec_options = Dictionary::new();
+        let _ = video_codec_options.set("preset", "fast");
+
+        let video_settings = VideoEncoderSettings {
+            codec_specific_options: Some(video_codec_options.clone()),
+            ..VideoEncoderSettings::default()
+        };
+        let mut encoder_settings = EncoderSettings::Video(video_settings);
+        let options = encoder_settings.codec_specific_options();
+
+        assert!(options.is_some());
+        assert_eq!(options.unwrap().get("preset").as_deref(), Some("fast"));
+
+        let mut audio_codec_options = Dictionary::new();
+        let _ = audio_codec_options.set("bitrate", "128k");
+        let audio_settings = AudioEncoderSettings {
+            codec_specific_options: Some(audio_codec_options.clone()),
+            ..AudioEncoderSettings::default()
+        };
+        let mut encoder_settings = EncoderSettings::Audio(audio_settings);
+        let options = encoder_settings.codec_specific_options();
+
+        assert!(options.is_some());
+        assert_eq!(options.unwrap().get("bitrate").as_deref(), Some("128k"));
+    }
+
+    #[test]
+    fn test_encoder_settings_average_duration_video() {
+        let video_settings = VideoEncoderSettings {
+            width: 1920,
+            height: 1080,
+            frame_rate: 30,
+            ..VideoEncoderSettings::default()
+        };
+        let encoder_settings = EncoderSettings::Video(video_settings);
+        let timebase = AVRational { num: 1, den: 30000 };
+        let expected_duration = (timebase.den as i64) / (30 * timebase.num as i64);
+        let actual_duration = encoder_settings.average_duration(timebase);
+
+        assert_eq!(actual_duration, expected_duration);
+    }
+
+    #[test]
+    fn test_encoder_settings_average_duration_audio() {
+        let audio_settings = AudioEncoderSettings {
+            sample_rate: 44100,
+            ..AudioEncoderSettings::default()
+        };
+        let encoder_settings = EncoderSettings::Audio(audio_settings);
+        let timebase = AVRational { num: 1, den: 44100 };
+        let expected_duration = (timebase.den as i64) / (44100 * timebase.num as i64);
+        let actual_duration = encoder_settings.average_duration(timebase);
+
+        assert_eq!(actual_duration, expected_duration);
+    }
+
+    #[test]
+    fn test_from_video_encoder_settings() {
+        let sample_aspect_ratio = AVRational { num: 1, den: 1 };
+        let video_settings = VideoEncoderSettings {
+            width: 1920,
+            height: 1080,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            sample_aspect_ratio: Some(sample_aspect_ratio),
+            gop_size: Some(12),
+            ..VideoEncoderSettings::default()
+        };
+        let encoder_settings: EncoderSettings = video_settings.into();
+
+        if let EncoderSettings::Video(actual_video_settings) = encoder_settings {
+            assert_eq!(actual_video_settings.width, 1920);
+            assert_eq!(actual_video_settings.height, 1080);
+            assert_eq!(actual_video_settings.frame_rate, 30);
+            assert_eq!(actual_video_settings.pixel_format, AVPixelFormat::AV_PIX_FMT_YUV420P);
+            assert_eq!(actual_video_settings.sample_aspect_ratio, Some(sample_aspect_ratio));
+            assert_eq!(actual_video_settings.gop_size, Some(12));
+        } else {
+            panic!("Expected EncoderSettings::Video variant");
+        }
+    }
+
+    #[test]
+    fn test_from_audio_encoder_settings() {
+        let audio_settings = AudioEncoderSettings {
+            sample_rate: 44100,
+            ch_layout: Some(SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe {
+                av_channel_layout_uninit(ptr)
+            })),
+            sample_fmt: AVSampleFormat::AV_SAMPLE_FMT_FLTP,
+            thread_count: Some(4),
+            ..AudioEncoderSettings::default()
+        };
+        let encoder_settings: EncoderSettings = audio_settings.into();
+
+        if let EncoderSettings::Audio(actual_audio_settings) = encoder_settings {
+            assert_eq!(actual_audio_settings.sample_rate, 44100);
+            assert!(actual_audio_settings.ch_layout.is_some());
+            assert_eq!(actual_audio_settings.sample_fmt, AVSampleFormat::AV_SAMPLE_FMT_FLTP);
+            assert_eq!(actual_audio_settings.thread_count, Some(4));
+        } else {
+            panic!("Expected EncoderSettings::Audio variant");
+        }
+    }
+
+    #[test]
+    fn test_encoder_new_with_null_codec() {
+        let codec = EncoderCodec::from_ptr(std::ptr::null());
+        let data = std::io::Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let mut output = Output::new(data, options).expect("Failed to create Output");
+        let incoming_time_base = AVRational { num: 1, den: 1000 };
+        let outgoing_time_base = AVRational { num: 1, den: 1000 };
+        let settings = VideoEncoderSettings::default();
+        let result = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, settings);
+
+        assert!(matches!(result, Err(FfmpegError::NoEncoder)));
+    }
+
+    #[test]
+    fn test_encoder_new_success() {
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4);
+        assert!(codec.is_some(), "Failed to find MPEG-4 encoder");
+        let data = std::io::Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let mut output = Output::new(data, options).expect("Failed to create Output");
+        let incoming_time_base = AVRational { num: 1, den: 1000 };
+        let outgoing_time_base = AVRational { num: 1, den: 1000 };
+        let settings = VideoEncoderSettings {
+            width: 1920,
+            height: 1080,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            ..VideoEncoderSettings::default()
+        };
+        let result = Encoder::new(codec.unwrap(), &mut output, incoming_time_base, outgoing_time_base, settings);
+
+        assert!(result.is_ok(), "Encoder creation failed: {:?}", result.err());
+
+        let encoder = result.unwrap();
+        assert_eq!(encoder.incoming_time_base.num, 1);
+        assert_eq!(encoder.incoming_time_base.den, 1000);
+        assert_eq!(encoder.outgoing_time_base.num, 1);
+        assert_eq!(encoder.outgoing_time_base.den, 1000);
+        assert_eq!(encoder.stream_index, 0);
+    }
+
+    #[test]
+    fn test_send_eof() {
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
+        let data = std::io::Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let mut output = Output::new(data, options).expect("Failed to create Output");
+        let video_settings = VideoEncoderSettings {
+            width: 640,
+            height: 480,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            ..Default::default()
+        };
+        let mut encoder = Encoder::new(
+            codec,
+            &mut output,
+            AVRational { num: 1, den: 1000 },
+            AVRational { num: 1, den: 1000 },
+            video_settings,
+        )
+        .expect("Failed to create encoder");
+
+        let result = encoder.send_eof();
+        assert!(result.is_ok(), "send_eof returned an error: {:?}", result.err());
+        assert!(encoder.send_eof().is_err(), "send_eof should return an error");
+    }
+
+    #[test]
+    fn test_encoder_getters() {
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
+        let data = std::io::Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let mut output = Output::new(data, options).expect("Failed to create Output");
+        let incoming_time_base = AVRational { num: 1, den: 1000 };
+        let outgoing_time_base = AVRational { num: 1, den: 1000 };
+        let video_settings = VideoEncoderSettings {
+            width: 640,
+            height: 480,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            ..Default::default()
+        };
+        let encoder = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, video_settings)
+            .expect("Failed to create encoder");
+
+        let stream_index = encoder.stream_index();
+        assert_eq!(stream_index, 0, "Unexpected stream index: expected 0, got {}", stream_index);
+
+        let actual_incoming_time_base = encoder.incoming_time_base();
+        assert_eq!(
+            actual_incoming_time_base, incoming_time_base,
+            "Unexpected incoming_time_base: expected {:?}, got {:?}",
+            incoming_time_base, actual_incoming_time_base
+        );
+
+        let actual_outgoing_time_base = encoder.outgoing_time_base();
+        assert_eq!(
+            actual_outgoing_time_base, outgoing_time_base,
+            "Unexpected outgoing_time_base: expected {:?}, got {:?}",
+            outgoing_time_base, actual_outgoing_time_base
+        );
+    }
+
+    #[test]
+    fn test_muxer_settings_default() {
+        let settings = MuxerSettings::default();
+
+        assert!(settings.interleave, "Default interleave should be true");
+        assert!(
+            settings.muxer_options.is_empty(),
+            "Default muxer_options should be an empty dictionary"
+        );
+    }
+
+    #[test]
+    fn test_muxer_settings_builder_custom_values() {
+        let mut custom_options = Dictionary::new();
+        custom_options.set("key1", "value1").unwrap();
+        custom_options.set("key2", "value2").unwrap();
+        let settings = MuxerSettings::builder()
+            .interleave(false)
+            .muxer_options(custom_options.clone())
+            .build();
+
+        assert!(!settings.interleave, "Interleave should be set to false");
+        assert_eq!(
+            settings.muxer_options.get("key1").as_deref(),
+            Some("value1"),
+            "Expected muxer_options to have key1 with value 'value1'"
+        );
+        assert_eq!(
+            settings.muxer_options.get("key2").as_deref(),
+            Some("value2"),
+            "Expected muxer_options to have key2 with value 'value2'"
+        );
+    }
+
+    #[test]
+    fn test_muxer_encoder_new() {
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
+        let data = std::io::Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let output = Output::new(data, options).expect("Failed to create Output");
+        let incoming_time_base = AVRational { num: 1, den: 1000 };
+        let outgoing_time_base = AVRational { num: 1, den: 1000 };
+        let video_settings = VideoEncoderSettings {
+            width: 1920,
+            height: 1080,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            ..Default::default()
+        };
+        let encoder_settings: EncoderSettings = video_settings.into();
+        let mut muxer_options = Dictionary::new();
+        muxer_options.set("option1", "value1").unwrap();
+        muxer_options.set("option2", "value2").unwrap();
+        let muxer_settings = MuxerSettings {
+            interleave: false,
+            muxer_options,
+        };
+        let muxer_encoder = MuxerEncoder::new(
+            codec,
+            output,
+            incoming_time_base,
+            outgoing_time_base,
+            encoder_settings,
+            muxer_settings,
+        );
+
+        assert!(
+            muxer_encoder.is_ok(),
+            "Failed to create MuxerEncoder: {:?}",
+            muxer_encoder.err()
+        );
+        let muxer_encoder = muxer_encoder.unwrap();
+
+        assert!(!muxer_encoder.interleave, "Expected interleave to be false, but it was true");
+        assert_eq!(
+            muxer_encoder.muxer_options.get("option1").as_deref(),
+            Some("value1"),
+            "Expected muxer_options to have 'option1' with value 'value1'"
+        );
+        assert_eq!(
+            muxer_encoder.muxer_options.get("option2").as_deref(),
+            Some("value2"),
+            "Expected muxer_options to have 'option2' with value 'value2'"
+        );
+        assert!(
+            !muxer_encoder.muxer_headers_written,
+            "Expected muxer_headers_written to be false"
+        );
+        assert_eq!(muxer_encoder.previous_dts, -1, "Expected previous_dts to be -1");
+        assert_eq!(muxer_encoder.previous_pts, -1, "Expected previous_pts to be -1");
+        assert!(muxer_encoder.buffered_packet.is_none(), "Expected buffered_packet to be None");
+        assert_eq!(muxer_encoder.stream_index(), 0, "Expected stream index to be 0");
+        assert_eq!(
+            muxer_encoder.incoming_time_base(),
+            incoming_time_base,
+            "Expected incoming_time_base to match"
+        );
+        assert_eq!(
+            muxer_encoder.outgoing_time_base(),
+            outgoing_time_base,
+            "Expected outgoing_time_base to match"
+        );
+    }
+
+    #[test]
+    fn test_muxer_encoder_into_inner() {
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
+        let data = std::io::Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let output = Output::new(data.clone(), options).expect("Failed to create Output");
+        let incoming_time_base = AVRational { num: 1, den: 1000 };
+        let outgoing_time_base = AVRational { num: 1, den: 1000 };
+        let video_settings = VideoEncoderSettings {
+            width: 1920,
+            height: 1080,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            ..Default::default()
+        };
+        let encoder_settings: EncoderSettings = video_settings.into();
+        let muxer_settings = MuxerSettings::default();
+        let muxer_encoder = MuxerEncoder::new(
+            codec,
+            output,
+            incoming_time_base,
+            outgoing_time_base,
+            encoder_settings,
+            muxer_settings,
+        )
+        .expect("Failed to create MuxerEncoder");
+
+        let output = muxer_encoder.into_inner();
+        assert_eq!(
+            output.into_inner(),
+            data,
+            "Expected the inner output data to match the original data"
+        );
+    }
+
+    #[test]
+    fn test_muxer_encoder_deref() {
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
+        let data = std::io::Cursor::new(Vec::new());
+        let options = OutputOptions::default().format_name("mp4");
+        let output = Output::new(data, options).expect("Failed to create Output");
+        let incoming_time_base = AVRational { num: 1, den: 1000 };
+        let outgoing_time_base = AVRational { num: 1, den: 1000 };
+        let video_settings = VideoEncoderSettings {
+            width: 1920,
+            height: 1080,
+            frame_rate: 30,
+            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
+            ..Default::default()
+        };
+        let encoder_settings: EncoderSettings = video_settings.into();
+        let muxer_settings = MuxerSettings::default();
+        let mut muxer_encoder = MuxerEncoder::new(
+            codec,
+            output,
+            incoming_time_base,
+            outgoing_time_base,
+            encoder_settings,
+            muxer_settings,
+        )
+        .expect("Failed to create MuxerEncoder");
+
+        let encoder_ref = &*muxer_encoder;
+        assert_eq!(
+            encoder_ref.stream_index(),
+            0,
+            "Expected stream index to be 0, but got {}",
+            encoder_ref.stream_index()
+        );
+
+        let encoder_mut_ref = &mut *muxer_encoder;
+        encoder_mut_ref.previous_dts = 12345;
+        assert_eq!(
+            encoder_mut_ref.previous_dts, 12345,
+            "Expected previous_dts to be updated to 12345, but got {}",
+            encoder_mut_ref.previous_dts
+        );
     }
 }
