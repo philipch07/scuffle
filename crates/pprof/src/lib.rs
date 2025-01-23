@@ -14,6 +14,15 @@
 //! std::fs::write("capture.pprof", capture).unwrap();
 //! ```
 //!
+//! ## Analyzing the profile
+//!
+//! The resulting profile can be analyzed using the [`pprof`](https://github.com/google/pprof) tool.
+//!
+//! For example, to generate a flamegraph:
+//! ```sh
+//! pprof -svg capture.pprof
+//! ```
+//!
 //! ## Status
 //!
 //! This crate is currently under development and is not yet stable.
