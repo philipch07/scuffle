@@ -16,6 +16,7 @@
 //! You can choose between one of them if you use this work.
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
 
 use std::borrow::Cow;
 use std::path::Path;
@@ -220,4 +221,137 @@ macro_rules! bootstrap {
             }
         }
     };
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use crate::{parse_settings, Cli, Options};
+
+    #[derive(Debug, serde::Deserialize)]
+    struct TestSettings {
+        key: String,
+    }
+
+    #[test]
+    fn parse_empty() {
+        let err = parse_settings::<TestSettings>(Options::default()).expect_err("expected error");
+        assert!(matches!(err, crate::ConfigError::Config(config::ConfigError::Message(_))));
+        assert_eq!(err.to_string(), "missing field `key`");
+    }
+
+    #[test]
+    fn parse_cli() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-o".to_string(), "key=value".to_string()],
+            }),
+            ..Default::default()
+        };
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "value");
+    }
+
+    #[test]
+    fn cli_error() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-o".to_string(), "error".to_string()],
+            }),
+            ..Default::default()
+        };
+        let err = parse_settings::<TestSettings>(options).expect_err("expected error");
+
+        if let crate::ConfigError::Clap(err) = err {
+            assert_eq!(err.to_string(), "error: Override must be in the format KEY=VALUE");
+        } else {
+            panic!("unexpected error: {}", err);
+        }
+    }
+
+    #[test]
+    fn parse_file() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-c".to_string(), "assets/test.toml".to_string()],
+            }),
+            ..Default::default()
+        };
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "filevalue");
+    }
+
+    #[test]
+    fn file_error() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-c".to_string(), "assets/invalid.txt".to_string()],
+            }),
+            ..Default::default()
+        };
+        let err = parse_settings::<TestSettings>(options).expect_err("expected error");
+
+        if let crate::ConfigError::Config(config::ConfigError::FileParse { uri: Some(uri), cause }) = err {
+            assert_eq!(uri, "assets/invalid.txt");
+            assert_eq!(cause.to_string(), "No supported format found for file: Some(\"assets/invalid.txt\")");
+        } else {
+            panic!("unexpected error: {}", err);
+        }
+    }
+
+    #[test]
+    fn parse_env() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec![],
+            }),
+            env_prefix: Some("SETTINGS_PARSE_ENV_TEST"),
+            ..Default::default()
+        };
+        std::env::set_var("SETTINGS_PARSE_ENV_TEST_KEY", "envvalue");
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "envvalue");
+    }
+
+    #[test]
+    fn overrides() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-o".to_string(), "key=value".to_string()],
+            }),
+            env_prefix: Some("SETTINGS_OVERRIDES_TEST"),
+            ..Default::default()
+        };
+        std::env::set_var("SETTINGS_OVERRIDES_TEST_KEY", "envvalue");
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "value");
+    }
 }
