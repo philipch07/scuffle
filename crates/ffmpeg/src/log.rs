@@ -309,7 +309,7 @@ mod tests {
             (LogLevel::Verbose, "trace"),
             (LogLevel::Debug, "debug"),
             (LogLevel::Info, "info"),
-            // (LogLevel::Warning, "warn"), TODO: idk why including this makes it not work
+            (LogLevel::Warning, "warning"),
             (LogLevel::Quiet, "error"),
             (LogLevel::Error, "error"),
             (LogLevel::Panic, "error"),
