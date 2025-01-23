@@ -8,7 +8,7 @@ use crate::PprofError;
 
 /// A CPU profiler.
 ///
-/// Call [`capture`] to capture a pprof profile for the given duration.
+/// Call [`Cpu::capture`] to capture a pprof profile for the given duration.
 pub struct Cpu(pprof::ProfilerGuardBuilder);
 
 impl Cpu {
