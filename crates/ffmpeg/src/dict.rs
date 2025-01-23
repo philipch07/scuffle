@@ -99,6 +99,9 @@ impl Dictionary {
     }
 
     pub fn set(&mut self, key: &str, value: &str) -> Result<(), FfmpegError> {
+        if key.is_empty() {
+            return Err(FfmpegError::Arguments("Keys cannot be empty"));
+        }
         let key = CString::new(key).expect("Failed to convert key to CString");
         let value = CString::new(value).expect("Failed to convert value to CString");
 
@@ -113,6 +116,9 @@ impl Dictionary {
     }
 
     pub fn get(&self, key: &str) -> Option<String> {
+        if key.is_empty() {
+            return None;
+        }
         let key = CString::new(key).expect("Failed to convert key to CString");
 
         // Safety: av_dict_get is safe to call
@@ -211,5 +217,184 @@ impl From<&Dictionary> for HashMap<String, String> {
         dict.into_iter()
             .map(|(key, value)| (key.to_string_lossy().into_owned(), value.to_string_lossy().into_owned()))
             .collect()
+    }
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+
+    use std::collections::HashMap;
+
+    use crate::dict::Dictionary;
+
+    fn sort_hashmap<K: Ord, V>(map: std::collections::HashMap<K, V>) -> std::collections::BTreeMap<K, V> {
+        map.into_iter().collect()
+    }
+
+    #[test]
+    fn test_dict_default_and_items() {
+        let mut dict = Dictionary::default();
+
+        assert!(dict.is_empty(), "Default dictionary should be empty");
+        assert!(dict.as_ptr().is_null(), "Default dictionary pointer should be null");
+
+        dict.set("key1", "value1").expect("Failed to set key1");
+        dict.set("key2", "value2").expect("Failed to set key2");
+        dict.set("key3", "value3").expect("Failed to set key3");
+
+        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
+
+        insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
+        {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_dict_set_empty_key() {
+        let mut dict = Dictionary::new();
+        assert!(dict.set("", "value1").is_err());
+    }
+
+    #[test]
+    fn test_dict_clone_empty() {
+        let empty_dict = Dictionary::new();
+        let cloned_dict = empty_dict.clone();
+
+        assert!(cloned_dict.is_empty(), "Cloned dictionary should be empty");
+        assert!(empty_dict.is_empty(), "Original dictionary should remain empty");
+    }
+
+    #[test]
+    fn test_dict_clone_non_empty() {
+        let mut dict = Dictionary::new();
+        dict.set("key1", "value1").expect("Failed to set key1");
+        dict.set("key2", "value2").expect("Failed to set key2");
+        let mut clone = dict.clone();
+
+        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
+        let clone_hm: std::collections::HashMap<String, String> = HashMap::from(&clone);
+
+        insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
+        {
+            "key1": "value1",
+            "key2": "value2",
+        }
+        "#);
+        insta::assert_debug_snapshot!(sort_hashmap(clone_hm), @r#"
+        {
+            "key1": "value1",
+            "key2": "value2",
+        }
+        "#);
+
+        clone.set("key3", "value3").expect("Failed to set key3 in cloned dictionary");
+
+        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
+        let clone_hm: std::collections::HashMap<String, String> = HashMap::from(&clone);
+        insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
+        {
+            "key1": "value1",
+            "key2": "value2",
+        }
+        "#);
+        insta::assert_debug_snapshot!(sort_hashmap(clone_hm), @r#"
+        {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_dictionary_builder_set_and_build() {
+        let dict = Dictionary::builder()
+            .set("key1", "value1")
+            .set("key2", "value2")
+            .set("key3", "value3")
+            .build();
+
+        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
+        insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
+        {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_dict_get() {
+        let mut dict = Dictionary::new();
+        assert!(
+            dict.get("nonexistent_key").is_none(),
+            "Getting a nonexistent key from an empty dictionary should return None"
+        );
+
+        dict.set("key1", "value1").expect("Failed to set key1");
+        dict.set("key2", "value2").expect("Failed to set key2");
+        assert_eq!(
+            dict.get("key1"),
+            Some("value1".to_string()),
+            "The value for 'key1' should be 'value1'"
+        );
+        assert_eq!(
+            dict.get("key2"),
+            Some("value2".to_string()),
+            "The value for 'key2' should be 'value2'"
+        );
+
+        assert!(dict.get("key3").is_none(), "Getting a nonexistent key should return None");
+
+        dict.set("special_key!", "special_value").expect("Failed to set special_key!");
+        assert_eq!(
+            dict.get("special_key!"),
+            Some("special_value".to_string()),
+            "The value for 'special_key!' should be 'special_value'"
+        );
+
+        dbg!(dict.get(""));
+        assert!(
+            dict.get("").is_none(),
+            "Getting an empty key should return None (empty keys are not allowed)"
+        );
+    }
+
+    #[test]
+    fn test_from_hashmap_for_dictionary() {
+        let mut hash_map = std::collections::HashMap::new();
+        hash_map.insert("key1".to_string(), "value1".to_string());
+        hash_map.insert("key2".to_string(), "value2".to_string());
+        hash_map.insert("key3".to_string(), "value3".to_string());
+        let dict = Dictionary::from(hash_map);
+
+        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
+        insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
+        {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+        }
+        "#);
+
+        let mut hash_map_with_empty = std::collections::HashMap::new();
+        hash_map_with_empty.insert("key1".to_string(), "value1".to_string());
+        hash_map_with_empty.insert("".to_string(), "value2".to_string());
+        hash_map_with_empty.insert("key3".to_string(), "".to_string());
+
+        let dict_with_empty = Dictionary::from(hash_map_with_empty);
+
+        let dict_with_empty_hm: std::collections::HashMap<String, String> = HashMap::from(&dict_with_empty);
+        insta::assert_debug_snapshot!(sort_hashmap(dict_with_empty_hm), @r#"
+        {
+            "key1": "value1",
+        }
+        "#);
     }
 }
