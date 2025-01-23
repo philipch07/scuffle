@@ -311,7 +311,10 @@ mod tests {
 
         if let crate::ConfigError::Config(config::ConfigError::FileParse { uri: Some(uri), cause }) = err {
             assert_eq!(uri, "assets/invalid.txt");
-            assert_eq!(cause.to_string(), "No supported format found for file: Some(\"assets/invalid.txt\")");
+            assert_eq!(
+                cause.to_string(),
+                "No supported format found for file: Some(\"assets/invalid.txt\")"
+            );
         } else {
             panic!("unexpected error: {}", err);
         }
