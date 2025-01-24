@@ -10,6 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "Tools for managing configuration from environment variables or config files."
 keywords = ["settings", "configuration", "environment", "config"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [dependencies]
 config = { version = "0.14", default-features = false }
 clap = { version = "4", optional = true }

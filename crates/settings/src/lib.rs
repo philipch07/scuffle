@@ -1,56 +1,142 @@
+//! A crate designed to provide a simple interface to load and manage settings.
+//!
+//! This crate is a wrapper around the `config` crate and `clap` crate
+//! to provide a simple interface to load and manage settings.
+//!
+//! ## How to use this
+//!
+//! ### With `scuffle_bootstrap`
+//!
+//! ```rust
+//! // Define a config struct like this
+//! // You can use all of the serde attributes to customize the deserialization
+//! #[derive(serde::Deserialize)]
+//! struct MyConfig {
+//!     some_setting: String,
+//!     #[serde(default)]
+//!     some_other_setting: i32,
+//! }
+//!
+//! // Implement scuffle_boostrap::ConfigParser for the config struct like this
+//! scuffle_settings::bootstrap!(MyConfig);
+//!
+//! # use std::sync::Arc;
+//! /// Our global state
+//! struct Global;
+//!
+//! impl scuffle_bootstrap::global::Global for Global {
+//!     type Config = MyConfig;
+//!
+//!     async fn init(config: MyConfig) -> anyhow::Result<Arc<Self>> {
+//!         // Here you now have access to the config
+//!         Ok(Arc::new(Self))
+//!     }
+//! }
+//! ```
+//!
+//! ### Without `scuffle_bootstrap`
+//!
+//! ```rust
+//! # fn test() -> Result<(), scuffle_settings::SettingsError> {
+//! // Define a config struct like this
+//! // You can use all of the serde attributes to customize the deserialization
+//! #[derive(serde::Deserialize)]
+//! struct MyConfig {
+//!     some_setting: String,
+//!     #[serde(default)]
+//!     some_other_setting: i32,
+//! }
+//!
+//! // Parsing options
+//! let options = scuffle_settings::Options {
+//!     env_prefix: Some("MY_APP"),
+//!     ..Default::default()
+//! };
+//! // Parse the settings
+//! let settings: MyConfig = scuffle_settings::parse_settings(options)?;
+//! # Ok(())
+//! # }
+//! # std::env::set_var("MY_APP_SOME_SETTING", "value");
+//! # test().unwrap();
+//! ```
+//!
+//! See [`Options`] for more information on how to customize parsing.
+//!
+//! ## Templates
+//!
+//! If the `templates` feature is enabled, the parser will attempt to render
+//! the configuration file as a jinja template before processing it.
+//!
+//! All environment variables set during execution will be available under
+//! the `env` variable inside the file.
+//!
+//! Example TOML file:
+//!
+//! ```toml
+//! some_setting = "${{ env.MY_APP_SECRET }}"
+//! ```
+//!
+//! Use `${{` and `}}` for variables, `{%` and `%}` for blocks and `{#` and `#}` for comments.
+//!
+//! ## Command Line Interface
+//!
+//! The following options are available for the CLI:
+//!
+//! - `--config` or `-c`
+//!
+//!   Path to a configuration file. This option can be used multiple times to load multiple files.
+//! - `--override` or `-o`
+//!
+//!   Provide an override for a configuration value, in the format `KEY=VALUE`.
+//!
+//! ## Feature Flags
+//!
+//! - `full`: Enables all of the following features
+//! - `templates`: Enables template support
+//!
+//!   See [Templates](#templates) above.
+//! - `bootstrap`: Enables the `bootstrap!` macro
+//!
+//!   See [`bootstrap!`] and [With `scuffle_bootstrap`](#with-scuffle_bootstrap) above.
+//! - `cli`: Enables the CLI
+//!
+//!   See [Command Line Interface](#command-line-interface) above.
+//! - `all-formats`: Enables all of the following formats
+//!
+//! ### Format Feature Flags
+//!
+//! - `toml`: Enables TOML support
+//! - `yaml`: Enables YAML support
+//! - `json`: Enables JSON support
+//! - `json5`: Enables JSON5 support
+//! - `ron`: Enables RON support
+//! - `ini`: Enables INI support
+//!
+//! ## Status
+//!
+//! This crate is currently under development and is not yet stable.
+//!
+//! Unit tests are not yet fully implemented. Use at your own risk.
+//!
+//! ## License
+//!
+//! This project is licensed under the [MIT](./LICENSE.MIT) or [Apache-2.0](./LICENSE.Apache-2.0) license.
+//! You can choose between one of them if you use this work.
+//!
+//! `SPDX-License-Identifier: MIT OR Apache-2.0`
+#![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
+
+use std::borrow::Cow;
 use std::path::Path;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    #[error(transparent)]
-    Config(#[from] config::ConfigError),
-    #[cfg(feature = "cli")]
-    #[error(transparent)]
-    Clap(#[from] clap::Error),
-}
+use config::FileStoredFormat;
 
-/// A struct used to define how the CLI should be generated
-#[derive(Debug, Clone)]
-pub struct Cli {
-    /// The name of the program
-    pub name: &'static str,
+mod options;
 
-    /// The version of the program
-    pub version: &'static str,
-
-    /// The about of the program
-    pub about: &'static str,
-
-    /// The author of the program
-    pub author: &'static str,
-
-    /// The arguments to add to the CLI
-    pub argv: Vec<String>,
-}
-
-/// A macro to create a CLI struct
-/// This macro will automatically set the name, version, about, and author from
-/// the environment variables at compile time
-#[macro_export]
-macro_rules! cli {
-    () => {
-        $crate::cli!(std::env::args().collect())
-    };
-    ($args:expr) => {
-        $crate::Cli {
-            name: env!("CARGO_BIN_NAME"),
-            version: env!("CARGO_PKG_VERSION"),
-            about: env!("CARGO_PKG_DESCRIPTION"),
-            author: env!("CARGO_PKG_AUTHORS"),
-            argv: $args,
-        }
-    };
-}
+pub use options::*;
 
 #[derive(Debug, Clone, Copy)]
 struct FormatWrapper;
-
-use std::borrow::Cow;
 
 #[cfg(not(feature = "templates"))]
 fn template_text<'a>(
@@ -88,79 +174,37 @@ impl config::Format for FormatWrapper {
         uri: Option<&String>,
         text: &str,
     ) -> Result<config::Map<String, config::Value>, Box<dyn std::error::Error + Send + Sync>> {
-        match uri.and_then(|s| Path::new(s.as_str()).extension()).and_then(|s| s.to_str()) {
+        let uri_ext = uri.and_then(|s| Path::new(s.as_str()).extension()).and_then(|s| s.to_str());
+
+        let mut formats: Vec<config::FileFormat> = vec![
             #[cfg(feature = "toml")]
-            Some("toml") => config::FileFormat::Toml.parse(uri, template_text(text, &config::FileFormat::Toml)?.as_ref()),
-            #[cfg(not(feature = "toml"))]
-            Some("toml") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "toml support is not enabled, consider building with the `toml` feature enabled",
-            ))),
+            config::FileFormat::Toml,
             #[cfg(feature = "json")]
-            Some("json") => config::FileFormat::Json.parse(uri, template_text(text, &config::FileFormat::Json)?.as_ref()),
-            #[cfg(not(feature = "json"))]
-            Some("json") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "json support is not enabled, consider building with the `json` feature enabled",
-            ))),
+            config::FileFormat::Json,
             #[cfg(feature = "yaml")]
-            Some("yaml") | Some("yml") => {
-                config::FileFormat::Yaml.parse(uri, template_text(text, &config::FileFormat::Yaml)?.as_ref())
-            }
-            #[cfg(not(feature = "yaml"))]
-            Some("yaml") | Some("yml") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "yaml support is not enabled, consider building with the `yaml` feature enabled",
-            ))),
+            config::FileFormat::Yaml,
             #[cfg(feature = "json5")]
-            Some("json5") => config::FileFormat::Json5.parse(uri, template_text(text, &config::FileFormat::Json5)?.as_ref()),
-            #[cfg(not(feature = "json5"))]
-            Some("json5") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "json5 support is not enabled, consider building with the `json5` feature enabled",
-            ))),
+            config::FileFormat::Json5,
             #[cfg(feature = "ini")]
-            Some("ini") => config::FileFormat::Ini.parse(uri, template_text(text, &config::FileFormat::Ini)?.as_ref()),
-            #[cfg(not(feature = "ini"))]
-            Some("ini") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "ini support is not enabled, consider building with the `ini` feature enabled",
-            ))),
+            config::FileFormat::Ini,
             #[cfg(feature = "ron")]
-            Some("ron") => config::FileFormat::Ron.parse(uri, template_text(text, &config::FileFormat::Ron)?.as_ref()),
-            #[cfg(not(feature = "ron"))]
-            Some("ron") => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "ron support is not enabled, consider building with the `ron` feature enabled",
-            ))),
-            _ => {
-                let formats: &[config::FileFormat] = &[
-                    #[cfg(feature = "toml")]
-                    config::FileFormat::Toml,
-                    #[cfg(feature = "json")]
-                    config::FileFormat::Json,
-                    #[cfg(feature = "yaml")]
-                    config::FileFormat::Yaml,
-                    #[cfg(feature = "json5")]
-                    config::FileFormat::Json5,
-                    #[cfg(feature = "ini")]
-                    config::FileFormat::Ini,
-                    #[cfg(feature = "ron")]
-                    config::FileFormat::Ron,
-                ];
+            config::FileFormat::Ron,
+        ];
 
-                for format in formats {
-                    if let Ok(map) = format.parse(uri, template_text(text, format)?.as_ref()) {
-                        return Ok(map);
-                    }
-                }
+        if let Some(uri_ext) = uri_ext {
+            formats.sort_by_key(|f| if f.file_extensions().contains(&uri_ext) { 0 } else { 1 });
+        }
 
-                Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    format!("No supported format found for file: {:?}", uri),
-                )))
+        for format in formats {
+            if let Ok(map) = format.parse(uri, template_text(text, &format)?.as_ref()) {
+                return Ok(map);
             }
         }
+
+        Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("No supported format found for file: {:?}", uri),
+        )))
     }
 }
 
@@ -185,29 +229,20 @@ impl config::FileStoredFormat for FormatWrapper {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Options {
-    /// The CLI options
+/// An error that can occur when parsing settings.
+#[derive(Debug, thiserror::Error)]
+pub enum SettingsError {
+    #[error(transparent)]
+    Config(#[from] config::ConfigError),
     #[cfg(feature = "cli")]
-    pub cli: Option<Cli>,
-    /// The default config file name (loaded if no other files are specified)
-    pub default_config_file: Option<&'static str>,
-    /// Environment variables prefix
-    pub env_prefix: Option<&'static str>,
+    #[error(transparent)]
+    Clap(#[from] clap::Error),
 }
 
-impl Default for Options {
-    fn default() -> Self {
-        Self {
-            #[cfg(feature = "cli")]
-            cli: None,
-            default_config_file: Some("config"),
-            env_prefix: Some("APP"),
-        }
-    }
-}
-
-pub fn parse_settings<T: serde::de::DeserializeOwned>(options: Options) -> Result<T, ConfigError> {
+/// Parse settings using the given options.
+///
+/// Refer to the [`Options`] struct for more information on how to customize parsing.
+pub fn parse_settings<T: serde::de::DeserializeOwned>(options: Options) -> Result<T, SettingsError> {
     let mut config = config::Config::builder();
 
     #[allow(unused_mut)]
@@ -279,9 +314,19 @@ pub mod macros {
     pub use {anyhow, scuffle_bootstrap};
 }
 
-/// A macro to create a config parser from a CLI struct
-/// This macro will automatically parse the CLI struct into the given type
-/// using the `scuffle-settings` crate
+/// This macro can be used to integrate with the [`scuffle_bootstrap`] ecosystem.
+///
+/// This macro will implement the [`scuffle_bootstrap::config::ConfigParser`] trait for the given type.
+/// The generated implementation uses the [`parse_settings`] function to parse the settings.
+///
+/// ## Example
+///
+/// ```rust
+/// #[derive(serde::Deserialize)]
+/// struct MySettings {
+///     key: String,
+/// }
+/// ```
 #[cfg(feature = "bootstrap")]
 #[macro_export]
 macro_rules! bootstrap {
@@ -298,4 +343,158 @@ macro_rules! bootstrap {
             }
         }
     };
+}
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use crate::{parse_settings, Cli, Options};
+
+    #[derive(Debug, serde::Deserialize)]
+    struct TestSettings {
+        key: String,
+    }
+
+    #[test]
+    fn parse_empty() {
+        let err = parse_settings::<TestSettings>(Options::default()).expect_err("expected error");
+        assert!(matches!(err, crate::SettingsError::Config(config::ConfigError::Message(_))));
+        assert_eq!(err.to_string(), "missing field `key`");
+    }
+
+    #[test]
+    fn parse_cli() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-o".to_string(), "key=value".to_string()],
+            }),
+            ..Default::default()
+        };
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "value");
+    }
+
+    #[test]
+    fn cli_error() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-o".to_string(), "error".to_string()],
+            }),
+            ..Default::default()
+        };
+        let err = parse_settings::<TestSettings>(options).expect_err("expected error");
+
+        if let crate::SettingsError::Clap(err) = err {
+            assert_eq!(err.to_string(), "error: Override must be in the format KEY=VALUE");
+        } else {
+            panic!("unexpected error: {}", err);
+        }
+    }
+
+    #[test]
+    fn parse_file() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-c".to_string(), "assets/test.toml".to_string()],
+            }),
+            ..Default::default()
+        };
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "filevalue");
+    }
+
+    #[test]
+    fn file_error() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-c".to_string(), "assets/invalid.txt".to_string()],
+            }),
+            ..Default::default()
+        };
+        let err = parse_settings::<TestSettings>(options).expect_err("expected error");
+
+        if let crate::SettingsError::Config(config::ConfigError::FileParse { uri: Some(uri), cause }) = err {
+            assert_eq!(uri, "assets/invalid.txt");
+            assert_eq!(
+                cause.to_string(),
+                "No supported format found for file: Some(\"assets/invalid.txt\")"
+            );
+        } else {
+            panic!("unexpected error: {}", err);
+        }
+    }
+
+    #[test]
+    fn parse_env() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec![],
+            }),
+            env_prefix: Some("SETTINGS_PARSE_ENV_TEST"),
+            ..Default::default()
+        };
+        std::env::set_var("SETTINGS_PARSE_ENV_TEST_KEY", "envvalue");
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "envvalue");
+    }
+
+    #[test]
+    fn overrides() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-o".to_string(), "key=value".to_string()],
+            }),
+            env_prefix: Some("SETTINGS_OVERRIDES_TEST"),
+            ..Default::default()
+        };
+        std::env::set_var("SETTINGS_OVERRIDES_TEST_KEY", "envvalue");
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "value");
+    }
+
+    #[test]
+    fn templates() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-c".to_string(), "assets/templates.toml".to_string()],
+            }),
+            ..Default::default()
+        };
+        std::env::set_var("SETTINGS_TEMPLATES_TEST", "templatevalue");
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
+
+        assert_eq!(settings.key, "templatevalue");
+    }
 }
