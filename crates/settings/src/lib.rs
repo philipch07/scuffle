@@ -1,8 +1,116 @@
-//! A crate designed to provide a simple interface to load and manage settings for Scuffle.
+//! A crate designed to provide a simple interface to load and manage settings.
 //!
-//! ## Why do we need this?
+//! This crate is a wrapper around the `config` crate and `clap` crate
+//! to provide a simple interface to load and manage settings.
 //!
-//! TODO(troy): Add more details about why we need this.
+//! ## How to use this
+//!
+//! ### With `scuffle_bootstrap`
+//!
+//! ```rust
+//! // Define a config struct like this
+//! // You can use all of the serde attributes to customize the deserialization
+//! #[derive(serde::Deserialize)]
+//! struct MyConfig {
+//!     some_setting: String,
+//!     #[serde(default)]
+//!     some_other_setting: i32,
+//! }
+//!
+//! // Implement scuffle_boostrap::ConfigParser for the config struct like this
+//! scuffle_settings::bootstrap!(MyConfig);
+//!
+//! # use std::sync::Arc;
+//! /// Our global state
+//! struct Global;
+//!
+//! impl scuffle_bootstrap::global::Global for Global {
+//!     type Config = MyConfig;
+//!
+//!     async fn init(config: MyConfig) -> anyhow::Result<Arc<Self>> {
+//!         // Here you now have access to the config
+//!         Ok(Arc::new(Self))
+//!     }
+//! }
+//! ```
+//!
+//! ### Without `scuffle_bootstrap`
+//!
+//! ```rust
+//! # fn test() -> Result<(), scuffle_settings::SettingsError> {
+//! // Define a config struct like this
+//! // You can use all of the serde attributes to customize the deserialization
+//! #[derive(serde::Deserialize)]
+//! struct MyConfig {
+//!     some_setting: String,
+//!     #[serde(default)]
+//!     some_other_setting: i32,
+//! }
+//!
+//! // Parsing options
+//! let options = scuffle_settings::Options {
+//!     env_prefix: Some("MY_APP"),
+//!     ..Default::default()
+//! };
+//! // Parse the settings
+//! let settings: MyConfig = scuffle_settings::parse_settings(options)?;
+//! # Ok(())
+//! # }
+//! # std::env::set_var("MY_APP_SOME_SETTING", "value");
+//! # test().unwrap();
+//! ```
+//!
+//! See [`Options`] for more information on how to customize parsing.
+//!
+//! ## Templates
+//!
+//! If the `templates` feature is enabled, the parser will attempt to render
+//! the configuration file as a jinja template before processing it.
+//!
+//! All environment variables set during execution will be available under
+//! the `env` variable inside the file.
+//!
+//! Example TOML file:
+//!
+//! ```toml
+//! some_setting = "{{ env.MY_APP_SECRET }}"
+//! ```
+//!
+//! Use `{{` and `}}` for variables, `{%` and `%}` for blocks and `{#` and `#}` for comments.
+//!
+//! ## Command Line Interface
+//!
+//! The following options are available for the CLI:
+//!
+//! - `--config` or `-c`
+//!
+//!   Path to a configuration file. This option can be used multiple times to load multiple files.
+//! - `--override` or `-o`
+//!
+//!   Provide an override for a configuration value, in the format `KEY=VALUE`.
+//!
+//! ## Feature Flags
+//!
+//! - `full`: Enables all of the following features
+//! - `templates`: Enables template support
+//!
+//!   See [Templates](#templates) above.
+//! - `bootstrap`: Enables the `bootstrap!` macro
+//!
+//!   See [`bootstrap!`] and [With `scuffle_bootstrap`](#with-scuffle_bootstrap) above.
+//! - `cli`: Enables the CLI
+//!
+//!   See [Command Line Interface](#command-line-interface) above.
+//! - `all-formats`: Enables all of the following formats
+//!
+//! ### Format Feature Flags
+//!
+//! - `toml`: Enables TOML support
+//! - `yaml`: Enables YAML support
+//! - `json`: Enables JSON support
+//! - `json5`: Enables JSON5 support
+//! - `ron`: Enables RON support
+//! - `ini`: Enables INI support
 //!
 //! ## Status
 //!
@@ -26,15 +134,6 @@ use config::FileStoredFormat;
 mod options;
 
 pub use options::*;
-
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    #[error(transparent)]
-    Config(#[from] config::ConfigError),
-    #[cfg(feature = "cli")]
-    #[error(transparent)]
-    Clap(#[from] clap::Error),
-}
 
 #[derive(Debug, Clone, Copy)]
 struct FormatWrapper;
@@ -130,7 +229,20 @@ impl config::FileStoredFormat for FormatWrapper {
     }
 }
 
-pub fn parse_settings<T: serde::de::DeserializeOwned>(options: Options) -> Result<T, ConfigError> {
+/// An error that can occur when parsing settings.
+#[derive(Debug, thiserror::Error)]
+pub enum SettingsError {
+    #[error(transparent)]
+    Config(#[from] config::ConfigError),
+    #[cfg(feature = "cli")]
+    #[error(transparent)]
+    Clap(#[from] clap::Error),
+}
+
+/// Parse settings using the given options.
+///
+/// Refer to the [`Options`] struct for more information on how to customize parsing.
+pub fn parse_settings<T: serde::de::DeserializeOwned>(options: Options) -> Result<T, SettingsError> {
     let mut config = config::Config::builder();
 
     #[allow(unused_mut)]
@@ -202,9 +314,19 @@ pub mod macros {
     pub use {anyhow, scuffle_bootstrap};
 }
 
-/// A macro to create a config parser from a CLI struct
-/// This macro will automatically parse the CLI struct into the given type
-/// using the `scuffle-settings` crate
+/// This macro can be used to integrate with the [`scuffle_bootstrap`] ecosystem.
+///
+/// This macro will implement the [`scuffle_bootstrap::config::ConfigParser`] trait for the given type.
+/// The generated implementation uses the [`parse_settings`] function to parse the settings.
+///
+/// ## Example
+///
+/// ```rust
+/// #[derive(serde::Deserialize)]
+/// struct MySettings {
+///     key: String,
+/// }
+/// ```
 #[cfg(feature = "bootstrap")]
 #[macro_export]
 macro_rules! bootstrap {
@@ -236,7 +358,7 @@ mod tests {
     #[test]
     fn parse_empty() {
         let err = parse_settings::<TestSettings>(Options::default()).expect_err("expected error");
-        assert!(matches!(err, crate::ConfigError::Config(config::ConfigError::Message(_))));
+        assert!(matches!(err, crate::SettingsError::Config(config::ConfigError::Message(_))));
         assert_eq!(err.to_string(), "missing field `key`");
     }
 
@@ -271,7 +393,7 @@ mod tests {
         };
         let err = parse_settings::<TestSettings>(options).expect_err("expected error");
 
-        if let crate::ConfigError::Clap(err) = err {
+        if let crate::SettingsError::Clap(err) = err {
             assert_eq!(err.to_string(), "error: Override must be in the format KEY=VALUE");
         } else {
             panic!("unexpected error: {}", err);
@@ -309,7 +431,7 @@ mod tests {
         };
         let err = parse_settings::<TestSettings>(options).expect_err("expected error");
 
-        if let crate::ConfigError::Config(config::ConfigError::FileParse { uri: Some(uri), cause }) = err {
+        if let crate::SettingsError::Config(config::ConfigError::FileParse { uri: Some(uri), cause }) = err {
             assert_eq!(uri, "assets/invalid.txt");
             assert_eq!(
                 cause.to_string(),
@@ -356,5 +478,10 @@ mod tests {
         let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
 
         assert_eq!(settings.key, "value");
+    }
+
+    #[test]
+    fn templates() {
+
     }
 }
