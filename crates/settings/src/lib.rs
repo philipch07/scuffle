@@ -73,10 +73,10 @@
 //! Example TOML file:
 //!
 //! ```toml
-//! some_setting = "{{ env.MY_APP_SECRET }}"
+//! some_setting = "${{ env.MY_APP_SECRET }}"
 //! ```
 //!
-//! Use `{{` and `}}` for variables, `{%` and `%}` for blocks and `{#` and `#}` for comments.
+//! Use `${{` and `}}` for variables, `{%` and `%}` for blocks and `{#` and `#}` for comments.
 //!
 //! ## Command Line Interface
 //!
@@ -482,6 +482,19 @@ mod tests {
 
     #[test]
     fn templates() {
+        let options = Options {
+            cli: Some(Cli {
+                name: "test",
+                version: "0.1.0",
+                about: "test",
+                author: "test",
+                argv: vec!["test".to_string(), "-c".to_string(), "assets/templates.toml".to_string()],
+            }),
+            ..Default::default()
+        };
+        std::env::set_var("SETTINGS_TEMPLATES_TEST", "templatevalue");
+        let settings: TestSettings = parse_settings(options).expect("failed to parse settings");
 
+        assert_eq!(settings.key, "templatevalue");
     }
 }
