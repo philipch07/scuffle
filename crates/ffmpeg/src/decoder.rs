@@ -422,8 +422,8 @@ mod tests {
 
         let decoder = decoder_result.unwrap();
         if let Decoder::Video(video_decoder) = decoder {
-            assert!(video_decoder.width() > 0, "Expected valid width for video stream");
-            assert!(video_decoder.height() > 0, "Expected valid height for video stream");
+            assert_eq!(video_decoder.width(), 3840, "Expected valid width for video stream");
+            assert_eq!(video_decoder.height(), 2160, "Expected valid height for video stream");
         } else {
             panic!("Expected a video decoder, but got a different type");
         }
