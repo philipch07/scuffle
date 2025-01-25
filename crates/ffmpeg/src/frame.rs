@@ -270,7 +270,7 @@ mod tests {
     use crate::frame::Frame;
 
     #[test]
-    fn test_frame_clone_snapshot() {
+    fn test_frame_clone() {
         let mut frame = Frame::new().expect("Failed to create frame");
         frame.set_format(AV_PIX_FMT_YUV420P as i32);
 
@@ -280,6 +280,9 @@ mod tests {
             (*av_frame).height = 16;
 
             assert!(av_frame_get_buffer(av_frame, 32) >= 0, "Failed to allocate buffer for frame.");
+
+            let buf_size = (*av_frame).linesize[0] * (*av_frame).height;
+            assert_eq!(buf_size, 512, "Allocated buffer size should match.");
         }
 
         frame.set_pts(Some(12));
