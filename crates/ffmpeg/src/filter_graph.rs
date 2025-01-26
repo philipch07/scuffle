@@ -503,14 +503,14 @@ mod tests {
         audio_frame.set_nb_samples(1024);
         audio_frame.set_sample_rate(44100);
 
-        unsafe {
-            let av_frame = audio_frame.as_mut_ptr();
-            ffmpeg_sys_next::av_channel_layout_default(&mut (*av_frame).ch_layout, 2);
-            assert!(
-                ffmpeg_sys_next::av_frame_get_buffer(av_frame, 0) >= 0,
-                "Failed to allocate buffer for the frame"
-            );
-        }
+        assert!(
+            audio_frame.set_channel_layout_default(2).is_ok(),
+            "Failed to set default channel layout"
+        );
+        assert!(
+            audio_frame.alloc_frame_buffer(None).is_ok(),
+            "Failed to allocate frame buffer"
+        );
 
         let mut source_context = filter_graph
             .get(source_context_name)
