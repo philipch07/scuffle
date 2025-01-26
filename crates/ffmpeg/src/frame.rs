@@ -549,7 +549,10 @@ mod tests {
         let frame = Frame::new().expect("Failed to create frame");
         let mut audio_frame = frame.audio();
 
-        assert!(audio_frame.set_channel_layout_default(usize::MAX).is_err(), "Expected error for invalid channel count.");
+        assert!(
+            audio_frame.set_channel_layout_default(usize::MAX).is_err(),
+            "Expected error for invalid channel count."
+        );
     }
 
     #[test]
@@ -565,7 +568,10 @@ mod tests {
             opaque: std::ptr::null_mut(),
         };
 
-        assert!(audio_frame.set_channel_layout_custom(custom_layout).is_err(), "Expected error for invalid custom channel layout");
+        assert!(
+            audio_frame.set_channel_layout_custom(custom_layout).is_err(),
+            "Expected error for invalid custom channel layout"
+        );
     }
 
     #[test]
@@ -581,13 +587,13 @@ mod tests {
             opaque: std::ptr::null_mut(),
         };
 
-        assert!(audio_frame.set_channel_layout_custom(custom_layout).is_ok(), "Failed to set custom channel layout");
+        assert!(
+            audio_frame.set_channel_layout_custom(custom_layout).is_ok(),
+            "Failed to set custom channel layout"
+        );
 
         let layout = audio_frame.channel_layout();
-        assert_eq!(
-            layout.nb_channels, 2,
-            "Expected channel layout to have 2 channels (stereo)."
-        );
+        assert_eq!(layout.nb_channels, 2, "Expected channel layout to have 2 channels (stereo).");
         assert_eq!(
             unsafe { layout.u.mask },
             ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
@@ -608,7 +614,10 @@ mod tests {
         audio_frame.set_nb_samples(1024);
         audio_frame.set_sample_rate(44100);
 
-        assert!(audio_frame.set_channel_layout_default(2).is_ok(), "Failed to set default channel layout");
+        assert!(
+            audio_frame.set_channel_layout_default(2).is_ok(),
+            "Failed to set default channel layout"
+        );
         assert!(
             audio_frame.alloc_frame_buffer(None).is_ok(),
             "Failed to allocate buffer with no alignment (should default to 0)"
@@ -634,10 +643,22 @@ mod tests {
         let mut audio_frame = frame.audio();
         audio_frame.set_nb_samples(1024);
 
-        assert!(audio_frame.alloc_frame_buffer(None).is_err(), "Should fail to allocate buffer with invalid frame and None alignment");
-        assert!(audio_frame.alloc_frame_buffer(Some(0)).is_err(), "Should fail to allocate buffer with invalid frame and 0 alignment");
-        assert!(audio_frame.alloc_frame_buffer(Some(32)).is_err(), "Should fail to allocate buffer with invalid frame and positive alignment");
-        assert!(audio_frame.alloc_frame_buffer(Some(-1)).is_err(), "Should fail to allocate buffer with invalid frame and negative alignment");
+        assert!(
+            audio_frame.alloc_frame_buffer(None).is_err(),
+            "Should fail to allocate buffer with invalid frame and None alignment"
+        );
+        assert!(
+            audio_frame.alloc_frame_buffer(Some(0)).is_err(),
+            "Should fail to allocate buffer with invalid frame and 0 alignment"
+        );
+        assert!(
+            audio_frame.alloc_frame_buffer(Some(32)).is_err(),
+            "Should fail to allocate buffer with invalid frame and positive alignment"
+        );
+        assert!(
+            audio_frame.alloc_frame_buffer(Some(-1)).is_err(),
+            "Should fail to allocate buffer with invalid frame and negative alignment"
+        );
     }
 
     #[test]
@@ -680,7 +701,10 @@ mod tests {
         audio_frame.set_duration(Some(512));
         audio_frame.set_time_base(AVRational { num: 1, den: 44100 });
 
-        assert!(audio_frame.set_channel_layout_default(2).is_ok(), "Failed to set default channel layout");
+        assert!(
+            audio_frame.set_channel_layout_default(2).is_ok(),
+            "Failed to set default channel layout"
+        );
         assert_debug_snapshot!(audio_frame, @r"
         AudioFrame {
             channel_count: 2,
