@@ -38,6 +38,17 @@ impl Frame {
         ))
     }
 
+    pub fn alloc_frame_buffer(&mut self, alignment: Option<i32>) -> Result<(), FfmpegError> {
+        unsafe {
+            let av_frame = self.as_mut_ptr();
+            let ret = ffmpeg_sys_next::av_frame_get_buffer(av_frame, alignment.unwrap_or(0));
+            if ret < 0 {
+                return Err(FfmpegError::Code(ret.into()));
+            }
+        }
+        Ok(())
+    }
+
     pub fn as_ptr(&self) -> *const AVFrame {
         self.0.as_ptr()
     }
@@ -210,6 +221,43 @@ impl std::ops::DerefMut for VideoFrame {
 }
 
 impl AudioFrame {
+    // Sets channel layout to default with a channel count of `channel_count`.
+    pub fn set_channel_layout_default(&mut self, channel_count: usize) -> Result<(), FfmpegError> {
+        unsafe {
+            let av_frame = self.as_mut_ptr();
+            ffmpeg_sys_next::av_channel_layout_default(&mut (*av_frame).ch_layout, channel_count as i32);
+
+            // returns 0 if the channel layout is invalid
+            if ffmpeg_sys_next::av_channel_layout_check(&(*av_frame).ch_layout) == 0 {
+                return Err(FfmpegError::Arguments("Invalid default channel layout."));
+            }
+        }
+        Ok(())
+    }
+
+    // Sets channel layout to a custom layout. Note that the channel count
+    // is defined by the given `ffmpeg_sys_next::AVChannelLayout`.
+    pub fn set_channel_layout_custom(&mut self, custom_layout: ffmpeg_sys_next::AVChannelLayout) -> Result<(), FfmpegError> {
+        unsafe {
+            let av_frame = self.as_mut_ptr();
+            (*av_frame).ch_layout = custom_layout;
+
+            // returns 0 if the channel layout is invalid
+            if ffmpeg_sys_next::av_channel_layout_check(&(*av_frame).ch_layout) == 0 {
+                return Err(FfmpegError::Arguments("Invalid default channel layout."));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn channel_layout(&self) -> ffmpeg_sys_next::AVChannelLayout {
+        self.0 .0.as_deref_except().ch_layout
+    }
+
+    pub fn channel_count(&self) -> usize {
+        self.0 .0.as_deref_except().ch_layout.nb_channels as usize
+    }
+
     pub fn nb_samples(&self) -> i32 {
         self.0 .0.as_deref_except().nb_samples
     }
@@ -230,6 +278,7 @@ impl AudioFrame {
 impl std::fmt::Debug for AudioFrame {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AudioFrame")
+            .field("channel_count", &self.channel_count())
             .field("nb_samples", &self.nb_samples())
             .field("sample_rate", &self.sample_rate())
             .field("pts", &self.pts())
@@ -263,7 +312,7 @@ impl std::ops::DerefMut for AudioFrame {
 mod tests {
     use ffmpeg_sys_next::AVPixelFormat::AV_PIX_FMT_YUV420P;
     use ffmpeg_sys_next::AVSampleFormat::AV_SAMPLE_FMT_S16;
-    use ffmpeg_sys_next::{av_channel_layout_default, av_frame_get_buffer, AVRational, AV_PIX_FMT_RGB32};
+    use ffmpeg_sys_next::{av_frame_get_buffer, AVRational, AV_PIX_FMT_RGB32};
     use insta::assert_debug_snapshot;
     use rand::{thread_rng, Rng};
 
@@ -302,13 +351,10 @@ mod tests {
 
     #[test]
     fn test_audio_conversion() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        let av_frame = frame.as_mut_ptr();
-        unsafe {
-            av_channel_layout_default(&mut (*av_frame).ch_layout, 2);
-        }
-        let audio_frame = frame.audio();
+        let frame = Frame::new().expect("Failed to create frame");
+        let mut audio_frame = frame.audio();
 
+        assert!(audio_frame.set_channel_layout_default(2).is_ok());
         assert!(audio_frame.is_audio(), "The frame should be identified as audio.");
         assert!(!audio_frame.is_video(), "The frame should not be identified as video.");
     }
@@ -499,6 +545,102 @@ mod tests {
     }
 
     #[test]
+    fn test_set_channel_layout_default_invalid_count_error() {
+        let frame = Frame::new().expect("Failed to create frame");
+        let mut audio_frame = frame.audio();
+
+        assert!(audio_frame.set_channel_layout_default(usize::MAX).is_err(), "Expected error for invalid channel count.");
+    }
+
+    #[test]
+    fn test_set_channel_layout_custom_invalid_layout_error() {
+        let frame = Frame::new().expect("Failed to create frame");
+        let mut audio_frame = frame.audio();
+        let custom_layout = ffmpeg_sys_next::AVChannelLayout {
+            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+            nb_channels: -1,
+            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
+                mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
+            },
+            opaque: std::ptr::null_mut(),
+        };
+
+        assert!(audio_frame.set_channel_layout_custom(custom_layout).is_err(), "Expected error for invalid custom channel layout");
+    }
+
+    #[test]
+    fn test_set_channel_layout_custom() {
+        let frame = Frame::new().expect("Failed to create frame");
+        let mut audio_frame = frame.audio();
+        let custom_layout = ffmpeg_sys_next::AVChannelLayout {
+            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+            nb_channels: 2,
+            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
+                mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
+            },
+            opaque: std::ptr::null_mut(),
+        };
+
+        assert!(audio_frame.set_channel_layout_custom(custom_layout).is_ok(), "Failed to set custom channel layout");
+
+        let layout = audio_frame.channel_layout();
+        assert_eq!(
+            layout.nb_channels, 2,
+            "Expected channel layout to have 2 channels (stereo)."
+        );
+        assert_eq!(
+            unsafe { layout.u.mask },
+            ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
+            "Expected channel mask to match AV_CH_LAYOUT_STEREO."
+        );
+        assert_eq!(
+            layout.order,
+            ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+            "Expected channel order to be AV_CHANNEL_ORDER_NATIVE."
+        );
+    }
+
+    #[test]
+    fn test_alloc_frame_buffer() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut audio_frame = frame.audio();
+        audio_frame.set_nb_samples(1024);
+        audio_frame.set_sample_rate(44100);
+
+        assert!(audio_frame.set_channel_layout_default(2).is_ok(), "Failed to set default channel layout");
+        assert!(
+            audio_frame.alloc_frame_buffer(None).is_ok(),
+            "Failed to allocate buffer with no alignment (should default to 0)"
+        );
+        assert!(
+            audio_frame.alloc_frame_buffer(Some(0)).is_ok(),
+            "Failed to allocate buffer with None alignment"
+        );
+        assert!(
+            audio_frame.alloc_frame_buffer(Some(32)).is_ok(),
+            "Failed to allocate buffer with positive alignment"
+        );
+        assert!(
+            audio_frame.alloc_frame_buffer(Some(-1)).is_ok(),
+            "Failed to allocate buffer with negative alignment"
+        );
+    }
+
+    #[test]
+    fn test_alloc_frame_buffer_error() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut audio_frame = frame.audio();
+        audio_frame.set_nb_samples(1024);
+
+        assert!(audio_frame.alloc_frame_buffer(None).is_err(), "Should fail to allocate buffer with invalid frame and None alignment");
+        assert!(audio_frame.alloc_frame_buffer(Some(0)).is_err(), "Should fail to allocate buffer with invalid frame and 0 alignment");
+        assert!(audio_frame.alloc_frame_buffer(Some(32)).is_err(), "Should fail to allocate buffer with invalid frame and positive alignment");
+        assert!(audio_frame.alloc_frame_buffer(Some(-1)).is_err(), "Should fail to allocate buffer with invalid frame and negative alignment");
+    }
+
+    #[test]
     fn test_nb_samples() {
         let mut frame = Frame::new().expect("Failed to create frame");
         frame.set_format(AV_SAMPLE_FMT_S16 as i32);
@@ -526,44 +668,44 @@ mod tests {
         );
     }
 
-    // TODO: test fails; is_audio() should return true.
-    // #[test]
-    // fn test_audio_frame_debug() {
-    //     let mut frame = Frame::new().expect("Failed to create frame");
-    //     frame.set_format(AV_SAMPLE_FMT_S16 as i32);
-    //     let mut audio_frame = frame.audio();
-    //     audio_frame.set_nb_samples(1024);
-    //     audio_frame.set_sample_rate(44100);
+    #[test]
+    fn test_audio_frame_debug() {
+        let mut frame = Frame::new().expect("Failed to create frame");
+        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut audio_frame = frame.audio();
+        audio_frame.set_nb_samples(1024);
+        audio_frame.set_sample_rate(44100);
+        audio_frame.set_pts(Some(12345));
+        audio_frame.set_dts(Some(67890));
+        audio_frame.set_duration(Some(512));
+        audio_frame.set_time_base(AVRational { num: 1, den: 44100 });
 
-    //     audio_frame.set_pts(Some(12345));
-    //     audio_frame.set_dts(Some(67890));
-    //     audio_frame.set_duration(Some(512));
-    //     audio_frame.set_time_base(AVRational { num: 1, den: 44100 });
-
-    //     assert_debug_snapshot!(audio_frame, @r"
-    //     AudioFrame {
-    //         nb_samples: 1024,
-    //         sample_rate: 44100,
-    //         pts: Some(
-    //             12345,
-    //         ),
-    //         dts: Some(
-    //             67890,
-    //         ),
-    //         duration: Some(
-    //             512,
-    //         ),
-    //         best_effort_timestamp: Some(
-    //             12345,
-    //         ),
-    //         time_base: AVRational {
-    //             num: 1,
-    //             den: 44100,
-    //         },
-    //         format: 1,
-    //         is_audio: true,
-    //         is_video: false,
-    //     }
-    //     ");
-    // }
+        assert!(audio_frame.set_channel_layout_default(2).is_ok(), "Failed to set default channel layout");
+        assert_debug_snapshot!(audio_frame, @r"
+        AudioFrame {
+            channel_count: 2,
+            nb_samples: 1024,
+            sample_rate: 44100,
+            pts: Some(
+                12345,
+            ),
+            dts: Some(
+                67890,
+            ),
+            duration: Some(
+                512,
+            ),
+            best_effort_timestamp: Some(
+                12345,
+            ),
+            time_base: AVRational {
+                num: 1,
+                den: 44100,
+            },
+            format: 1,
+            is_audio: true,
+            is_video: false,
+        }
+        ");
+    }
 }
