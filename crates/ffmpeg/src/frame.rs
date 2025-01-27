@@ -39,6 +39,12 @@ impl Frame {
     }
 
     pub fn alloc_frame_buffer(&mut self, alignment: Option<i32>) -> Result<(), FfmpegError> {
+        // Safety: `self.as_mut_ptr()` is assumed to provide a valid mutable pointer to an
+        // `AVFrame` structure. The `av_frame_get_buffer` function from FFMPEG allocates
+        // and attaches a buffer to the `AVFrame` if it doesn't already exist.
+        // It is the caller's responsibility to ensure that `self` is properly initialized
+        // and represents a valid `AVFrame` instance.
+
         unsafe {
             let av_frame = self.as_mut_ptr();
             let ret = ffmpeg_sys_next::av_frame_get_buffer(av_frame, alignment.unwrap_or(0));
@@ -223,6 +229,10 @@ impl std::ops::DerefMut for VideoFrame {
 impl AudioFrame {
     // Sets channel layout to default with a channel count of `channel_count`.
     pub fn set_channel_layout_default(&mut self, channel_count: usize) -> Result<(), FfmpegError> {
+        // Safety: `self.as_mut_ptr()` should return a valid mutable pointer to the internal
+        // `AVFrame` structure. This block modifies the `ch_layout` field of the `AVFrame`
+        // using FFMPEG's `av_channel_layout_default` function, which is expected to be safe
+        // as long as the provided `channel_count` is valid and within acceptable ranges.
         unsafe {
             let av_frame = self.as_mut_ptr();
             ffmpeg_sys_next::av_channel_layout_default(&mut (*av_frame).ch_layout, channel_count as i32);
@@ -238,6 +248,10 @@ impl AudioFrame {
     // Sets channel layout to a custom layout. Note that the channel count
     // is defined by the given `ffmpeg_sys_next::AVChannelLayout`.
     pub fn set_channel_layout_custom(&mut self, custom_layout: ffmpeg_sys_next::AVChannelLayout) -> Result<(), FfmpegError> {
+        // Safety: `self.as_mut_ptr()` is assumed to return a valid mutable pointer to the internal
+        // `AVFrame` structure. This block directly assigns a custom channel layout to the
+        // `ch_layout` field. It is the caller's responsibility to ensure that the custom
+        // layout is valid and properly initialized.
         unsafe {
             let av_frame = self.as_mut_ptr();
             (*av_frame).ch_layout = custom_layout;
