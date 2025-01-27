@@ -23,6 +23,7 @@ arc-swap = { version = "1.7" }
 ffmpeg-sys-next = { version = "7.1.0" }
 scuffle-workspace-hack.workspace = true
 rand = "0.8"
+bon = "3.3.2"
 
 [dev-dependencies]
 insta = {version = "1.42", features = ["filters"]}

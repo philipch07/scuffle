@@ -294,70 +294,33 @@ impl VideoEncoderSettings {
     }
 }
 
+#[derive(bon::Builder)]
 pub struct AudioEncoderSettings {
-    sample_rate: i32,
-    ch_layout: Option<SmartObject<AVChannelLayout>>,
-    sample_fmt: AVSampleFormat,
-    thread_count: Option<i32>,
-    thread_type: Option<i32>,
-    bitrate: Option<i64>,
-    buffer_size: Option<i64>,
-    rc_min_rate: Option<i64>,
-    rc_max_rate: Option<i64>,
-    rc_buffer_size: Option<i32>,
-    codec_specific_options: Option<Dictionary>,
-    flags: Option<i32>,
-    flags2: Option<i32>,
-}
-
-impl Default for AudioEncoderSettings {
-    fn default() -> Self {
-        Self {
-            sample_rate: 0,
-            ch_layout: None,
-            sample_fmt: AVSampleFormat::AV_SAMPLE_FMT_NONE,
-            thread_count: None,
-            thread_type: None,
-            bitrate: None,
-            buffer_size: None,
-            rc_min_rate: None,
-            rc_max_rate: None,
-            rc_buffer_size: None,
-            codec_specific_options: None,
-            flags: None,
-            flags2: None,
-        }
-    }
+    pub sample_rate: i32,
+    #[builder(setters(vis = "", name = ch_layout_internal))]
+    pub ch_layout: SmartObject<AVChannelLayout>,
+    pub sample_fmt: AVSampleFormat,
+    pub thread_count: Option<i32>,
+    pub thread_type: Option<i32>,
+    pub bitrate: Option<i64>,
+    pub rc_min_rate: Option<i64>,
+    pub rc_max_rate: Option<i64>,
+    pub rc_buffer_size: Option<i32>,
+    pub codec_specific_options: Option<Dictionary>,
+    pub flags: Option<i32>,
+    pub flags2: Option<i32>,
 }
 
 impl AudioEncoderSettings {
-    pub fn new() -> Self {
-        Self {
-            sample_rate: 0,
-            ch_layout: None,
-            sample_fmt: AVSampleFormat::AV_SAMPLE_FMT_NONE,
-            thread_count: None,
-            thread_type: None,
-            bitrate: None,
-            buffer_size: None,
-            rc_min_rate: None,
-            rc_max_rate: None,
-            rc_buffer_size: None,
-            codec_specific_options: None,
-            flags: None,
-            flags2: None,
-        }
-    }
-
     fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
-        if self.sample_rate <= 0 || self.ch_layout.is_none() || self.sample_fmt == AVSampleFormat::AV_SAMPLE_FMT_NONE {
+        if self.sample_rate <= 0 || self.sample_fmt == AVSampleFormat::AV_SAMPLE_FMT_NONE {
             return Err(FfmpegError::Arguments(
                 "sample_rate, channel_layout and sample_fmt must be set",
             ));
         }
 
         encoder.sample_rate = self.sample_rate;
-        encoder.ch_layout = self.ch_layout.unwrap().into_inner();
+        encoder.ch_layout = self.ch_layout.into_inner();
         encoder.sample_fmt = self.sample_fmt;
         encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
         encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);
@@ -378,32 +341,22 @@ impl AudioEncoderSettings {
 
         (timebase.den as i64) / (self.sample_rate as i64 * timebase.num as i64)
     }
+}
 
-    pub fn sample_rate(&self) -> i32 {
-        self.sample_rate
-    }
-
-    pub fn set_sample_rate(&mut self, sample_rate: i32) -> &mut Self{
-        self.sample_rate = sample_rate;
-        self
-    }
-
-    pub fn channel_count(&self) -> i32 {
-        self.ch_layout.as_ref().map(|ch_layout| ch_layout.nb_channels).unwrap_or(0)
-    }
-
-    pub fn set_channel_count(&mut self, channel_count: i32) -> &mut Self {
+impl<S: audio_encoder_settings_builder::State> AudioEncoderSettingsBuilder<S> {
+    pub fn channel_count(self, channel_count: i32) -> AudioEncoderSettingsBuilder<audio_encoder_settings_builder::SetChLayout<S>>
+    where
+        S::ChLayout: audio_encoder_settings_builder::IsUnset
+    {
         let mut ch_layout = SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe { av_channel_layout_uninit(ptr) });
         unsafe { av_channel_layout_default(ch_layout.as_mut(), channel_count) };
-        self.ch_layout = Some(ch_layout);
-        self
+        self.ch_layout_internal(ch_layout)
     }
 
-    pub fn ch_layout(&self) -> Option<SmartObject<AVChannelLayout>> {
-        self.ch_layout.clone()
-    }
-
-    pub fn set_ch_layout(&mut self, custom_layout: AVChannelLayout) -> Result<&mut Self, FfmpegError> {
+    pub fn ch_layout(self, custom_layout: AVChannelLayout) -> Result<AudioEncoderSettingsBuilder<audio_encoder_settings_builder::SetChLayout<S>>, FfmpegError>
+    where
+        S::ChLayout: audio_encoder_settings_builder::IsUnset
+    {
         let smart_object = SmartObject::new(custom_layout, |ptr| unsafe { ffmpeg_sys_next::av_channel_layout_uninit(ptr) });
 
         unsafe {
@@ -412,107 +365,7 @@ impl AudioEncoderSettings {
             }
         }
 
-        self.ch_layout = Some(smart_object);
-        Ok(self)
-    }
-
-    pub fn sample_fmt(&self) -> AVSampleFormat {
-        self.sample_fmt
-    }
-
-    pub fn set_sample_fmt(&mut self, sample_fmt: AVSampleFormat) -> &mut Self{
-        self.sample_fmt = sample_fmt;
-        self
-    }
-
-    pub fn thread_count(&self) -> Option<i32> {
-        self.thread_count
-    }
-
-    pub fn set_thread_count(&mut self, thread_count: i32) -> &mut Self{
-        self.thread_count = Some(thread_count);
-        self
-    }
-
-    pub fn thread_type(&self) -> Option<i32> {
-        self.thread_type
-    }
-
-    pub fn set_thread_type(&mut self, thread_type: i32) -> &mut Self{
-        self.thread_type = Some(thread_type);
-        self
-    }
-
-    pub fn bitrate(&self) -> Option<i64> {
-        self.bitrate
-    }
-
-    pub fn set_bitrate(&mut self, bitrate: i64) -> &mut Self{
-        self.bitrate = Some(bitrate);
-        self
-    }
-
-    pub fn buffer_size(&self) -> Option<i64> {
-        self.buffer_size
-    }
-
-    pub fn set_buffer_size(&mut self, buffer_size: i64) -> &mut Self{
-        self.buffer_size = Some(buffer_size);
-        self
-    }
-
-    pub fn rc_min_rate(&self) -> Option<i64> {
-        self.rc_min_rate
-    }
-
-    pub fn set_rc_min_rate(&mut self, rc_min_rate: i64) -> &mut Self{
-        self.rc_min_rate = Some(rc_min_rate);
-        self
-    }
-
-    pub fn rc_max_rate(&self) -> Option<i64> {
-        self.rc_max_rate
-    }
-
-    pub fn set_rc_max_rate(&mut self, rc_max_rate: i64) -> &mut Self{
-        self.rc_max_rate = Some(rc_max_rate);
-        self
-    }
-
-    pub fn rc_buffer_size(&self) -> Option<i32> {
-        self.rc_buffer_size
-    }
-
-    pub fn set_rc_buffer_size(&mut self, rc_buffer_size: i32) -> &mut Self{
-        self.rc_buffer_size = Some(rc_buffer_size);
-        self
-    }
-
-    pub fn codec_specific_options(&self) -> Option<&Dictionary> {
-        self.codec_specific_options.as_ref()
-    }
-
-    pub fn set_codec_specific_options(&mut self, codec_specific_options: Dictionary) -> &mut Self{
-        self.codec_specific_options = Some(codec_specific_options);
-        self
-    }
-
-    pub fn flags(&self) -> Option<i32> {
-        self.flags
-    }
-
-    pub fn set_flags(&mut self, flags: i32) -> &mut Self{
-        self.flags = Some(flags);
-        self
-    }
-
-    pub fn flags2(&self) -> Option<i32> {
-        self.flags2
-    }
-
-    pub fn set_flags2(&mut self, flags2: i32) -> &mut Self{
-        self.flags2 = Some(flags2);
-        self
+        Ok(self.ch_layout_internal(smart_object))
     }
 }
 
@@ -888,8 +741,7 @@ impl<T: Send + Sync> std::ops::DerefMut for MuxerEncoder<T> {
 mod tests {
     use ffmpeg_sys_next::AVCodecID::AV_CODEC_ID_MPEG4;
     use ffmpeg_sys_next::{
-        av_channel_layout_uninit, AVChannelLayout, AVChannelOrder, AVCodecContext, AVPixelFormat, AVRational,
-        AVSampleFormat, AV_CH_LAYOUT_STEREO,
+        AVCodecContext, AVPixelFormat, AVRational, AVSampleFormat,
     };
 
     use crate::codec::EncoderCodec;
@@ -899,7 +751,6 @@ mod tests {
     };
     use crate::error::FfmpegError;
     use crate::io::{Output, OutputOptions};
-    use crate::smart_object::SmartObject;
 
     #[test]
     fn test_video_encoder_settings_default() {
@@ -1072,24 +923,6 @@ mod tests {
     }
 
     #[test]
-    fn test_audio_encoder_settings_default() {
-        let default_settings = AudioEncoderSettings::default();
-        assert_eq!(default_settings.sample_rate(), 0);
-        assert!(default_settings.ch_layout().is_none());
-        assert_eq!(default_settings.sample_fmt(), AVSampleFormat::AV_SAMPLE_FMT_NONE);
-        assert!(default_settings.thread_count().is_none());
-        assert!(default_settings.thread_type().is_none());
-        assert!(default_settings.bitrate().is_none());
-        assert!(default_settings.buffer_size().is_none());
-        assert!(default_settings.rc_min_rate().is_none());
-        assert!(default_settings.rc_max_rate().is_none());
-        assert!(default_settings.rc_buffer_size().is_none());
-        assert!(default_settings.codec_specific_options().is_none());
-        assert!(default_settings.flags().is_none());
-        assert!(default_settings.flags2().is_none());
-    }
-
-    #[test]
     fn test_audio_encoder_get_set_apply() {
         let sample_rate = 44100;
         let channel_count = 2;
@@ -1097,7 +930,6 @@ mod tests {
         let thread_count = 4;
         let thread_type = 1;
         let bitrate = 128_000;
-        let buffer_size = 64 * 1024;
         let rc_min_rate = 64_000;
         let rc_max_rate = 256_000;
         let rc_buffer_size = 1024;
@@ -1107,103 +939,58 @@ mod tests {
         let mut codec_specific_options = Dictionary::new();
         let _ = codec_specific_options.set("profile", "high");
 
-        let mut settings = AudioEncoderSettings::new();
-        settings.set_sample_rate(sample_rate);
-        settings.set_channel_count(channel_count);
-        settings.set_sample_fmt(sample_fmt);
-        settings.set_thread_count(thread_count);
-        settings.set_thread_type(thread_type);
-        settings.set_bitrate(bitrate);
-        settings.set_buffer_size(buffer_size);
-        settings.set_rc_min_rate(rc_min_rate);
-        settings.set_rc_max_rate(rc_max_rate);
-        settings.set_rc_buffer_size(rc_buffer_size);
-        settings.set_codec_specific_options(codec_specific_options);
-        settings.set_flags(flags);
-        settings.set_flags2(flags2);
+        let settings = AudioEncoderSettings::builder()
+            .sample_rate(sample_rate)
+            .channel_count(channel_count)
+            .sample_fmt(sample_fmt)
+            .thread_count(thread_count)
+            .thread_type(thread_type)
+            .bitrate(bitrate)
+            .rc_min_rate(rc_min_rate)
+            .rc_max_rate(rc_max_rate)
+            .rc_buffer_size(rc_buffer_size)
+            .codec_specific_options(codec_specific_options)
+            .flags(flags)
+            .flags2(flags2)
+            .build();
 
-        assert_eq!(settings.sample_rate(), sample_rate);
-        assert_eq!(settings.channel_count(), 2);
-        assert!(settings.ch_layout().is_some());
-        assert_eq!(settings.sample_fmt(), sample_fmt);
-        assert_eq!(settings.thread_count(), Some(thread_count));
-        assert_eq!(settings.thread_type(), Some(thread_type));
-        assert_eq!(settings.bitrate(), Some(bitrate));
-        assert_eq!(settings.buffer_size(), Some(buffer_size));
-        assert_eq!(settings.rc_min_rate(), Some(rc_min_rate));
-        assert_eq!(settings.rc_max_rate(), Some(rc_max_rate));
-        assert_eq!(settings.rc_buffer_size(), Some(rc_buffer_size));
-        assert!(settings.codec_specific_options().is_some());
+        assert_eq!(settings.sample_rate, sample_rate);
+        assert_eq!(settings.ch_layout.nb_channels, 2);
+        assert_eq!(settings.sample_fmt, sample_fmt);
+        assert_eq!(settings.thread_count, Some(thread_count));
+        assert_eq!(settings.thread_type, Some(thread_type));
+        assert_eq!(settings.bitrate, Some(bitrate));
+        assert_eq!(settings.rc_min_rate, Some(rc_min_rate));
+        assert_eq!(settings.rc_max_rate, Some(rc_max_rate));
+        assert_eq!(settings.rc_buffer_size, Some(rc_buffer_size));
+        assert!(settings.codec_specific_options.is_some());
 
-        let actual_codec_specific_options = settings.codec_specific_options().unwrap();
+        let actual_codec_specific_options = settings.codec_specific_options.unwrap();
         assert_eq!(actual_codec_specific_options.get("profile").as_deref(), Some("high"));
 
-        assert_eq!(settings.flags(), Some(flags));
-        assert_eq!(settings.flags2(), Some(flags2));
-
-        let custom_layout = AVChannelLayout {
-            order: AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
-            nb_channels: 2,
-            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
-                mask: AV_CH_LAYOUT_STEREO,
-            },
-            opaque: std::ptr::null_mut(),
-        };
-
-        assert!(
-            settings.set_ch_layout(custom_layout).is_ok(),
-            "Failed to set custom channel layout"
-        );
-        let layout = settings.ch_layout().expect("Expected ch_layout to be set.");
-        assert_eq!(layout.nb_channels, 2, "Expected channel layout to have 2 channels.");
-        assert_eq!(
-            unsafe { layout.u.mask },
-            AV_CH_LAYOUT_STEREO,
-            "Expected channel mask to match AV_CH_LAYOUT_STEREO."
-        );
-        assert_eq!(
-            layout.order,
-            AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
-            "Expected channel order to be AV_CHANNEL_ORDER_NATIVE."
-        );
-        assert_eq!(settings.channel_count(), 2, "Expected channel_count to return 2.");
-
-        let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
-        let result = settings.apply(&mut encoder);
-
-        assert!(result.is_ok(), "Failed to apply settings: {:?}", result.err());
-        assert_eq!(encoder.sample_rate, sample_rate);
-        assert_eq!(encoder.ch_layout.nb_channels, channel_count);
-        assert_eq!(encoder.sample_fmt, sample_fmt);
-        assert_eq!(encoder.thread_count, thread_count);
-        assert_eq!(encoder.thread_type, thread_type);
-        assert_eq!(encoder.bit_rate, bitrate);
-        assert_eq!(encoder.rc_min_rate, rc_min_rate);
-        assert_eq!(encoder.rc_max_rate, rc_max_rate);
-        assert_eq!(encoder.rc_buffer_size, rc_buffer_size);
-        assert_eq!(encoder.flags, flags);
-        assert_eq!(encoder.flags2, flags2);
+        assert_eq!(settings.flags, Some(flags));
+        assert_eq!(settings.flags2, Some(flags2));
     }
 
     #[test]
     fn test_set_ch_layout_invalid_layout() {
-        let mut settings = AudioEncoderSettings::new();
-        let invalid_layout = ffmpeg_sys_next::AVChannelLayout {
-            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
-            nb_channels: 0,
-            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
-            opaque: std::ptr::null_mut(),
-        };
+        let result = AudioEncoderSettings::builder()
+            .ch_layout(ffmpeg_sys_next::AVChannelLayout {
+                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
+                nb_channels: 0,
+                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
+                opaque: std::ptr::null_mut(),
+            });
 
         assert!(
-            settings.set_ch_layout(invalid_layout).is_err(),
+            result.is_err(),
             "Expected an error for invalid channel layout."
         );
     }
 
     #[test]
     fn test_audio_encoder_settings_apply_error() {
-        let settings = AudioEncoderSettings::default();
+        let settings = AudioEncoderSettings::builder().sample_rate(0).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_NONE).channel_count(2).build();
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let result = settings.apply(&mut encoder);
 
@@ -1218,10 +1005,7 @@ mod tests {
     fn test_average_duration() {
         let sample_rate = 48000;
         let timebase = AVRational { num: 1, den: 48000 };
-        let settings = AudioEncoderSettings {
-            sample_rate,
-            ..AudioEncoderSettings::default()
-        };
+        let settings = AudioEncoderSettings::builder().sample_rate(sample_rate).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP).channel_count(2).build();
         let expected_duration = 1;
         let actual_duration = settings.average_duration(timebase);
 
@@ -1232,10 +1016,7 @@ mod tests {
     fn test_average_duration_with_zero_sample_rate() {
         let sample_rate = 0;
         let timebase = AVRational { num: 1, den: 48000 };
-        let settings = AudioEncoderSettings {
-            sample_rate,
-            ..AudioEncoderSettings::default()
-        };
+        let settings = AudioEncoderSettings::builder().sample_rate(sample_rate).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP).channel_count(2).build();
         let actual_duration = settings.average_duration(timebase);
 
         assert_eq!(actual_duration, 0);
@@ -1245,10 +1026,7 @@ mod tests {
     fn test_average_duration_with_custom_timebase() {
         let sample_rate = 96000;
         let timebase = AVRational { num: 1, den: 96000 };
-        let settings = AudioEncoderSettings {
-            sample_rate,
-            ..AudioEncoderSettings::default()
-        };
+        let settings = AudioEncoderSettings::builder().sample_rate(sample_rate).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP).channel_count(2).build();
         let expected_duration = 1;
         let actual_duration = settings.average_duration(timebase);
 
@@ -1281,15 +1059,7 @@ mod tests {
 
     #[test]
     fn test_encoder_settings_apply_audio() {
-        let audio_settings = AudioEncoderSettings {
-            sample_rate: 44100,
-            ch_layout: Some(SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe {
-                av_channel_layout_uninit(ptr)
-            })),
-            sample_fmt: AVSampleFormat::AV_SAMPLE_FMT_FLTP,
-            thread_count: Some(4),
-            ..AudioEncoderSettings::default()
-        };
+        let audio_settings = AudioEncoderSettings::builder().sample_rate(44100).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP).channel_count(2).thread_count(4).build();
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let encoder_settings = EncoderSettings::Audio(audio_settings);
         let result = encoder_settings.apply(&mut encoder);
@@ -1317,10 +1087,7 @@ mod tests {
 
         let mut audio_codec_options = Dictionary::new();
         let _ = audio_codec_options.set("bitrate", "128k");
-        let audio_settings = AudioEncoderSettings {
-            codec_specific_options: Some(audio_codec_options.clone()),
-            ..AudioEncoderSettings::default()
-        };
+        let audio_settings = AudioEncoderSettings::builder().sample_rate(44100).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP).channel_count(2).thread_count(4).codec_specific_options(audio_codec_options).build();
         let mut encoder_settings = EncoderSettings::Audio(audio_settings);
         let options = encoder_settings.codec_specific_options();
 
@@ -1346,10 +1113,7 @@ mod tests {
 
     #[test]
     fn test_encoder_settings_average_duration_audio() {
-        let audio_settings = AudioEncoderSettings {
-            sample_rate: 44100,
-            ..AudioEncoderSettings::default()
-        };
+        let audio_settings = AudioEncoderSettings::builder().sample_rate(44100).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP).channel_count(2).thread_count(4).build();
         let encoder_settings = EncoderSettings::Audio(audio_settings);
         let timebase = AVRational { num: 1, den: 44100 };
         let expected_duration = (timebase.den as i64) / (44100 * timebase.num as i64);
@@ -1386,22 +1150,13 @@ mod tests {
 
     #[test]
     fn test_from_audio_encoder_settings() {
-        let audio_settings = AudioEncoderSettings {
-            sample_rate: 44100,
-            ch_layout: Some(SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe {
-                av_channel_layout_uninit(ptr)
-            })),
-            sample_fmt: AVSampleFormat::AV_SAMPLE_FMT_FLTP,
-            thread_count: Some(4),
-            ..AudioEncoderSettings::default()
-        };
+        let audio_settings = AudioEncoderSettings::builder().sample_rate(44100).sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP).channel_count(2).thread_count(4).build();
         let encoder_settings: EncoderSettings = audio_settings.into();
 
         if let EncoderSettings::Audio(actual_audio_settings) = encoder_settings {
-            assert_eq!(actual_audio_settings.sample_rate(), 44100);
-            assert!(actual_audio_settings.ch_layout.is_some());
-            assert_eq!(actual_audio_settings.sample_fmt(), AVSampleFormat::AV_SAMPLE_FMT_FLTP);
-            assert_eq!(actual_audio_settings.thread_count(), Some(4));
+            assert_eq!(actual_audio_settings.sample_rate, 44100);
+            assert_eq!(actual_audio_settings.sample_fmt, AVSampleFormat::AV_SAMPLE_FMT_FLTP);
+            assert_eq!(actual_audio_settings.thread_count, Some(4));
         } else {
             panic!("Expected EncoderSettings::Audio variant");
         }
