@@ -135,144 +135,162 @@ impl VideoEncoderSettings {
         self.width
     }
 
-    pub fn set_width(&mut self, width: i32) {
+    pub fn set_width(&mut self, width: i32) -> &mut Self {
         self.width = width;
+        self
     }
 
     pub fn height(&self) -> i32 {
         self.height
     }
 
-    pub fn set_height(&mut self, height: i32) {
+    pub fn set_height(&mut self, height: i32) -> &mut Self {
         self.height = height;
+        self
     }
 
     pub fn frame_rate(&self) -> i32 {
         self.frame_rate
     }
 
-    pub fn set_frame_rate(&mut self, frame_rate: i32) {
+    pub fn set_frame_rate(&mut self, frame_rate: i32) -> &mut Self {
         self.frame_rate = frame_rate;
+        self
     }
 
     pub fn pixel_format(&self) -> AVPixelFormat {
         self.pixel_format
     }
 
-    pub fn set_pixel_format(&mut self, pixel_format: AVPixelFormat) {
+    pub fn set_pixel_format(&mut self, pixel_format: AVPixelFormat) -> &mut Self {
         self.pixel_format = pixel_format;
+        self
     }
 
     pub fn gop_size(&self) -> Option<i32> {
         self.gop_size
     }
 
-    pub fn set_gop_size(&mut self, gop_size: i32) {
+    pub fn set_gop_size(&mut self, gop_size: i32) -> &mut Self {
         self.gop_size = Some(gop_size);
+        self
     }
 
     pub fn qmax(&self) -> Option<i32> {
         self.qmax
     }
 
-    pub fn set_qmax(&mut self, qmax: i32) {
+    pub fn set_qmax(&mut self, qmax: i32) -> &mut Self {
         self.qmax = Some(qmax);
+        self
     }
 
     pub fn qmin(&self) -> Option<i32> {
         self.qmin
     }
 
-    pub fn set_qmin(&mut self, qmin: i32) {
+    pub fn set_qmin(&mut self, qmin: i32) -> &mut Self {
         self.qmin = Some(qmin);
+        self
     }
 
     pub fn thread_count(&self) -> Option<i32> {
         self.thread_count
     }
 
-    pub fn set_thread_count(&mut self, thread_count: i32) {
+    pub fn set_thread_count(&mut self, thread_count: i32) -> &mut Self {
         self.thread_count = Some(thread_count);
+        self
     }
 
     pub fn thread_type(&self) -> Option<i32> {
         self.thread_type
     }
 
-    pub fn set_thread_type(&mut self, thread_type: i32) {
+    pub fn set_thread_type(&mut self, thread_type: i32) -> &mut Self {
         self.thread_type = Some(thread_type);
+        self
     }
 
     pub fn sample_aspect_ratio(&self) -> Option<AVRational> {
         self.sample_aspect_ratio
     }
 
-    pub fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
+    pub fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) -> &mut Self {
         self.sample_aspect_ratio = Some(sample_aspect_ratio);
+        self
     }
 
     pub fn bitrate(&self) -> Option<i64> {
         self.bitrate
     }
 
-    pub fn set_bitrate(&mut self, bitrate: i64) {
+    pub fn set_bitrate(&mut self, bitrate: i64) -> &mut Self {
         self.bitrate = Some(bitrate);
+        self
     }
 
     pub fn rc_min_rate(&self) -> Option<i64> {
         self.rc_min_rate
     }
 
-    pub fn set_rc_min_rate(&mut self, rc_min_rate: i64) {
+    pub fn set_rc_min_rate(&mut self, rc_min_rate: i64) -> &mut Self {
         self.rc_min_rate = Some(rc_min_rate);
+        self
     }
 
     pub fn rc_max_rate(&self) -> Option<i64> {
         self.rc_max_rate
     }
 
-    pub fn set_rc_max_rate(&mut self, rc_max_rate: i64) {
+    pub fn set_rc_max_rate(&mut self, rc_max_rate: i64) -> &mut Self {
         self.rc_max_rate = Some(rc_max_rate);
+        self
     }
 
     pub fn rc_buffer_size(&self) -> Option<i32> {
         self.rc_buffer_size
     }
 
-    pub fn set_rc_buffer_size(&mut self, rc_buffer_size: i32) {
+    pub fn set_rc_buffer_size(&mut self, rc_buffer_size: i32) -> &mut Self {
         self.rc_buffer_size = Some(rc_buffer_size);
+        self
     }
 
     pub fn max_b_frames(&self) -> Option<i32> {
         self.max_b_frames
     }
 
-    pub fn set_max_b_frames(&mut self, max_b_frames: i32) {
+    pub fn set_max_b_frames(&mut self, max_b_frames: i32) -> &mut Self {
         self.max_b_frames = Some(max_b_frames);
+        self
     }
 
     pub fn codec_specific_options(&self) -> Option<&Dictionary> {
         self.codec_specific_options.as_ref()
     }
 
-    pub fn set_codec_specific_options(&mut self, codec_specific_options: Dictionary) {
+    pub fn set_codec_specific_options(&mut self, codec_specific_options: Dictionary) -> &mut Self {
         self.codec_specific_options = Some(codec_specific_options);
+        self
     }
 
     pub fn flags(&self) -> Option<i32> {
         self.flags
     }
 
-    pub fn set_flags(&mut self, flags: i32) {
+    pub fn set_flags(&mut self, flags: i32) -> &mut Self {
         self.flags = Some(flags);
+        self
     }
 
     pub fn flags2(&self) -> Option<i32> {
         self.flags2
     }
 
-    pub fn set_flags2(&mut self, flags2: i32) {
+    pub fn set_flags2(&mut self, flags2: i32) -> &mut Self {
         self.flags2 = Some(flags2);
+        self
     }
 }
 
@@ -365,25 +383,27 @@ impl AudioEncoderSettings {
         self.sample_rate
     }
 
-    pub fn set_sample_rate(&mut self, sample_rate: i32) {
+    pub fn set_sample_rate(&mut self, sample_rate: i32) -> &mut Self{
         self.sample_rate = sample_rate;
+        self
     }
 
     pub fn channel_count(&self) -> i32 {
         self.ch_layout.as_ref().map(|ch_layout| ch_layout.nb_channels).unwrap_or(0)
     }
 
-    pub fn set_channel_count(&mut self, channel_count: i32) {
+    pub fn set_channel_count(&mut self, channel_count: i32) -> &mut Self {
         let mut ch_layout = SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe { av_channel_layout_uninit(ptr) });
         unsafe { av_channel_layout_default(ch_layout.as_mut(), channel_count) };
         self.ch_layout = Some(ch_layout);
+        self
     }
 
     pub fn ch_layout(&self) -> Option<SmartObject<AVChannelLayout>> {
         self.ch_layout.clone()
     }
 
-    pub fn set_ch_layout(&mut self, custom_layout: AVChannelLayout) -> Result<(), FfmpegError> {
+    pub fn set_ch_layout(&mut self, custom_layout: AVChannelLayout) -> Result<&mut Self, FfmpegError> {
         let smart_object = SmartObject::new(custom_layout, |ptr| unsafe { ffmpeg_sys_next::av_channel_layout_uninit(ptr) });
 
         unsafe {
@@ -393,95 +413,106 @@ impl AudioEncoderSettings {
         }
 
         self.ch_layout = Some(smart_object);
-        Ok(())
+        Ok(self)
     }
 
     pub fn sample_fmt(&self) -> AVSampleFormat {
         self.sample_fmt
     }
 
-    pub fn set_sample_fmt(&mut self, sample_fmt: AVSampleFormat) {
+    pub fn set_sample_fmt(&mut self, sample_fmt: AVSampleFormat) -> &mut Self{
         self.sample_fmt = sample_fmt;
+        self
     }
 
     pub fn thread_count(&self) -> Option<i32> {
         self.thread_count
     }
 
-    pub fn set_thread_count(&mut self, thread_count: i32) {
+    pub fn set_thread_count(&mut self, thread_count: i32) -> &mut Self{
         self.thread_count = Some(thread_count);
+        self
     }
 
     pub fn thread_type(&self) -> Option<i32> {
         self.thread_type
     }
 
-    pub fn set_thread_type(&mut self, thread_type: i32) {
+    pub fn set_thread_type(&mut self, thread_type: i32) -> &mut Self{
         self.thread_type = Some(thread_type);
+        self
     }
 
     pub fn bitrate(&self) -> Option<i64> {
         self.bitrate
     }
 
-    pub fn set_bitrate(&mut self, bitrate: i64) {
+    pub fn set_bitrate(&mut self, bitrate: i64) -> &mut Self{
         self.bitrate = Some(bitrate);
+        self
     }
 
     pub fn buffer_size(&self) -> Option<i64> {
         self.buffer_size
     }
 
-    pub fn set_buffer_size(&mut self, buffer_size: i64) {
+    pub fn set_buffer_size(&mut self, buffer_size: i64) -> &mut Self{
         self.buffer_size = Some(buffer_size);
+        self
     }
 
     pub fn rc_min_rate(&self) -> Option<i64> {
         self.rc_min_rate
     }
 
-    pub fn set_rc_min_rate(&mut self, rc_min_rate: i64) {
+    pub fn set_rc_min_rate(&mut self, rc_min_rate: i64) -> &mut Self{
         self.rc_min_rate = Some(rc_min_rate);
+        self
     }
 
     pub fn rc_max_rate(&self) -> Option<i64> {
         self.rc_max_rate
     }
 
-    pub fn set_rc_max_rate(&mut self, rc_max_rate: i64) {
+    pub fn set_rc_max_rate(&mut self, rc_max_rate: i64) -> &mut Self{
         self.rc_max_rate = Some(rc_max_rate);
+        self
     }
 
     pub fn rc_buffer_size(&self) -> Option<i32> {
         self.rc_buffer_size
     }
 
-    pub fn set_rc_buffer_size(&mut self, rc_buffer_size: i32) {
+    pub fn set_rc_buffer_size(&mut self, rc_buffer_size: i32) -> &mut Self{
         self.rc_buffer_size = Some(rc_buffer_size);
+        self
     }
 
     pub fn codec_specific_options(&self) -> Option<&Dictionary> {
         self.codec_specific_options.as_ref()
     }
 
-    pub fn set_codec_specific_options(&mut self, codec_specific_options: Dictionary) {
+    pub fn set_codec_specific_options(&mut self, codec_specific_options: Dictionary) -> &mut Self{
         self.codec_specific_options = Some(codec_specific_options);
+        self
     }
 
     pub fn flags(&self) -> Option<i32> {
         self.flags
     }
 
-    pub fn set_flags(&mut self, flags: i32) {
+    pub fn set_flags(&mut self, flags: i32) -> &mut Self{
         self.flags = Some(flags);
+        self
     }
 
     pub fn flags2(&self) -> Option<i32> {
         self.flags2
     }
 
-    pub fn set_flags2(&mut self, flags2: i32) {
+    pub fn set_flags2(&mut self, flags2: i32) -> &mut Self{
         self.flags2 = Some(flags2);
+        self
     }
 }
 
