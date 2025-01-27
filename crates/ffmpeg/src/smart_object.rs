@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub struct SmartPtr<T>(SmartObject<*mut T>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SmartObject<T> {
     value: Option<T>,
     destructor: fn(&mut T),
