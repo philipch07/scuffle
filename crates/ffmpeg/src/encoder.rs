@@ -42,31 +42,6 @@ pub struct VideoEncoderSettings {
     pub flags2: Option<i32>,
 }
 
-impl Default for VideoEncoderSettings {
-    fn default() -> Self {
-        Self {
-            width: 0,
-            height: 0,
-            frame_rate: 0,
-            pixel_format: AVPixelFormat::AV_PIX_FMT_NONE,
-            gop_size: None,
-            qmax: None,
-            qmin: None,
-            thread_count: None,
-            thread_type: None,
-            sample_aspect_ratio: None,
-            bitrate: None,
-            rc_min_rate: None,
-            rc_max_rate: None,
-            rc_buffer_size: None,
-            max_b_frames: None,
-            codec_specific_options: None,
-            flags: None,
-            flags2: None,
-        }
-    }
-}
-
 impl VideoEncoderSettings {
     fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
         if self.width <= 0 || self.height <= 0 || self.frame_rate <= 0 || self.pixel_format == AVPixelFormat::AV_PIX_FMT_NONE
@@ -576,29 +551,6 @@ mod tests {
     use crate::io::{Output, OutputOptions};
 
     #[test]
-    fn test_video_encoder_settings_default() {
-        let default_settings = VideoEncoderSettings::default();
-        assert_eq!(default_settings.width, 0);
-        assert_eq!(default_settings.height, 0);
-        assert_eq!(default_settings.frame_rate, 0);
-        assert_eq!(default_settings.pixel_format, AVPixelFormat::AV_PIX_FMT_NONE);
-        assert!(default_settings.gop_size.is_none());
-        assert!(default_settings.qmax.is_none());
-        assert!(default_settings.qmin.is_none());
-        assert!(default_settings.thread_count.is_none());
-        assert!(default_settings.thread_type.is_none());
-        assert!(default_settings.sample_aspect_ratio.is_none());
-        assert!(default_settings.bitrate.is_none());
-        assert!(default_settings.rc_min_rate.is_none());
-        assert!(default_settings.rc_max_rate.is_none());
-        assert!(default_settings.rc_buffer_size.is_none());
-        assert!(default_settings.max_b_frames.is_none());
-        assert!(default_settings.codec_specific_options.is_none());
-        assert!(default_settings.flags.is_none());
-        assert!(default_settings.flags2.is_none());
-    }
-
-    #[test]
     fn test_video_encoder_apply() {
         let width = 1920;
         let height = 1080;
@@ -690,7 +642,12 @@ mod tests {
 
     #[test]
     fn test_video_encoder_settings_apply_error() {
-        let settings = VideoEncoderSettings::default();
+        let settings = VideoEncoderSettings::builder()
+            .width(0)
+            .height(0)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(0)
+            .build();
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let result = settings.apply(&mut encoder);
 
@@ -705,10 +662,12 @@ mod tests {
     fn test_video_encoder_average_duration() {
         let frame_rate = 30;
         let timebase = AVRational { num: 1, den: 30000 };
-        let settings = VideoEncoderSettings {
-            frame_rate,
-            ..VideoEncoderSettings::default()
-        };
+        let settings = VideoEncoderSettings::builder()
+            .width(0)
+            .height(0)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(frame_rate)
+            .build();
 
         let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
         let actual_duration = settings.average_duration(timebase);
@@ -721,10 +680,12 @@ mod tests {
         let frame_rate = 60;
         let timebase = AVRational { num: 1, den: 60000 };
 
-        let settings = VideoEncoderSettings {
-            frame_rate,
-            ..VideoEncoderSettings::default()
-        };
+        let settings = VideoEncoderSettings::builder()
+            .width(0)
+            .height(0)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(frame_rate)
+            .build();
 
         let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
         let actual_duration = settings.average_duration(timebase);
@@ -736,10 +697,12 @@ mod tests {
     fn test_video_encoder_average_duration_with_zero_frame_rate() {
         let frame_rate = 0;
         let timebase = AVRational { num: 1, den: 30000 };
-        let settings = VideoEncoderSettings {
-            frame_rate,
-            ..VideoEncoderSettings::default()
-        };
+        let settings = VideoEncoderSettings::builder()
+            .width(0)
+            .height(0)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(frame_rate)
+            .build();
 
         let actual_duration = settings.average_duration(timebase);
         assert_eq!(actual_duration, 0);
@@ -1039,7 +1002,12 @@ mod tests {
         let mut output = Output::new(data, options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };
-        let settings = VideoEncoderSettings::default();
+        let settings = VideoEncoderSettings::builder()
+            .width(0)
+            .height(0)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(0)
+            .build();
         let result = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, settings);
 
         assert!(matches!(result, Err(FfmpegError::NoEncoder)));
@@ -1175,13 +1143,12 @@ mod tests {
         let output = Output::new(data, options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };
-        let video_settings = VideoEncoderSettings {
-            width: 1920,
-            height: 1080,
-            frame_rate: 30,
-            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
-            ..Default::default()
-        };
+        let video_settings = VideoEncoderSettings::builder()
+            .width(1920)
+            .height(1080)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(30)
+            .build();
         let encoder_settings: EncoderSettings = video_settings.into();
         let mut muxer_options = Dictionary::new();
         muxer_options.set("option1", "value1").unwrap();
@@ -1245,13 +1212,12 @@ mod tests {
         let output = Output::new(data.clone(), options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };
-        let video_settings = VideoEncoderSettings {
-            width: 1920,
-            height: 1080,
-            frame_rate: 30,
-            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
-            ..Default::default()
-        };
+        let video_settings = VideoEncoderSettings::builder()
+            .width(1920)
+            .height(1080)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(30)
+            .build();
         let encoder_settings: EncoderSettings = video_settings.into();
         let muxer_settings = MuxerSettings::default();
         let muxer_encoder = MuxerEncoder::new(
@@ -1280,13 +1246,12 @@ mod tests {
         let output = Output::new(data, options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };
-        let video_settings = VideoEncoderSettings {
-            width: 1920,
-            height: 1080,
-            frame_rate: 30,
-            pixel_format: AVPixelFormat::AV_PIX_FMT_YUV420P,
-            ..Default::default()
-        };
+        let video_settings = VideoEncoderSettings::builder()
+            .width(1920)
+            .height(1080)
+            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(30)
+            .build();
         let encoder_settings: EncoderSettings = video_settings.into();
         let muxer_settings = MuxerSettings::default();
         let mut muxer_encoder = MuxerEncoder::new(
