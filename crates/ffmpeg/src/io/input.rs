@@ -94,6 +94,10 @@ impl<T: Send + Sync> Input<T> {
         Const::new(Streams::new(self.inner.context.as_deref_except()))
     }
 
+    pub fn streams_mut(&mut self) -> Streams<'_> {
+        Streams::new(self.inner.context.as_deref_mut_except())
+    }
+
     pub fn packets(&mut self) -> Packets<'_> {
         Packets::new(self.inner.context.as_deref_mut_except())
     }

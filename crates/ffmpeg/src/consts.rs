@@ -51,3 +51,26 @@ impl<T> std::ops::DerefMut for Mut<'_, T> {
         &mut self.0
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use crate::consts::Mut;
+
+    #[test]
+    fn test_mut_fmt_vec() {
+        let value = vec![1, 2, 3];
+        let mut_value = Mut::new(value);
+
+        assert_eq!(format!("{:?}", mut_value), "[1, 2, 3]");
+    }
+
+    #[test]
+    fn test_deref_for_mut_with_complex_type() {
+        let value = vec![1, 2, 3];
+        let mut_value = Mut::new(value);
+        let deref_value: &Vec<i32> = &mut_value;
+
+        assert_eq!(deref_value, &vec![1, 2, 3], "Dereferencing Mut should return the inner value");
+    }
+}

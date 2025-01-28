@@ -250,3 +250,297 @@ impl std::ops::DerefMut for AudioDecoder {
         &mut self.0
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use ffmpeg_sys_next::AVCodecID::{AV_CODEC_ID_AAC, AV_CODEC_ID_H264};
+    use ffmpeg_sys_next::AVMediaType;
+
+    use crate::codec::DecoderCodec;
+    use crate::decoder::{Decoder, DecoderOptions};
+    use crate::io::Input;
+
+    #[test]
+    fn test_generic_decoder_debug() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let stream = streams
+            .iter()
+            .find(|s| {
+                s.codec_parameters()
+                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .unwrap_or(false)
+            })
+            .expect("No video stream found");
+        let codec_params = stream.codec_parameters().expect("Missing codec parameters");
+        assert_eq!(
+            codec_params.codec_type,
+            AVMediaType::AVMEDIA_TYPE_VIDEO,
+            "Expected the stream to be a video stream"
+        );
+        let decoder_options = DecoderOptions {
+            codec: Some(DecoderCodec::new(AV_CODEC_ID_H264).expect("Failed to find H264 codec")),
+            thread_count: 2,
+        };
+        let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
+        let generic_decoder = match decoder {
+            Decoder::Video(video_decoder) => video_decoder.0,
+            Decoder::Audio(audio_decoder) => audio_decoder.0,
+        };
+
+        insta::assert_debug_snapshot!(generic_decoder, @r"
+        Decoder {
+            time_base: AVRational {
+                num: 1,
+                den: 15360,
+            },
+            codec_type: AVMEDIA_TYPE_VIDEO,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_video_decoder_debug() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let stream = streams
+            .iter()
+            .find(|s| {
+                s.codec_parameters()
+                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .unwrap_or(false)
+            })
+            .expect("No video stream found");
+        let codec_params = stream.codec_parameters().expect("Missing codec parameters");
+        assert_eq!(
+            codec_params.codec_type,
+            AVMediaType::AVMEDIA_TYPE_VIDEO,
+            "Expected the stream to be a video stream"
+        );
+
+        let decoder_options = DecoderOptions {
+            codec: Some(DecoderCodec::new(AV_CODEC_ID_H264).expect("Failed to find H264 codec")),
+            thread_count: 2,
+        };
+        let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
+
+        let generic_decoder = match decoder {
+            Decoder::Video(video_decoder) => video_decoder,
+            _ => panic!("Expected a video decoder, got something else"),
+        };
+
+        insta::assert_debug_snapshot!(generic_decoder, @r"
+        VideoDecoder {
+            time_base: AVRational {
+                num: 1,
+                den: 15360,
+            },
+            width: 3840,
+            height: 2160,
+            pixel_format: AV_PIX_FMT_YUV420P,
+            frame_rate: AVRational {
+                num: 60,
+                den: 1,
+            },
+            sample_aspect_ratio: AVRational {
+                num: 1,
+                den: 1,
+            },
+        }
+        ");
+    }
+
+    #[test]
+    fn test_audio_decoder_debug() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let stream = streams
+            .iter()
+            .find(|s| {
+                s.codec_parameters()
+                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO)
+                    .unwrap_or(false)
+            })
+            .expect("No audio stream found");
+        let codec_params = stream.codec_parameters().expect("Missing codec parameters");
+        assert_eq!(
+            codec_params.codec_type,
+            AVMediaType::AVMEDIA_TYPE_AUDIO,
+            "Expected the stream to be an audio stream"
+        );
+        let decoder_options = DecoderOptions {
+            codec: Some(DecoderCodec::new(AV_CODEC_ID_AAC).expect("Failed to find AAC codec")),
+            thread_count: 2,
+        };
+        let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
+        let audio_decoder = match decoder {
+            Decoder::Audio(audio_decoder) => audio_decoder,
+            _ => panic!("Expected an audio decoder, got something else"),
+        };
+
+        insta::assert_debug_snapshot!(audio_decoder, @r"
+        AudioDecoder {
+            time_base: AVRational {
+                num: 1,
+                den: 48000,
+            },
+            sample_rate: 48000,
+            channels: 2,
+            sample_fmt: AV_SAMPLE_FMT_FLTP,
+        }
+        ");
+    }
+
+    #[test]
+    fn test_decoder_options_default() {
+        let default_options = DecoderOptions::default();
+
+        assert!(default_options.codec.is_none(), "Expected default codec to be None");
+        assert_eq!(default_options.thread_count, 1, "Expected default thread_count to be 1");
+    }
+
+    #[test]
+    fn test_decoder_new() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let stream = streams
+            .iter()
+            .find(|s| {
+                s.codec_parameters()
+                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .unwrap_or(false)
+            })
+            .expect("No video stream found");
+
+        let decoder_result = Decoder::new(&stream);
+        assert!(decoder_result.is_ok(), "Expected Decoder::new to succeed, but it failed");
+
+        let decoder = decoder_result.unwrap();
+        if let Decoder::Video(video_decoder) = decoder {
+            assert_eq!(video_decoder.width(), 3840, "Expected valid width for video stream");
+            assert_eq!(video_decoder.height(), 2160, "Expected valid height for video stream");
+        } else {
+            panic!("Expected a video decoder, but got a different type");
+        }
+    }
+
+    #[test]
+    fn test_decoder_with_options_missing_codec_parameters() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let mut stream = streams.get(0).expect("Expected a valid stream");
+        unsafe {
+            (*stream.as_mut_ptr()).codecpar = std::ptr::null_mut();
+        }
+        let decoder_result = Decoder::with_options(&stream, DecoderOptions::default());
+
+        assert!(decoder_result.is_err(), "Expected Decoder creation to fail");
+        if let Err(err) = decoder_result {
+            match err {
+                crate::error::FfmpegError::NoDecoder => (),
+                _ => panic!("Unexpected error type: {:?}", err),
+            }
+        }
+    }
+
+    #[test]
+    fn test_decoder_with_options_non_video_audio_codec_type() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let mut stream = streams.get(0).expect("Expected a valid stream");
+        unsafe {
+            (*stream.as_mut_ptr()).codecpar.as_mut().unwrap().codec_type = AVMediaType::AVMEDIA_TYPE_SUBTITLE;
+        }
+        let decoder_result = Decoder::with_options(&stream, DecoderOptions::default());
+
+        assert!(
+            decoder_result.is_err(),
+            "Expected Decoder creation to fail for non-video/audio codec type"
+        );
+        if let Err(err) = decoder_result {
+            match err {
+                crate::error::FfmpegError::NoDecoder => (),
+                _ => panic!("Unexpected error type: {:?}", err),
+            }
+        }
+    }
+
+    #[test]
+    fn test_video_decoder_deref_mut_safe() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let stream = streams
+            .iter()
+            .find(|s| {
+                s.codec_parameters()
+                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .unwrap_or(false)
+            })
+            .expect("No video stream found");
+        let decoder_options = DecoderOptions {
+            codec: None,
+            thread_count: 2,
+        };
+        let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
+        let mut video_decoder = match decoder {
+            Decoder::Video(video_decoder) => video_decoder,
+            _ => panic!("Expected a VideoDecoder, got something else"),
+        };
+        {
+            let generic_decoder = &mut *video_decoder;
+            let mut time_base = generic_decoder.time_base();
+            time_base.num = 1000;
+            time_base.den = 1;
+            generic_decoder.decoder.as_deref_mut_except().time_base = time_base;
+        }
+        let generic_decoder = &*video_decoder;
+        let time_base = generic_decoder.decoder.as_deref_except().time_base;
+
+        assert_eq!(time_base.num, 1000, "Expected time_base.num to be updated via DerefMut");
+        assert_eq!(time_base.den, 1, "Expected time_base.den to be updated via DerefMut");
+    }
+
+    #[test]
+    fn test_audio_decoder_deref_mut() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let stream = streams
+            .iter()
+            .find(|s| {
+                s.codec_parameters()
+                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO)
+                    .unwrap_or(false)
+            })
+            .expect("No audio stream found");
+        let decoder_options = DecoderOptions {
+            codec: None,
+            thread_count: 2,
+        };
+        let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
+        let mut audio_decoder = match decoder {
+            Decoder::Audio(audio_decoder) => audio_decoder,
+            _ => panic!("Expected an AudioDecoder, got something else"),
+        };
+        {
+            let generic_decoder = &mut *audio_decoder;
+            let mut time_base = generic_decoder.time_base();
+            time_base.num = 48000;
+            time_base.den = 1;
+            generic_decoder.decoder.as_deref_mut_except().time_base = time_base;
+        }
+        let generic_decoder = &*audio_decoder;
+        let time_base = generic_decoder.decoder.as_deref_except().time_base;
+
+        assert_eq!(time_base.num, 48000, "Expected time_base.num to be updated via DerefMut");
+        assert_eq!(time_base.den, 1, "Expected time_base.den to be updated via DerefMut");
+    }
+}

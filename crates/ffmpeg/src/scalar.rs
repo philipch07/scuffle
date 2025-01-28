@@ -112,3 +112,117 @@ impl Scalar {
         Ok(&self.frame)
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use ffmpeg_sys_next::av_frame_get_buffer;
+    use insta::assert_debug_snapshot;
+
+    use crate::frame::Frame;
+    use crate::scalar::{AVPixelFormat, Scalar};
+
+    #[test]
+    fn test_scalar_new() {
+        let input_width = 1920;
+        let input_height = 1080;
+        let incoming_pixel_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
+        let output_width = 1280;
+        let output_height = 720;
+        let output_pixel_fmt = AVPixelFormat::AV_PIX_FMT_RGB24;
+        let scalar = Scalar::new(
+            input_width,
+            input_height,
+            incoming_pixel_fmt,
+            output_width,
+            output_height,
+            output_pixel_fmt,
+        );
+
+        assert!(scalar.is_ok(), "Expected Scalar::new to succeed");
+        let scalar = scalar.unwrap();
+
+        assert_eq!(
+            scalar.width(),
+            output_width,
+            "Expected Scalar width to match the output width"
+        );
+        assert_eq!(
+            scalar.height(),
+            output_height,
+            "Expected Scalar height to match the output height"
+        );
+        assert_eq!(
+            scalar.pixel_format(),
+            output_pixel_fmt,
+            "Expected Scalar pixel format to match the output pixel format"
+        );
+    }
+
+    #[test]
+    fn test_scalar_process() {
+        let input_width = 1920;
+        let input_height = 1080;
+        let incoming_pixel_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
+        let output_width = 1280;
+        let output_height = 720;
+        let output_pixel_fmt = AVPixelFormat::AV_PIX_FMT_RGB24;
+
+        let mut scalar = Scalar::new(
+            input_width,
+            input_height,
+            incoming_pixel_fmt,
+            output_width,
+            output_height,
+            output_pixel_fmt,
+        )
+        .expect("Failed to create Scalar");
+
+        let mut input_frame = Frame::new().expect("Failed to create Frame");
+        unsafe {
+            let frame_mut = input_frame.as_mut_ptr().as_mut().unwrap();
+            frame_mut.width = input_width;
+            frame_mut.height = input_height;
+            frame_mut.format = incoming_pixel_fmt as i32;
+
+            match av_frame_get_buffer(frame_mut, 32) {
+                0 => {}
+                err => panic!("Failed to allocate input frame buffer: {}", err),
+            }
+        }
+
+        let result = scalar.process(&input_frame);
+
+        assert!(
+            result.is_ok(),
+            "Expected Scalar::process to succeed, but got error: {:?}",
+            result
+        );
+
+        let output_frame = result.unwrap();
+        assert_debug_snapshot!(output_frame, @r"
+        VideoFrame {
+            width: 1280,
+            height: 720,
+            sample_aspect_ratio: AVRational {
+                num: 0,
+                den: 1,
+            },
+            pts: None,
+            dts: None,
+            duration: Some(
+                0,
+            ),
+            best_effort_timestamp: None,
+            time_base: AVRational {
+                num: 0,
+                den: 1,
+            },
+            format: 2,
+            is_audio: false,
+            is_video: true,
+            is_keyframe: false,
+        }
+        ");
+    }
+}

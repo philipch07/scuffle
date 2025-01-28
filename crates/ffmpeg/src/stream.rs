@@ -232,3 +232,330 @@ impl std::fmt::Debug for Stream<'_> {
             .finish()
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use ffmpeg_sys_next::{AVDiscard, AVRational, AVStream};
+    use insta::{assert_debug_snapshot, Settings};
+
+    use crate::io::Input;
+    use crate::stream::AVMediaType;
+
+    #[test]
+    fn test_best_stream() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+
+        let media_type = AVMediaType::AVMEDIA_TYPE_VIDEO;
+        let best_stream = streams.best(media_type);
+
+        assert!(best_stream.is_some(), "Expected best stream to be found");
+        let best_stream = best_stream.unwrap();
+        assert!(best_stream.index() >= 0, "Expected a valid stream index");
+    }
+
+    #[test]
+    fn test_best_none_stream() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let invalid_media_type = AVMediaType::AVMEDIA_TYPE_SUBTITLE;
+        let best_stream = streams.best(invalid_media_type);
+
+        assert!(
+            best_stream.is_none(),
+            "Expected `best` to return None for unsupported media type"
+        );
+    }
+
+    #[test]
+    fn test_best_mut_stream() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+
+        let media_type = AVMediaType::AVMEDIA_TYPE_VIDEO;
+        let best_mut_stream = streams.best_mut(media_type);
+
+        assert!(best_mut_stream.is_some(), "Expected best mutable stream to be found");
+        let best_mut_stream = best_mut_stream.unwrap();
+        assert!(best_mut_stream.index() >= 0, "Expected a valid stream index");
+    }
+
+    #[test]
+    fn test_streams_into_iter() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams_mut();
+        let streams_len = streams.len();
+        let iter = streams.into_iter();
+        let collected_streams: Vec<_> = iter.collect();
+
+        assert_eq!(
+            collected_streams.len(),
+            streams_len,
+            "Expected the iterator to yield the same number of streams as `streams.len()`"
+        );
+
+        for stream in collected_streams {
+            assert!(stream.index() >= 0, "Expected a valid stream index");
+        }
+    }
+
+    #[test]
+    fn test_streams_iter() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams_mut();
+        let iter = streams.iter();
+        let collected_streams: Vec<_> = iter.collect();
+
+        assert_eq!(
+            collected_streams.len(),
+            streams.len(),
+            "Expected iterator to yield the same number of streams as `streams.len()`"
+        );
+
+        for stream in collected_streams {
+            assert!(stream.index() >= 0, "Expected a valid stream index");
+        }
+    }
+
+    #[test]
+    fn test_streams_get_valid_index() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let stream_index = 0;
+        let stream = streams.get(stream_index);
+
+        assert!(stream.is_some(), "Expected `get` to return Some for a valid index");
+        let stream = stream.unwrap();
+
+        assert_eq!(stream.index(), stream_index as i32, "Stream index should match");
+        assert!(stream.id() >= 0, "Stream ID should be valid");
+    }
+
+    #[test]
+    fn test_streams_get_invalid_index() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let invalid_index = streams.len();
+        let stream = streams.get(invalid_index);
+
+        assert!(stream.is_none(), "Expected `get` to return None for an invalid index");
+    }
+
+    #[test]
+    fn test_stream_as_mut_ptr() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let stream_index = 0;
+        let mut stream = streams.get(stream_index).expect("Expected a valid stream");
+        let stream_mut_ptr = stream.as_mut_ptr();
+
+        assert!(!stream_mut_ptr.is_null(), "Expected a non-null mutable pointer");
+        assert_eq!(
+            stream_mut_ptr,
+            stream.as_ptr() as *mut AVStream,
+            "Mutable pointer should match the constant pointer cast to mutable"
+        );
+    }
+
+    #[test]
+    fn test_stream_nb_frames() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let mut stream = streams.get(0).expect("Expected a valid stream");
+
+        let test_nb_frames = 100;
+        stream.set_nb_frames(test_nb_frames);
+        assert_eq!(
+            stream.nb_frames(),
+            Some(test_nb_frames),
+            "Expected `nb_frames` to match the set value"
+        );
+    }
+
+    #[test]
+    fn test_stream_disposition() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let mut stream = streams.get(0).expect("Expected a valid stream");
+
+        let test_disposition = 0x01;
+        stream.set_disposition(test_disposition);
+        assert_eq!(
+            stream.disposition(),
+            test_disposition,
+            "Expected `disposition` to match the set value"
+        );
+    }
+
+    #[test]
+    fn test_stream_discard() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let mut stream = streams.get(0).expect("Expected a valid stream");
+
+        let test_discard = AVDiscard::AVDISCARD_ALL;
+        stream.set_discard(test_discard);
+        assert_eq!(stream.discard(), test_discard, "Expected `discard` to match the set value");
+    }
+
+    #[test]
+    fn test_stream_sample_aspect_ratio() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let mut stream = streams.get(0).expect("Expected a valid stream");
+
+        let test_aspect_ratio = AVRational { num: 4, den: 3 };
+        stream.set_sample_aspect_ratio(test_aspect_ratio);
+        assert_eq!(
+            stream.sample_aspect_ratio(),
+            test_aspect_ratio,
+            "Expected `sample_aspect_ratio` to match the set value"
+        );
+    }
+
+    #[test]
+    fn test_stream_metadata_insta() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let mut stream = streams.get(0).expect("Expected a valid stream");
+        let mut metadata = stream.metadata_mut();
+        let _ = metadata.set("test_key", "test_value");
+        let _ = metadata.set("test_key_2", "test_value_2");
+        let metadata = stream.metadata();
+
+        // sorting metadata as the order is not guaranteed
+        let sorted_metadata: BTreeMap<_, _> = metadata
+            .iter()
+            .filter_map(|(key, value)| {
+                // convert `CStr` to `&str` to gracefully handle invalid UTF-8
+                Some((key.to_str().ok()?.to_string(), value.to_str().ok()?.to_string()))
+            })
+            .collect();
+
+        assert_debug_snapshot!(sorted_metadata, @r###"
+        {
+            "encoder": "Lavc60.9.100 libx264",
+            "handler_name": "GPAC ISO Video Handler",
+            "language": "und",
+            "test_key": "test_value",
+            "test_key_2": "test_value_2",
+            "vendor_id": "[0][0][0][0]",
+        }
+        "###);
+    }
+
+    #[test]
+    fn test_stream_frame_rates() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let stream = streams.get(0).expect("Expected a valid stream");
+        let avg_frame_rate = stream.avg_frame_rate();
+        let real_frame_rate = stream.r_frame_rate();
+
+        assert!(avg_frame_rate.num > 0, "Expected non-zero avg_frame_rate numerator");
+        assert!(real_frame_rate.num > 0, "Expected non-zero r_frame_rate numerator");
+    }
+
+    #[test]
+    fn test_stream_format_context() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let stream = streams.get(0).expect("Expected a valid stream");
+
+        let format_context = stream.format_context();
+        assert_eq!(
+            format_context as *const _,
+            input.as_ptr(),
+            "Expected `format_context` to match the input's context"
+        );
+    }
+
+    #[test]
+    fn test_stream_debug() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let mut streams = input.streams_mut();
+        let stream = streams.get(0).expect("Expected a valid stream");
+
+        let metadata = stream.metadata();
+        // sorting metadata as the order is not guaranteed
+        let sorted_metadata: BTreeMap<_, _> = metadata
+            .iter()
+            .filter_map(|(key, value)| {
+                // convert `CStr` to `&str` to gracefully handle invalid UTF-8
+                Some((key.to_str().ok()?.to_string(), value.to_str().ok()?.to_string()))
+            })
+            .collect();
+
+        let serialized_metadata = sorted_metadata
+            .iter()
+            .map(|(key, value)| format!("        \"{}\": \"{}\",", key, value))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let replacement_metadata = format!("metadata: {{\n{}\n    }}", serialized_metadata);
+        let mut settings = Settings::new();
+        let metadata_regex = r"metadata: \{[^}]*\}";
+        settings.add_filter(metadata_regex, &replacement_metadata);
+
+        settings.bind(|| {
+            assert_debug_snapshot!(stream, @r#"
+            Stream {
+                index: 0,
+                id: 1,
+                time_base: AVRational {
+                    num: 1,
+                    den: 15360,
+                },
+                start_time: Some(
+                    0,
+                ),
+                duration: Some(
+                    16384,
+                ),
+                nb_frames: Some(
+                    64,
+                ),
+                disposition: 1,
+                discard: AVDISCARD_DEFAULT,
+                sample_aspect_ratio: AVRational {
+                    num: 1,
+                    den: 1,
+                },
+                metadata: {
+                    "encoder": "Lavc60.9.100 libx264",
+                    "handler_name": "GPAC ISO Video Handler",
+                    "language": "und",
+                    "vendor_id": "[0][0][0][0]",
+                },
+                avg_frame_rate: AVRational {
+                    num: 60,
+                    den: 1,
+                },
+                r_frame_rate: AVRational {
+                    num: 60,
+                    den: 1,
+                },
+            }
+            "#);
+        });
+    }
+}

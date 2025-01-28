@@ -32,3 +32,52 @@ impl FrameRateLimiter {
         }
     }
 }
+
+#[cfg(test)]
+#[cfg_attr(all(test, coverage_nightly), coverage(off))]
+mod tests {
+    use ffmpeg_sys_next::AVRational;
+
+    use crate::frame::Frame;
+    use crate::limiter::FrameRateLimiter;
+
+    #[test]
+    fn test_frame_rate_limiter_new() {
+        let frame_rate = 30;
+        let time_base = AVRational { num: 1, den: 30000 };
+
+        let limiter = FrameRateLimiter::new(frame_rate, time_base);
+
+        assert_eq!(limiter.last_frame, 0);
+        assert_eq!(limiter.accumulated_time, 0);
+        assert_eq!(limiter.frame_timing, 1000);
+    }
+
+    #[test]
+    fn test_frame_rate_limiter_limit_if_case() {
+        let frame_rate = 30;
+        let time_base = AVRational { num: 1, den: 30000 };
+        let mut limiter = FrameRateLimiter::new(frame_rate, time_base);
+        let mut frame = Frame::new().unwrap();
+        frame.set_dts(Some(2000));
+        let result = limiter.limit(&frame);
+
+        assert!(result);
+        assert_eq!(limiter.last_frame, 2000);
+        assert_eq!(limiter.accumulated_time, 1000);
+    }
+
+    #[test]
+    fn test_frame_rate_limiter_limit_else_case() {
+        let frame_rate = 30;
+        let time_base = AVRational { num: 1, den: 30000 };
+        let mut limiter = FrameRateLimiter::new(frame_rate, time_base);
+        let mut frame = Frame::new().unwrap();
+        frame.set_dts(Some(500));
+        let result = limiter.limit(&frame);
+
+        assert!(!result);
+        assert_eq!(limiter.last_frame, 500);
+        assert_eq!(limiter.accumulated_time, 500);
+    }
+}
