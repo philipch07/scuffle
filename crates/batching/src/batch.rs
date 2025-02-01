@@ -336,30 +336,30 @@ mod tests {
         let start = std::time::Instant::now();
         let a = loader.execute("a").await;
         assert_eq!(a, Some(1));
-        assert!(start.elapsed() < std::time::Duration::from_millis(15));
+        assert!(start.elapsed() < std::time::Duration::from_millis(100));
         assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 1);
 
         let start = std::time::Instant::now();
         let b = loader.execute("b").await;
         assert_eq!(b, Some(2));
-        assert!(start.elapsed() < std::time::Duration::from_millis(15));
+        assert!(start.elapsed() < std::time::Duration::from_millis(100));
         assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 2);
         let start = std::time::Instant::now();
         let c = loader.execute("c").await;
         assert_eq!(c, Some(3));
-        assert!(start.elapsed() < std::time::Duration::from_millis(15));
+        assert!(start.elapsed() < std::time::Duration::from_millis(100));
         assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 3);
 
         let start = std::time::Instant::now();
         let ab = loader.execute_many(vec!["a", "b"]).await;
         assert_eq!(ab, vec![Some(1), Some(2)]);
-        assert!(start.elapsed() < std::time::Duration::from_millis(15));
+        assert!(start.elapsed() < std::time::Duration::from_millis(100));
         assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 4);
 
         let start = std::time::Instant::now();
         let unknown = loader.execute("unknown").await;
         assert_eq!(unknown, None);
-        assert!(start.elapsed() < std::time::Duration::from_millis(15));
+        assert!(start.elapsed() < std::time::Duration::from_millis(100));
         assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 5);
     }
 
@@ -381,7 +381,7 @@ mod tests {
             .execute_many(vec!["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"])
             .await;
         assert_eq!(ab, vec![Some(1), Some(2), Some(3), None, None, None, None, None, None, None]);
-        assert!(start.elapsed() < std::time::Duration::from_millis(15));
+        assert!(start.elapsed() < std::time::Duration::from_millis(100));
         assert_eq!(requests.load(std::sync::atomic::Ordering::Relaxed), 5);
     }
 

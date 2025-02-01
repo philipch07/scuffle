@@ -12,7 +12,7 @@ fmt *args:
     cargo +{{RUST_TOOLCHAIN}} fmt --all {{args}}
 
 lint *args:
-    cargo +{{RUST_TOOLCHAIN}} clippy --fix --allow-dirty --all-targets --allow-staged {{args}}
+    cargo +{{RUST_TOOLCHAIN}} clippy --fix --allow-dirty --allow-staged --all-features --all-targets {{args}}
 
 test *args:
     #!/bin/bash
