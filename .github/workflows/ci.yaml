@@ -45,7 +45,7 @@ jobs:
           shared-key: clippy
 
       - name: Make sure code is linted
-        run: cargo +${{ env.RUST_TOOLCHAIN }} clippy --all-targets
+        run: cargo +${{ env.RUST_TOOLCHAIN }} clippy --all-features --all-targets
 
   fmt:
     name: Fmt
