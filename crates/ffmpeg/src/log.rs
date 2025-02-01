@@ -129,15 +129,11 @@ pub fn log_callback_tracing() {
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
     use std::ffi::CString;
-    use std::ptr;
     use std::sync::{Arc, Mutex};
 
     use ffmpeg_sys_next::{av_log, av_log_get_level, avcodec_find_decoder, AVCodecID};
-    use tracing::subscriber::set_default;
-    use tracing::Level;
-    use tracing_subscriber::FmtSubscriber;
 
-    use crate::log::{log_callback_set, log_callback_tracing, log_callback_unset, set_log_level, LogLevel};
+    use crate::log::{log_callback_set, log_callback_unset, set_log_level, LogLevel};
 
     #[test]
     fn test_log_level_as_str_using_from_i32() {
@@ -300,6 +296,11 @@ mod tests {
     #[test]
     #[tracing_test::traced_test]
     fn test_log_callback_tracing() {
+        use tracing::{subscriber::set_default, Level};
+        use tracing_subscriber::FmtSubscriber;
+
+        use crate::log::log_callback_tracing;
+
         let subscriber = FmtSubscriber::builder().with_max_level(Level::TRACE).finish();
         let _ = set_default(subscriber);
         log_callback_tracing();
@@ -320,7 +321,7 @@ mod tests {
             let message = format!("Test {} log message", expected_tracing_level);
             unsafe {
                 av_log(
-                    ptr::null_mut(),
+                    std::ptr::null_mut(),
                     *level as i32,
                     CString::new(message.clone()).expect("Failed to create CString").as_ptr(),
                 );
@@ -345,6 +346,11 @@ mod tests {
     #[test]
     #[tracing_test::traced_test]
     fn test_log_callback_tracing_deprecated_message() {
+        use tracing::{subscriber::set_default, Level};
+        use tracing_subscriber::FmtSubscriber;
+
+        use crate::log::log_callback_tracing;
+
         let subscriber = FmtSubscriber::builder().with_max_level(Level::TRACE).finish();
         let _ = set_default(subscriber);
         log_callback_tracing();
@@ -352,7 +358,7 @@ mod tests {
         let deprecated_message = "deprecated pixel format used, make sure you did set range correctly";
         unsafe {
             av_log(
-                ptr::null_mut(),
+                std::ptr::null_mut(),
                 LogLevel::Trace as i32,
                 CString::new(deprecated_message).expect("Failed to create CString").as_ptr(),
             );
