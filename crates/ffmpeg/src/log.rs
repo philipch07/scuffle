@@ -296,7 +296,8 @@ mod tests {
     #[test]
     #[tracing_test::traced_test]
     fn test_log_callback_tracing() {
-        use tracing::{subscriber::set_default, Level};
+        use tracing::subscriber::set_default;
+        use tracing::Level;
         use tracing_subscriber::FmtSubscriber;
 
         use crate::log::log_callback_tracing;
@@ -346,7 +347,8 @@ mod tests {
     #[test]
     #[tracing_test::traced_test]
     fn test_log_callback_tracing_deprecated_message() {
-        use tracing::{subscriber::set_default, Level};
+        use tracing::subscriber::set_default;
+        use tracing::Level;
         use tracing_subscriber::FmtSubscriber;
 
         use crate::log::log_callback_tracing;
