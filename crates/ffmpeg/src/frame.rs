@@ -296,7 +296,7 @@ impl AudioChannelLayout {
     pub fn validate(&self) -> Result<(), FfmpegError> {
         // Safety: `av_channel_layout_check` is safe to call
         if unsafe { av_channel_layout_check(self.0.as_ref()) } == 0 {
-            return Err(FfmpegError::Arguments("Invalid channel layout."));
+            return Err(FfmpegError::Arguments("invalid channel layout"));
         }
 
         Ok(())

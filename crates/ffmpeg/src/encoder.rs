@@ -746,7 +746,7 @@ mod tests {
             })
         };
         let result: Result<(), FfmpegError> = channel_layout.validate();
-        assert_eq!(result.unwrap_err(), FfmpegError::Arguments("Invalid channel layout"));
+        assert_eq!(result.unwrap_err(), FfmpegError::Arguments("invalid channel layout"));
     }
 
     #[test]
