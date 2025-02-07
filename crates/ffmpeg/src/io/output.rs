@@ -164,8 +164,8 @@ impl<T: Send + Sync> Output<T> {
 
     /// Adds a new stream to the output.
     pub fn add_stream(&mut self, codec: Option<*const AVCodec>) -> Option<Stream<'_>> {
-        // Safety: `avformat_new_stream` is safe to call.
         let mut stream =
+            // Safety: `avformat_new_stream` is safe to call.
             NonNull::new(unsafe { avformat_new_stream(self.as_mut_ptr(), codec.unwrap_or_else(std::ptr::null)) })?;
 
         // Safety: The stream is a valid non-null pointer.
