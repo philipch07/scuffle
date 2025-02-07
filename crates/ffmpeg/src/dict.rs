@@ -160,7 +160,7 @@ impl Dictionary {
     }
 
     /// Returns a mutable reference to the pointer to the dictionary.
-    pub fn as_mut_ptr_ref(&mut self) -> &mut *mut AVDictionary {
+    pub const fn as_mut_ptr_ref(&mut self) -> &mut *mut AVDictionary {
         self.ptr.as_mut()
     }
 

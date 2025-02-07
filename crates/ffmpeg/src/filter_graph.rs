@@ -112,7 +112,7 @@ impl FilterGraph {
     }
 
     /// Set the thread count for the filter graph.
-    pub fn set_thread_count(&mut self, threads: i32) {
+    pub const fn set_thread_count(&mut self, threads: i32) {
         self.0.as_deref_mut_except().nb_threads = threads;
     }
 

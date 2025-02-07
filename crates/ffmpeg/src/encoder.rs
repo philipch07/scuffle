@@ -79,7 +79,7 @@ impl VideoEncoderSettings {
         Ok(())
     }
 
-    fn average_duration(&self, timebase: AVRational) -> i64 {
+    const fn average_duration(&self, timebase: AVRational) -> i64 {
         if self.frame_rate <= 0 {
             return 0;
         }
@@ -129,7 +129,7 @@ impl AudioEncoderSettings {
         Ok(())
     }
 
-    fn average_duration(&self, timebase: AVRational) -> i64 {
+    const fn average_duration(&self, timebase: AVRational) -> i64 {
         if self.sample_rate <= 0 {
             return 0;
         }
@@ -194,14 +194,14 @@ impl EncoderSettings {
         }
     }
 
-    fn codec_specific_options(&mut self) -> Option<&mut Dictionary> {
+    const fn codec_specific_options(&mut self) -> Option<&mut Dictionary> {
         match self {
             EncoderSettings::Video(video_settings) => video_settings.codec_specific_options.as_mut(),
             EncoderSettings::Audio(audio_settings) => audio_settings.codec_specific_options.as_mut(),
         }
     }
 
-    fn average_duration(&self, timebase: AVRational) -> i64 {
+    const fn average_duration(&self, timebase: AVRational) -> i64 {
         match self {
             EncoderSettings::Video(video_settings) => video_settings.average_duration(timebase),
             EncoderSettings::Audio(audio_settings) => audio_settings.average_duration(timebase),

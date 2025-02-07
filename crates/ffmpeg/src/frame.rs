@@ -328,7 +328,7 @@ impl AudioFrame {
     }
 
     /// Sets the number of samples in the frame.
-    pub fn set_nb_samples(&mut self, nb_samples: usize) {
+    pub const fn set_nb_samples(&mut self, nb_samples: usize) {
         self.0 .0.as_deref_mut_except().nb_samples = nb_samples as i32;
     }
 

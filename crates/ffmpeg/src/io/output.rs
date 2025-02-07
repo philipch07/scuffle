@@ -280,7 +280,7 @@ impl<T: Send + Sync> Output<T> {
     }
 
     /// Returns the flags for the output.
-    pub fn flags(&self) -> i32 {
+    pub const fn flags(&self) -> i32 {
         self.inner.context.as_deref_except().flags
     }
 }

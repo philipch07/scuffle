@@ -72,7 +72,7 @@ impl<'a> Streams<'a> {
     }
 
     /// Returns an iterator over the streams.
-    pub fn iter(&'a self) -> StreamIter<'a> {
+    pub const fn iter(&'a self) -> StreamIter<'a> {
         StreamIter {
             input: Self {
                 input: self.input,
