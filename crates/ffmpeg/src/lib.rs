@@ -23,23 +23,40 @@
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 #![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
+#![deny(missing_docs, clippy::undocumented_unsafe_blocks, clippy::multiple_unsafe_ops_per_block)]
 
+/// Codec specific functionality.
 pub mod codec;
+/// Constants.
 pub mod consts;
+/// Decoder specific functionality.
 pub mod decoder;
+/// Dictionary specific functionality.
 pub mod dict;
+/// Encoder specific functionality.
 pub mod encoder;
+/// Error handling.
 pub mod error;
+/// Filter graph specific functionality.
 pub mod filter_graph;
+/// Frame specific functionality.
 pub mod frame;
+/// Input/Output specific functionality.
 pub mod io;
+/// Limiter specific functionality.
 pub mod limiter;
+/// Logging specific functionality.
 pub mod log;
+/// Packet specific functionality.
 pub mod packet;
+/// Scalar specific functionality.
 pub mod scalar;
+/// Stream specific functionality.
 pub mod stream;
+/// Utility functionality.
 pub mod utils;
 
+/// The ffi module.
 pub use ffmpeg_sys_next as ffi;
 
 mod smart_object;

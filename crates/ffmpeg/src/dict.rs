@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::ffi::{CStr, CString};
+use std::ptr::NonNull;
 
 use ffmpeg_sys_next::*;
 
@@ -22,8 +23,13 @@ impl Default for Dictionary {
 
 impl std::fmt::Debug for Dictionary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let dict = HashMap::<String, String>::from(self);
-        dict.fmt(f)
+        let mut map = f.debug_map();
+
+        for (key, value) in self.iter() {
+            map.entry(&key, &value);
+        }
+
+        map.finish()
     }
 }
 
@@ -44,6 +50,7 @@ impl Clone for Dictionary {
     }
 }
 
+/// A builder for the dictionary.
 pub struct DictionaryBuilder {
     dict: Dictionary,
 }
@@ -66,12 +73,10 @@ impl Dictionary {
     pub const fn new() -> Self {
         Self {
             // Safety: A null pointer is a valid dictionary, and a valid pointer.
-            ptr: unsafe {
-                SmartPtr::wrap(std::ptr::null_mut(), |ptr| {
-                    // Safety: av_dict_free is safe to call
-                    av_dict_free(ptr)
-                })
-            },
+            ptr: SmartPtr::null(|ptr| {
+                // Safety: av_dict_free is safe to call
+                unsafe { av_dict_free(ptr) }
+            }),
         }
     }
 
@@ -129,14 +134,13 @@ impl Dictionary {
         let key = CString::new(key).expect("Failed to convert key to CString");
 
         // Safety: av_dict_get is safe to call
-        let entry = unsafe { av_dict_get(self.as_ptr(), key.as_ptr(), std::ptr::null_mut(), AV_DICT_IGNORE_SUFFIX) };
+        let mut entry = NonNull::new(unsafe { av_dict_get(self.as_ptr(), key.as_ptr(), std::ptr::null_mut(), AV_DICT_IGNORE_SUFFIX) })?;
 
-        if entry.is_null() {
-            None
-        } else {
-            // Safety: av_dict_get is safe to call
-            Some(unsafe { CStr::from_ptr((*entry).value) }.to_string_lossy().into_owned())
-        }
+        // Safety: The pointer here is valid.
+        let mut_ref = unsafe { entry.as_mut() };
+
+        // Safety: The pointer here is valid.
+        Some(unsafe { CStr::from_ptr(mut_ref.value) }.to_string_lossy().into_owned())
     }
 
     /// Returns true if the dictionary is empty.
@@ -165,6 +169,7 @@ impl Dictionary {
     }
 }
 
+/// An iterator over the dictionary.
 pub struct DictionaryIterator<'a> {
     dict: &'a Dictionary,
     entry: *mut AVDictionaryEntry,
@@ -187,16 +192,17 @@ impl<'a> Iterator for DictionaryIterator<'a> {
         // Safety: av_dict_get is safe to call
         self.entry = unsafe { av_dict_get(self.dict.as_ptr(), &[0] as *const _ as _, self.entry, AV_DICT_IGNORE_SUFFIX) };
 
-        if self.entry.is_null() {
-            None
-        } else {
-            // Safety: av_dict_get is safe to call
-            let key = unsafe { CStr::from_ptr((*self.entry).key) };
-            // Safety: av_dict_get is safe to call
-            let value = unsafe { CStr::from_ptr((*self.entry).value) };
+        let mut entry = NonNull::new(self.entry)?;
 
-            Some((key, value))
-        }
+        // Safety: The pointer here is valid.
+        let entry_ref = unsafe { entry.as_mut() };
+
+        // Safety: The pointer here is valid.
+        let key = unsafe { CStr::from_ptr(entry_ref.key) };
+        // Safety: The pointer here is valid.
+        let value = unsafe { CStr::from_ptr(entry_ref.value) };
+
+        Some((key, value))
     }
 }
 
@@ -209,29 +215,36 @@ impl<'a> IntoIterator for &'a Dictionary {
     }
 }
 
-impl From<HashMap<String, String>> for Dictionary {
-    fn from(map: HashMap<String, String>) -> Self {
-        let mut dict = Dictionary::new();
+macro_rules! impl_map_for_dict {
+    ($map:ty) => {
+        impl From<$map> for Dictionary {
+            fn from(map: $map) -> Self {
+                let mut dict = Dictionary::new();
 
-        for (key, value) in map {
-            if key.is_empty() || value.is_empty() {
-                continue;
+                for (key, value) in map {
+                    if key.is_empty() || value.is_empty() {
+                        continue;
+                    }
+
+                    dict.set(&key, &value).expect("Failed to set dictionary entry");
+                }
+
+                dict
             }
-
-            dict.set(&key, &value).expect("Failed to set dictionary entry");
         }
 
-        dict
-    }
+        impl From<&Dictionary> for $map {
+            fn from(dict: &Dictionary) -> Self {
+                dict.into_iter()
+                    .map(|(key, value)| (key.to_string_lossy().into_owned(), value.to_string_lossy().into_owned()))
+                    .collect()
+            }
+        }
+    };
 }
 
-impl From<&Dictionary> for HashMap<String, String> {
-    fn from(dict: &Dictionary) -> Self {
-        dict.into_iter()
-            .map(|(key, value)| (key.to_string_lossy().into_owned(), value.to_string_lossy().into_owned()))
-            .collect()
-    }
-}
+impl_map_for_dict!(HashMap<String, String>);
+impl_map_for_dict!(BTreeMap<String, String>);
 
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]

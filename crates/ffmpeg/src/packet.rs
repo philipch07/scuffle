@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use ffmpeg_sys_next::*;
 
 use crate::error::{FfmpegError, FfmpegErrorCode};
@@ -6,18 +8,28 @@ use crate::utils::{check_i64, or_nopts};
 
 /// A collection of packets. [`Packets`] implements [`Iterator`] and will yield packets until the end of the stream is reached.
 /// A wrapper around an [`AVFormatContext`].
-#[derive(Debug)]
 pub struct Packets<'a> {
-    context: &'a mut AVFormatContext,
+    context: *mut AVFormatContext,
+    _marker: PhantomData<&'a mut AVFormatContext>,
+}
+
+impl std::fmt::Debug for Packets<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Packets").field("context", &self.context).finish()
+    }
 }
 
 /// Safety: `Packets` is safe to send between threads.
 unsafe impl Send for Packets<'_> {}
 
-impl<'a> Packets<'a> {
+impl Packets<'_> {
     /// Creates a new `Packets` instance.
-    pub const fn new(context: &'a mut AVFormatContext) -> Self {
-        Self { context }
+    ///
+    /// # Safety
+    /// This function is unsafe because the caller must ensure that the lifetime & the mutablity
+    /// of the `AVFormatContext` matches the lifetime & mutability of the `Packets`.
+    pub const unsafe fn new(context: *mut AVFormatContext) -> Self {
+        Self { context, _marker: PhantomData }
     }
 
     /// Receives a packet from the context.
@@ -66,15 +78,22 @@ impl std::fmt::Debug for Packet {
 
 impl Clone for Packet {
     fn clone(&self) -> Self {
-        unsafe { Self::wrap(av_packet_clone(self.0.as_ptr())).expect("failed to clone packet") }
+        // Safety: `av_packet_clone` is safe to call.
+        let clone = unsafe { av_packet_clone(self.0.as_ptr()) };
+
+        // Safety: The pointer is valid.
+        unsafe { Self::wrap(clone).expect("failed to clone packet") }
     }
 }
 
 impl Packet {
     /// Creates a new `Packet`.
     pub fn new() -> Result<Self, FfmpegError> {
-        // Safety: av_packet_alloc is safe to call, and the pointer it returns is valid.
-        unsafe { Self::wrap(av_packet_alloc()) }.ok_or(FfmpegError::Alloc)
+        // Safety: `av_packet_alloc` is safe to call.
+        let packet = unsafe { av_packet_alloc() };
+
+        // Safety: The pointer is valid.
+        unsafe { Self::wrap(packet) }.ok_or(FfmpegError::Alloc)
     }
 
     /// Wraps a pointer to a packet.
@@ -135,17 +154,24 @@ impl Packet {
         self.0.as_deref_mut_except().duration = or_nopts(duration);
     }
 
-    pub fn rescale_timebase(&mut self, from: AVRational, to: AVRational) {
+    /// Converts the timebase of the packet.
+    pub fn convert_timebase(&mut self, from: AVRational, to: AVRational) {
         // Safety: av_rescale_q_rnd is safe to call
         self.set_pts(
             self.pts()
-                .map(|pts| unsafe { av_rescale_q_rnd(pts, from, to, AVRounding::AV_ROUND_NEAR_INF) }),
+                .map(|pts| {
+                    // Safety: av_rescale_q_rnd is safe to call
+                    unsafe { av_rescale_q_rnd(pts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
+                }),
         );
 
         // Safety: av_rescale_q_rnd is safe to call
         self.set_dts(
             self.dts()
-                .map(|dts| unsafe { av_rescale_q_rnd(dts, from, to, AVRounding::AV_ROUND_NEAR_INF) }),
+                .map(|dts| {
+                    // Safety: av_rescale_q_rnd is safe to call
+                    unsafe { av_rescale_q_rnd(dts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
+                }),
         );
 
         // Safety: av_rescale_q is safe to call
@@ -278,6 +304,7 @@ mod tests {
         let raw_ptr = packet.as_ptr();
 
         assert!(!raw_ptr.is_null(), "Expected a non-null pointer from Packet::as_ptr");
+        // Safety: `raw_ptr` is a valid pointer.
         unsafe {
             assert_eq!(
                 (*raw_ptr).stream_index,
@@ -296,7 +323,7 @@ mod tests {
         let from_time_base = AVRational { num: 1, den: 1000 };
         let to_time_base = AVRational { num: 1, den: 48000 };
 
-        packet.rescale_timebase(from_time_base, to_time_base);
+        packet.convert_timebase(from_time_base, to_time_base);
         assert_debug_snapshot!(packet, @r"
         Packet {
             stream_index: 0,
@@ -324,6 +351,7 @@ mod tests {
     #[test]
     fn test_packet_data_empty() {
         let mut packet = Packet::new().expect("Failed to create Packet");
+        // Safety: `packet.as_mut_ptr()` is a valid pointer.
         unsafe {
             let av_packet = packet.as_mut_ptr().as_mut().unwrap();
             av_packet.size = 0;

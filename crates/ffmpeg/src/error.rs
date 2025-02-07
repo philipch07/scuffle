@@ -2,21 +2,30 @@ use ffmpeg_sys_next::*;
 use nutype_enum::nutype_enum;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
+/// An error that occurs when the ffmpeg operation fails.
 pub enum FfmpegError {
+    /// An error that occurs when the memory allocation fails.
     #[error("failed to allocate memory")]
     Alloc,
+    /// An error that occurs when the ffmpeg error code is not a success code.
     #[error("ffmpeg error: {0}")]
     Code(#[from] FfmpegErrorCode),
+    /// An error that occurs when no decoder is found.
     #[error("no decoder found")]
     NoDecoder,
+    /// An error that occurs when no encoder is found.
     #[error("no encoder found")]
     NoEncoder,
+    /// An error that occurs when no stream is found.
     #[error("no stream found")]
     NoStream,
+    /// An error that occurs when no filter is found.
     #[error("no filter found")]
     NoFilter,
+    /// An error that occurs when no frame is found.
     #[error("no frame found")]
     NoFrame,
+    /// An error that occurs when the arguments are invalid.
     #[error("invalid arguments: {0}")]
     Arguments(&'static str),
 }
@@ -24,32 +33,59 @@ pub enum FfmpegError {
 pub(crate) const AVERROR_EAGAIN: i32 = AVERROR(EAGAIN);
 
 nutype_enum! {
+    /// An enum that represents the ffmpeg error code.
     pub enum FfmpegErrorCode(i32) {
+        /// FFmpeg error code for end of file.
         EndOfFile = AVERROR_EOF,
+        /// FFmpeg error code for invalid data.
         InvalidData = AVERROR_INVALIDDATA,
+        /// FFmpeg error code for muxer not found.
         MuxerNotFound = AVERROR_MUXER_NOT_FOUND,
+        /// FFmpeg error code for option not found.
         OptionNotFound = AVERROR_OPTION_NOT_FOUND,
+        /// FFmpeg error code for patch welcome.
         PatchWelcome = AVERROR_PATCHWELCOME,
+        /// FFmpeg error code for protocol not found.
         ProtocolNotFound = AVERROR_PROTOCOL_NOT_FOUND,
+        /// FFmpeg error code for stream not found.
         StreamNotFound = AVERROR_STREAM_NOT_FOUND,
+        /// FFmpeg error code for bitstream filter not found.
         BitstreamFilterNotFound = AVERROR_BSF_NOT_FOUND,
+        /// FFmpeg error code for bug.
         Bug = AVERROR_BUG,
+        /// FFmpeg error code for eof.
         Eof = AVERROR_EOF,
+        /// FFmpeg error code for eagain.
         Eagain = AVERROR_EAGAIN,
+        /// FFmpeg error code for buffer too small.
         BufferTooSmall = AVERROR_BUFFER_TOO_SMALL,
+        /// FFmpeg error code for decoder not found.
         DecoderNotFound = AVERROR_DECODER_NOT_FOUND,
+        /// FFmpeg error code for demuxer not found.
         DemuxerNotFound = AVERROR_DEMUXER_NOT_FOUND,
+        /// FFmpeg error code for encoder not found.
         EncoderNotFound = AVERROR_ENCODER_NOT_FOUND,
+        /// FFmpeg error code for exit.
         Exit = AVERROR_EXIT,
+        /// FFmpeg error code for external.
         External = AVERROR_EXTERNAL,
+        /// FFmpeg error code for filter not found.
         FilterNotFound = AVERROR_FILTER_NOT_FOUND,
+        /// FFmpeg error code for http bad request.
         HttpBadRequest = AVERROR_HTTP_BAD_REQUEST,
+        /// FFmpeg error code for http forbidden.
         HttpForbidden = AVERROR_HTTP_FORBIDDEN,
+        /// FFmpeg error code for http not found.
         HttpNotFound = AVERROR_HTTP_NOT_FOUND,
+        /// FFmpeg error code for http other 4xx.
         HttpOther4xx = AVERROR_HTTP_OTHER_4XX,
+        /// FFmpeg error code for http server error.
         HttpServerError = AVERROR_HTTP_SERVER_ERROR,
+        /// FFmpeg error code for http unauthorized.
         HttpUnauthorized = AVERROR_HTTP_UNAUTHORIZED,
+        /// FFmpeg error code for bug2.
         Bug2 = AVERROR_BUG2,
+        /// FFmpeg error code for unknown.
         Unknown = AVERROR_UNKNOWN,
     }
 }
@@ -63,6 +99,7 @@ impl FfmpegErrorCode {
         }
     }
 
+    /// Returns true if the error code is a success code.
     pub const fn is_success(self) -> bool {
         self.0 >= 0
     }

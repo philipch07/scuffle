@@ -10,8 +10,10 @@ use crate::error::{FfmpegError, FfmpegErrorCode};
 use crate::packet::Packet;
 use crate::stream::Stream;
 
+/// A struct that represents the options for the output.
 #[derive(Debug, Clone, bon::Builder)]
 pub struct OutputOptions {
+    /// The buffer size for the output.
     #[builder(default = DEFAULT_BUFFER_SIZE)]
     buffer_size: usize,
     #[builder(setters(vis = "", name = format_ffi_internal))]
@@ -20,6 +22,8 @@ pub struct OutputOptions {
 
 impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
     /// Sets the format FFI.
+    ///
+    /// Returns an error if the format FFI is null.
     pub fn format_ffi(
         self,
         format_ffi: *const AVOutputFormat,
@@ -35,6 +39,8 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
     }
 
     /// Gets the format ffi from the format name.
+    ///
+    /// Returns an error if the format name is empty or the format was not found.
     #[inline]
     pub fn format_name(
         self,
@@ -47,6 +53,8 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
     }
 
     /// Gets the format ffi from the format mime type.
+    ///
+    /// Returns an error if the format mime type is empty or the format was not found.
     #[inline]
     pub fn format_mime_type(
         self,
@@ -59,6 +67,8 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
     }
 
     /// Sets the format ffi from the format name and mime type.
+    ///
+    /// Returns an error if both the format name and mime type are empty or the format was not found.
     pub fn format_name_mime_type(
         self,
         format_name: &str,
@@ -71,11 +81,13 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
         let c_format_mime_type = CString::new(format_mime_type).ok();
         let c_format_name_ptr = c_format_name.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
         let c_format_mime_type_ptr = c_format_mime_type.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
+        // Safety: av_guess_format is safe to call and all the arguments are valid
         let format_ffi = unsafe { av_guess_format(c_format_name_ptr, std::ptr::null(), c_format_mime_type_ptr) };
         self.format_ffi(format_ffi)
     }
 }
 
+/// A struct that represents the output.
 pub struct Output<T: Send + Sync> {
     inner: Inner<T>,
     witten_header: bool,
@@ -132,11 +144,12 @@ impl<T: std::io::Write + Send + Sync> Output<T> {
 impl<T: Send + Sync> Output<T> {
     /// Sets the metadata for the output.
     pub fn set_metadata(&mut self, metadata: Dictionary) {
+        // Safety: We want to replace the metadata from the context (if one exists). This is safe as the metadata should be a valid pointer.
         unsafe {
-            // This frees the old metadata
             Dictionary::from_ptr_owned(self.inner.context.as_deref_mut_except().metadata);
-            self.inner.context.as_deref_mut_except().metadata = metadata.leak();
         };
+
+        self.inner.context.as_deref_mut_except().metadata = metadata.leak();
     }
 
     /// Returns the pointer to the underlying AVFormatContext.
@@ -152,34 +165,42 @@ impl<T: Send + Sync> Output<T> {
     /// Adds a new stream to the output.
     pub fn add_stream(&mut self, codec: Option<*const AVCodec>) -> Option<Stream<'_>> {
         // Safety: `avformat_new_stream` is safe to call.
-        let mut stream =
-            NonNull::new(unsafe { avformat_new_stream(self.as_mut_ptr(), codec.unwrap_or_else(std::ptr::null)) })?;
-        unsafe {
-            let stream = stream.as_mut();
-            stream.id = self.inner.context.as_deref_except().nb_streams as i32 - 1;
-            Some(Stream::new(stream, self.inner.context.as_deref_except()))
-        }
+        let mut stream = NonNull::new(unsafe {
+            avformat_new_stream(self.as_mut_ptr(), codec.unwrap_or_else(std::ptr::null))
+        })?;
+
+        // Safety: The stream is a valid non-null pointer.
+        let stream = unsafe { stream.as_mut() };
+        stream.id = self.inner.context.as_deref_except().nb_streams as i32 - 1;
+
+        Some(Stream::new(stream, self.inner.context.as_mut_ptr()))
     }
 
     /// Copies a stream from the input to the output.
-    pub fn copy_stream<'a>(&'a mut self, stream: &Stream<'_>) -> Option<Stream<'a>> {
-        let codec_param = stream.codec_parameters()?;
+    pub fn copy_stream<'a>(&'a mut self, stream: &Stream<'_>) -> Result<Option<Stream<'a>>, FfmpegError> {
+        let Some(codec_param) = stream.codec_parameters() else {
+            return Ok(None);
+        };
 
         // Safety: `avformat_new_stream` is safe to call.
-        let mut out_stream = NonNull::new(unsafe { avformat_new_stream(self.as_mut_ptr(), std::ptr::null()) })?;
-        unsafe {
-            let out_stream = out_stream.as_mut();
+        let Some(mut out_stream) = NonNull::new(unsafe { avformat_new_stream(self.as_mut_ptr(), std::ptr::null()) }) else {
+            return Ok(None);
+        };
 
-            // Safety: `avcodec_parameters_copy` is safe to call.
-            avcodec_parameters_copy(out_stream.codecpar, codec_param);
-            out_stream.id = self.inner.context.as_deref_except().nb_streams as i32 - 1;
-            let mut out_stream = Stream::new(out_stream, self.inner.context.as_deref_except());
-            out_stream.set_time_base(stream.time_base());
-            out_stream.set_start_time(stream.start_time());
-            out_stream.set_duration(stream.duration());
+        // Safety: The stream is a valid non-null pointer.
+        let out_stream = unsafe { out_stream.as_mut() };
 
-            Some(out_stream)
-        }
+        // Safety: `avcodec_parameters_copy` is safe to call when all arguments are valid.
+        FfmpegErrorCode(unsafe { avcodec_parameters_copy(out_stream.codecpar, codec_param) }).result()?;
+
+        out_stream.id = self.inner.context.as_deref_except().nb_streams as i32 - 1;
+
+        let mut out_stream = Stream::new(out_stream, self.inner.context.as_mut_ptr());
+        out_stream.set_time_base(stream.time_base());
+        out_stream.set_start_time(stream.start_time());
+        out_stream.set_duration(stream.duration());
+
+        Ok(Some(out_stream))
     }
 
     /// Writes the header to the output.
@@ -196,6 +217,7 @@ impl<T: Send + Sync> Output<T> {
         Ok(())
     }
 
+    /// Writes the header to the output with the given options.
     pub fn write_header_with_options(&mut self, options: &mut Dictionary) -> Result<(), FfmpegError> {
         if self.witten_header {
             return Err(FfmpegError::Arguments("header already written"));
@@ -209,6 +231,7 @@ impl<T: Send + Sync> Output<T> {
         Ok(())
     }
 
+    /// Writes the trailer to the output.
     pub fn write_trailer(&mut self) -> Result<(), FfmpegError> {
         if !self.witten_header {
             return Err(FfmpegError::Arguments("header not written"));
@@ -223,6 +246,10 @@ impl<T: Send + Sync> Output<T> {
         }
     }
 
+    /// Writes the interleaved packet to the output.
+    /// The difference between this and `write_packet` is that this function
+    /// writes the packet to the output and reorders the packets based on the
+    /// dts and pts.
     pub fn write_interleaved_packet(&mut self, mut packet: Packet) -> Result<(), FfmpegError> {
         if !self.witten_header {
             return Err(FfmpegError::Arguments("header not written"));
@@ -238,6 +265,7 @@ impl<T: Send + Sync> Output<T> {
         }
     }
 
+    /// Writes the packet to the output. Without reordering the packets.
     pub fn write_packet(&mut self, packet: &Packet) -> Result<(), FfmpegError> {
         if !self.witten_header {
             return Err(FfmpegError::Arguments("header not written"));
@@ -252,12 +280,14 @@ impl<T: Send + Sync> Output<T> {
         }
     }
 
+    /// Returns the flags for the output.
     pub fn flags(&self) -> i32 {
         self.inner.context.as_deref_except().flags
     }
 }
 
 impl Output<()> {
+    /// Opens the output with the given path.
     pub fn open(path: &str) -> Result<Self, FfmpegError> {
         Ok(Self {
             inner: Inner::open_output(path)?,
@@ -284,8 +314,10 @@ mod tests {
     fn test_output_options_get_format_ffi_null() {
         let format_name = CString::new("mp4").unwrap();
         let format_mime_type = CString::new("").unwrap();
-        let format_ptr =
-            unsafe { ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr()) };
+        // Safety: `av_guess_format` is safe to call and all arguments are valid.
+        let format_ptr = unsafe {
+            ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr())
+        };
 
         assert!(
             !format_ptr.is_null(),
@@ -385,7 +417,7 @@ mod tests {
         source_stream.set_time_base(AVRational { num: 1, den: 25 });
         source_stream.set_start_time(Some(1000));
         source_stream.set_duration(Some(500));
-        let copied_stream = output_two.copy_stream(&source_stream).expect("Failed to copy the stream");
+        let copied_stream = output_two.copy_stream(&source_stream).expect("Failed to copy the stream").expect("Failed to copy the stream");
 
         assert_eq!(copied_stream.index(), source_stream.index(), "Stream indices should match");
         assert_eq!(copied_stream.id(), source_stream.id(), "Stream IDs should match");

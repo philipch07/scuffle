@@ -5,7 +5,7 @@ use ffmpeg_sys_next::*;
 use super::internal::{read_packet, seek, Inner, InnerOptions};
 use crate::consts::{Const, DEFAULT_BUFFER_SIZE};
 use crate::dict::Dictionary;
-use crate::error::FfmpegError;
+use crate::error::{FfmpegError, FfmpegErrorCode};
 use crate::packet::{Packet, Packets};
 use crate::smart_object::SmartObject;
 use crate::stream::Streams;
@@ -104,17 +104,23 @@ impl<T: Send + Sync> Input<T> {
 
     /// Returns the streams of the input stream.
     pub const fn streams(&self) -> Const<'_, Streams<'_>> {
-        Const::new(Streams::new(self.inner.inner_ref().context.as_deref_except()))
+        // Safety: See the documentation of `Streams::new`.
+        // We upcast the pointer to be mut because the function signature requires it.
+        // However we do not mutate the pointer as its returned as a `Const<Streams>` which
+        // restricts the mutability of the streams to be const.
+        unsafe { Const::new(Streams::new(self.inner.inner_ref().context.as_ptr() as *mut _)) }
     }
 
     /// Returns a mutable reference to the streams of the input stream.
     pub const fn streams_mut(&mut self) -> Streams<'_> {
-        Streams::new(self.inner.inner_mut().context.as_deref_mut_except())
+        // Safety: See the documentation of `Streams::new`.
+        unsafe { Streams::new(self.inner.inner_mut().context.as_mut_ptr()) }
     }
 
     /// Returns the packets of the input stream.
     pub const fn packets(&mut self) -> Packets<'_> {
-        Packets::new(self.inner.inner_mut().context.as_deref_mut_except())
+        // Safety: See the documentation of `Packets::new`.
+        unsafe { Packets::new(self.inner.inner_mut().context.as_mut_ptr()) }
     }
 
     /// Receives a packet from the input stream.
@@ -124,35 +130,29 @@ impl<T: Send + Sync> Input<T> {
 
     fn create_input(mut inner: Inner<T>, path: Option<&CStr>, dictionary: &mut Dictionary) -> Result<Self, FfmpegError> {
         // Safety: avformat_open_input is safe to call
-        let ec = unsafe {
+        FfmpegErrorCode(unsafe {
             avformat_open_input(
                 inner.context.as_mut(),
                 path.map(|p| p.as_ptr()).unwrap_or(std::ptr::null()),
                 std::ptr::null(),
                 dictionary.as_mut_ptr_ref(),
             )
-        };
-        if ec != 0 {
-            return Err(FfmpegError::Code(ec.into()));
-        }
+        }).result()?;
 
         if inner.context.as_ptr().is_null() {
             return Err(FfmpegError::Alloc);
         }
 
-        let mut inner = SmartObject::new(inner, |inner| unsafe {
-            // We own this resource so we need to free it
-            avformat_close_input(inner.context.as_mut());
+        let mut inner = SmartObject::new(inner, |inner| {
+            // Safety: The pointer is valid. We own this resource so we need to free it
+            unsafe { avformat_close_input(inner.context.as_mut()) };
         });
 
         // We now own the context and this is freed when the object is dropped
         inner.context.set_destructor(|_| {});
 
         // Safety: avformat_find_stream_info is safe to call
-        let ec = unsafe { avformat_find_stream_info(inner.context.as_mut_ptr(), std::ptr::null_mut()) };
-        if ec < 0 {
-            return Err(FfmpegError::Code(ec.into()));
-        }
+        FfmpegErrorCode(unsafe { avformat_find_stream_info(inner.context.as_mut_ptr(), std::ptr::null_mut()) }).result()?;
 
         Ok(Self { inner })
     }
@@ -162,6 +162,7 @@ impl Input<()> {
     /// Opens an input stream from a file path.
     pub fn open(path: &str) -> Result<Self, FfmpegError> {
         // We immediately create an input and setup the inner, before using it.
+        // Safety: When we pass this inner to `create_input` with a valid path, the inner will be initialized by ffmpeg using the path.
         let inner = unsafe { Inner::empty() };
 
         Self::create_input(inner, Some(&std::ffi::CString::new(path).unwrap()), &mut Dictionary::new())
@@ -269,93 +270,86 @@ mod tests {
         configure_insta_filters(&mut settings);
 
         settings.bind(|| {
-            insta::assert_debug_snapshot!(streams, @r"
+            insta::assert_debug_snapshot!(streams, @r#"
             Streams {
-                input: AVFormatContext {
-                    av_class: [NON_NULL_POINTER],
-                    iformat: [NON_NULL_POINTER],
-                    oformat: [NULL_POINTER],
-                    priv_data: [NON_NULL_POINTER],
-                    pb: [NON_NULL_POINTER],
-                    ctx_flags: 0,
-                    nb_streams: 2,
-                    streams: [NON_NULL_POINTER],
-                    nb_stream_groups: 0,
-                    stream_groups: [NULL_POINTER],
-                    nb_chapters: 0,
-                    chapters: [NULL_POINTER],
-                    url: [NON_NULL_POINTER],
-                    start_time: 0,
-                    duration: 1066667,
-                    bit_rate: 1900416,
-                    packet_size: 0,
-                    max_delay: -1,
-                    flags: 2097152,
-                    probesize: 5000000,
-                    max_analyze_duration: 0,
-                    key: [NULL_POINTER],
-                    keylen: 0,
-                    nb_programs: 0,
-                    programs: [NULL_POINTER],
-                    video_codec_id: AV_CODEC_ID_NONE,
-                    audio_codec_id: AV_CODEC_ID_NONE,
-                    subtitle_codec_id: AV_CODEC_ID_NONE,
-                    data_codec_id: AV_CODEC_ID_NONE,
-                    metadata: [NON_NULL_POINTER],
-                    start_time_realtime: -9223372036854775808,
-                    fps_probe_size: -1,
-                    error_recognition: 1,
-                    interrupt_callback: AVIOInterruptCB {
-                        callback: None,
-                        opaque: [NULL_POINTER],
+                input: [NON_NULL_POINTER],
+                streams: [
+                    Stream {
+                        index: 0,
+                        id: 1,
+                        time_base: AVRational {
+                            num: 1,
+                            den: 15360,
+                        },
+                        start_time: Some(
+                            0,
+                        ),
+                        duration: Some(
+                            16384,
+                        ),
+                        nb_frames: Some(
+                            64,
+                        ),
+                        disposition: 1,
+                        discard: AVDISCARD_DEFAULT,
+                        sample_aspect_ratio: AVRational {
+                            num: 1,
+                            den: 1,
+                        },
+                        metadata: {
+                            "language": "und",
+                            "handler_name": "GPAC ISO Video Handler",
+                            "vendor_id": "[0][0][0][0]",
+                            "encoder": "Lavc60.9.100 libx264",
+                        },
+                        avg_frame_rate: AVRational {
+                            num: 60,
+                            den: 1,
+                        },
+                        r_frame_rate: AVRational {
+                            num: 60,
+                            den: 1,
+                        },
                     },
-                    debug: 0,
-                    max_streams: 1000,
-                    max_index_size: 1048576,
-                    max_picture_buffer: 3041280,
-                    max_interleave_delta: 10000000,
-                    max_ts_probe: 50,
-                    max_chunk_duration: 0,
-                    max_chunk_size: 0,
-                    max_probe_packets: 2500,
-                    strict_std_compliance: 0,
-                    event_flags: 1,
-                    avoid_negative_ts: -1,
-                    audio_preload: 0,
-                    use_wallclock_as_timestamps: 0,
-                    skip_estimate_duration_from_pts: 0,
-                    avio_flags: 0,
-                    duration_estimation_method: AVFMT_DURATION_FROM_STREAM,
-                    skip_initial_bytes: 0,
-                    correct_ts_overflow: 1,
-                    seek2any: 0,
-                    flush_packets: -1,
-                    probe_score: 100,
-                    format_probesize: 1048576,
-                    codec_whitelist: [NULL_POINTER],
-                    format_whitelist: [NULL_POINTER],
-                    protocol_whitelist: [NON_NULL_POINTER],
-                    protocol_blacklist: [NULL_POINTER],
-                    io_repositioned: 0,
-                    video_codec: [NULL_POINTER],
-                    audio_codec: [NULL_POINTER],
-                    subtitle_codec: [NULL_POINTER],
-                    data_codec: [NULL_POINTER],
-                    metadata_header_padding: -1,
-                    opaque: [NULL_POINTER],
-                    control_message_cb: None,
-                    output_ts_offset: 0,
-                    dump_separator: [NON_NULL_POINTER],
-                    io_open: Some(
-                        [NON_NULL_POINTER],
-                    ),
-                    io_close2: Some(
-                        [NON_NULL_POINTER],
-                    ),
-                    duration_probesize: 0,
-                },
+                    Stream {
+                        index: 1,
+                        id: 2,
+                        time_base: AVRational {
+                            num: 1,
+                            den: 48000,
+                        },
+                        start_time: Some(
+                            0,
+                        ),
+                        duration: Some(
+                            48096,
+                        ),
+                        nb_frames: Some(
+                            48,
+                        ),
+                        disposition: 1,
+                        discard: AVDISCARD_DEFAULT,
+                        sample_aspect_ratio: AVRational {
+                            num: 0,
+                            den: 1,
+                        },
+                        metadata: {
+                            "language": "und",
+                            "handler_name": "GPAC ISO Audio Handler",
+                            "vendor_id": "[0][0][0][0]",
+                        },
+                        avg_frame_rate: AVRational {
+                            num: 0,
+                            den: 0,
+                        },
+                        r_frame_rate: AVRational {
+                            num: 0,
+                            den: 0,
+                        },
+                    },
+                ],
             }
-            ");
+            "#);
         });
     }
 
@@ -379,89 +373,7 @@ mod tests {
         settings.bind(|| {
             insta::assert_debug_snapshot!(packets, @r"
             Packets {
-                context: AVFormatContext {
-                    av_class: [NON_NULL_POINTER],
-                    iformat: [NON_NULL_POINTER],
-                    oformat: [NULL_POINTER],
-                    priv_data: [NON_NULL_POINTER],
-                    pb: [NON_NULL_POINTER],
-                    ctx_flags: 0,
-                    nb_streams: 2,
-                    streams: [NON_NULL_POINTER],
-                    nb_stream_groups: 0,
-                    stream_groups: [NULL_POINTER],
-                    nb_chapters: 0,
-                    chapters: [NULL_POINTER],
-                    url: [NON_NULL_POINTER],
-                    start_time: 0,
-                    duration: 1066667,
-                    bit_rate: 1900416,
-                    packet_size: 0,
-                    max_delay: -1,
-                    flags: 2097152,
-                    probesize: 5000000,
-                    max_analyze_duration: 0,
-                    key: [NULL_POINTER],
-                    keylen: 0,
-                    nb_programs: 0,
-                    programs: [NULL_POINTER],
-                    video_codec_id: AV_CODEC_ID_NONE,
-                    audio_codec_id: AV_CODEC_ID_NONE,
-                    subtitle_codec_id: AV_CODEC_ID_NONE,
-                    data_codec_id: AV_CODEC_ID_NONE,
-                    metadata: [NON_NULL_POINTER],
-                    start_time_realtime: -9223372036854775808,
-                    fps_probe_size: -1,
-                    error_recognition: 1,
-                    interrupt_callback: AVIOInterruptCB {
-                        callback: None,
-                        opaque: [NULL_POINTER],
-                    },
-                    debug: 0,
-                    max_streams: 1000,
-                    max_index_size: 1048576,
-                    max_picture_buffer: 3041280,
-                    max_interleave_delta: 10000000,
-                    max_ts_probe: 50,
-                    max_chunk_duration: 0,
-                    max_chunk_size: 0,
-                    max_probe_packets: 2500,
-                    strict_std_compliance: 0,
-                    event_flags: 1,
-                    avoid_negative_ts: -1,
-                    audio_preload: 0,
-                    use_wallclock_as_timestamps: 0,
-                    skip_estimate_duration_from_pts: 0,
-                    avio_flags: 0,
-                    duration_estimation_method: AVFMT_DURATION_FROM_STREAM,
-                    skip_initial_bytes: 0,
-                    correct_ts_overflow: 1,
-                    seek2any: 0,
-                    flush_packets: -1,
-                    probe_score: 100,
-                    format_probesize: 1048576,
-                    codec_whitelist: [NULL_POINTER],
-                    format_whitelist: [NULL_POINTER],
-                    protocol_whitelist: [NON_NULL_POINTER],
-                    protocol_blacklist: [NULL_POINTER],
-                    io_repositioned: 0,
-                    video_codec: [NULL_POINTER],
-                    audio_codec: [NULL_POINTER],
-                    subtitle_codec: [NULL_POINTER],
-                    data_codec: [NULL_POINTER],
-                    metadata_header_padding: -1,
-                    opaque: [NULL_POINTER],
-                    control_message_cb: None,
-                    output_ts_offset: 0,
-                    dump_separator: [NON_NULL_POINTER],
-                    io_open: Some(
-                        [NON_NULL_POINTER],
-                    ),
-                    io_close2: Some(
-                        [NON_NULL_POINTER],
-                    ),
-                    duration_probesize: 0,
-                },
+                context: [NON_NULL_POINTER],
             }
             ");
         });

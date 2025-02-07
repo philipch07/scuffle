@@ -24,7 +24,9 @@ impl<T: Send> ChannelCompat<T> {
     }
 }
 
+/// A trait that represents a channel that can be read from.
 pub trait ChannelCompatRecv: Send {
+    /// The type of data that the channel can receive.
     type Data: AsRef<[u8]>;
 
     /// Receives data from the channel.
@@ -42,7 +44,9 @@ pub trait ChannelCompatRecv: Send {
     }
 }
 
+/// A trait that represents a channel that can be written to.
 pub trait ChannelCompatSend: Send {
+    /// The type of data that the channel can send.
     type Data: From<Vec<u8>>;
 
     /// Sends data to the channel.

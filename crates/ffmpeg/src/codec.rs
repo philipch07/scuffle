@@ -8,9 +8,13 @@ pub struct DecoderCodec(*const AVCodec);
 
 impl std::fmt::Debug for DecoderCodec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Safety: The pointer here is valid.
         if let Some(codec) = unsafe { self.0.as_ref() } {
+            // Safety: The pointer here is valid.
+            let name = unsafe { std::ffi::CStr::from_ptr(codec.name) };
+
             f.debug_struct("DecoderCodec")
-                .field("name", &unsafe { std::ffi::CStr::from_ptr(codec.name) })
+                .field("name", &name)
                 .field("id", &codec.id)
                 .finish()
         } else {
@@ -79,9 +83,13 @@ pub struct EncoderCodec(*const AVCodec);
 
 impl std::fmt::Debug for EncoderCodec {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Safety: The pointer here is valid.
         if let Some(codec) = unsafe { self.0.as_ref() } {
+            // Safety: The pointer here is valid.
+            let name = unsafe { std::ffi::CStr::from_ptr(codec.name) };
+
             f.debug_struct("EncoderCodec")
-                .field("name", &unsafe { std::ffi::CStr::from_ptr(codec.name) })
+                .field("name", &name)
                 .field("id", &codec.id)
                 .finish()
         } else {
@@ -214,9 +222,11 @@ mod tests {
 
     #[test]
     fn test_decoder_codec_from_ptr_valid() {
+        // Safety: `avcodec_find_decoder` is safe to call.
         let codec_ptr = unsafe { avcodec_find_decoder(AVCodecID::AV_CODEC_ID_H264) };
         assert!(!codec_ptr.is_null(), "Expected a valid codec pointer for H264");
 
+        // Safety: The pointer was allocated by `avcodec_find_decoder` and is valid.
         let decoder_codec = unsafe { DecoderCodec::from_ptr(codec_ptr) };
         assert_eq!(
             decoder_codec.as_ptr(),
@@ -227,7 +237,9 @@ mod tests {
 
     #[test]
     fn test_encoder_codec_debug_valid() {
+        // Safety: `avcodec_find_encoder` is safe to call.
         let codec_ptr = unsafe { avcodec_find_encoder(AVCodecID::AV_CODEC_ID_MPEG4) };
+
         assert!(!codec_ptr.is_null(), "Expected a valid codec pointer for MPEG4");
 
         let encoder_codec = EncoderCodec(codec_ptr);

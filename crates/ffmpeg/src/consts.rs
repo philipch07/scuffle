@@ -1,6 +1,6 @@
 pub(crate) const DEFAULT_BUFFER_SIZE: usize = 4096;
 
-/// Const is a owned value which is immutable, but also has a lifetime.
+/// Const is an owned value which is immutable, but also has a lifetime.
 /// This value exists because ffmpeg often has values that we 'own' but is linked
 /// to some lifetime.
 pub struct Const<'a, T>(pub(crate) T, pub(crate) std::marker::PhantomData<&'a ()>);
@@ -25,7 +25,7 @@ impl<T> std::ops::Deref for Const<'_, T> {
     }
 }
 
-/// Mut is a owned value which is mutable, but also has a lifetime.
+/// Mut is an owned value which is mutable, but also has a lifetime.
 /// This value exists because ffmpeg often has values that we 'own' but is linked
 /// to some lifetime.
 pub struct Mut<'a, T>(pub(crate) T, pub(crate) std::marker::PhantomData<&'a ()>);

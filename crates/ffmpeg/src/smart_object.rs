@@ -84,6 +84,11 @@ impl<T> SmartPtr<T> {
         Self(SmartObject::new(ptr, destructor))
     }
 
+    /// Creates a new `SmartPtr` instance with a null pointer.
+    pub(crate) const fn null(destructor: fn(&mut *mut T)) -> Self {
+        Self(SmartObject::new(std::ptr::null_mut(), destructor))
+    }
+
     /// Safety: The pointer must be valid.
     pub(crate) const unsafe fn wrap_non_null(ptr: *mut T, destructor: fn(&mut *mut T)) -> Option<Self> {
         if ptr.is_null() {
@@ -161,6 +166,8 @@ mod tests {
         // no-op destructor function
         fn noop_destructor<T>(_ptr: &mut *mut T) {}
         let ptr: *mut i32 = std::ptr::null_mut();
+
+        // Safety: `ptr` is a valid pointer
         let result = unsafe { SmartPtr::wrap_non_null(ptr, noop_destructor) };
 
         assert!(result.is_none(), "Expected `wrap_non_null` to return None for a null pointer");

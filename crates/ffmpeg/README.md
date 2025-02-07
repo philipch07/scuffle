@@ -9,6 +9,8 @@
 
 A crate designed to provide a simple interface to the native ffmpeg c-bindings.
 
+Currently this crate only supports the latest versions of ffmpeg (7.x.x)
+
 ```rs
 
 ```

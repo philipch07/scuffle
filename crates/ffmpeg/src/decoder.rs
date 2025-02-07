@@ -12,7 +12,9 @@ use crate::stream::Stream;
 /// This is the most common way to interact with decoders.
 #[derive(Debug)]
 pub enum Decoder {
+    /// A video decoder.
     Video(VideoDecoder),
+    /// An audio decoder.
     Audio(AudioDecoder),
 }
 
@@ -102,11 +104,16 @@ impl Decoder {
             return Err(FfmpegError::NoDecoder);
         }
 
-        // Safety: `codec` is a valid pointer, also the pointer returned from
-        // `avcodec_alloc_context3` is valid.
-        let mut decoder =
-            unsafe { SmartPtr::wrap_non_null(avcodec_alloc_context3(codec.as_ptr()), |ptr| avcodec_free_context(ptr)) }
-                .ok_or(FfmpegError::Alloc)?;
+        // Safety: `avcodec_alloc_context3` is safe to call and all arguments are valid.
+        let decoder = unsafe { avcodec_alloc_context3(codec.as_ptr()) };
+
+        let destructor = |ptr: &mut *mut AVCodecContext| {
+            // Safety: The pointer here is valid.
+            unsafe { avcodec_free_context(ptr) };
+        };
+
+        // Safety: `decoder` is a valid pointer, and `destructor` has been setup to free the context.
+        let mut decoder = unsafe { SmartPtr::wrap_non_null(decoder, destructor) }.ok_or(FfmpegError::Alloc)?;
 
         // Safety: `codec_params` is a valid pointer, and `decoder` is a valid pointer.
         FfmpegErrorCode(unsafe { avcodec_parameters_to_context(decoder.as_mut_ptr(), codec_params) }).result()?;
@@ -118,14 +125,17 @@ impl Decoder {
         decoder_mut.thread_count = options.thread_count;
 
         if decoder_mut.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO {
-            // Even though we are upcasting `AVFormatContext` from a const pointer to a
+            // Safety: Even though we are upcasting `AVFormatContext` from a const pointer to a
             // mutable pointer, it is still safe becasuse av_guess_frame_rate does not use
-            // the pointer to modify the `AVFormatContext`. https://github.com/FFmpeg/FFmpeg/blame/90bef6390fba02472141f299264331f68018a992/libavformat/avformat.c#L728
+            // the pointer to modify the `AVFormatContext`. https://github.com/FFmpeg/FFmpeg/blame/268d0b6527cba1ebac1f44347578617341f85c35/libavformat/avformat.c#L763
             // The function does not use the pointer at all, it only uses the `AVStream`
             // pointer to get the `AVRational`
+            let format_context = unsafe { ist.format_context() };
+
+            // Safety: See above.
             decoder_mut.framerate = unsafe {
                 av_guess_frame_rate(
-                    ist.format_context() as *const AVFormatContext as *mut AVFormatContext,
+                    format_context,
                     ist.as_ptr() as *mut AVStream,
                     std::ptr::null_mut(),
                 )
@@ -217,6 +227,7 @@ impl VideoDecoder {
         self.0.decoder.as_deref_except().sample_aspect_ratio
     }
 
+    /// Receives a frame from the decoder.
     pub fn receive_frame(&mut self) -> Result<Option<VideoFrame>, FfmpegError> {
         Ok(self.0.receive_frame()?.map(|frame| frame.video()))
     }
@@ -456,6 +467,7 @@ mod tests {
         let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
         let mut streams = input.streams_mut();
         let mut stream = streams.get(0).expect("Expected a valid stream");
+        // Safety: We are setting the `codecpar` to `null` to simulate a missing codec parameters.
         unsafe {
             (*stream.as_mut_ptr()).codecpar = std::ptr::null_mut();
         }
@@ -476,8 +488,11 @@ mod tests {
         let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
         let mut streams = input.streams_mut();
         let mut stream = streams.get(0).expect("Expected a valid stream");
+        // Safety: We are setting the `codecpar` to `null` to simulate a missing codec parameters.
+        let codecpar = unsafe { (*stream.as_mut_ptr()).codecpar };
+        // Safety: We are setting the `codec_type` to `AVMEDIA_TYPE_SUBTITLE` to simulate a non-video/audio codec type.
         unsafe {
-            (*stream.as_mut_ptr()).codecpar.as_mut().unwrap().codec_type = AVMediaType::AVMEDIA_TYPE_SUBTITLE;
+            (*codecpar).codec_type = AVMediaType::AVMEDIA_TYPE_SUBTITLE;
         }
         let decoder_result = Decoder::with_options(&stream, DecoderOptions::default());
 

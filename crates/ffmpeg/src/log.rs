@@ -9,14 +9,23 @@ use nutype_enum::nutype_enum;
 nutype_enum! {
     /// The logging level
     pub enum LogLevel(i32) {
+        /// Quiet logging level.
         Quiet = AV_LOG_QUIET,
+        /// Panic logging level.
         Panic = AV_LOG_PANIC,
+        /// Fatal logging level.
         Fatal = AV_LOG_FATAL,
+        /// Error logging level.
         Error = AV_LOG_ERROR,
+        /// Warning logging level.
         Warning = AV_LOG_WARNING,
+        /// Info logging level.
         Info = AV_LOG_INFO,
+        /// Verbose logging level.
         Verbose = AV_LOG_VERBOSE,
+        /// Debug logging level.
         Debug = AV_LOG_DEBUG,
+        /// Trace logging level.
         Trace = AV_LOG_TRACE,
     }
 }
@@ -40,6 +49,7 @@ impl std::fmt::Display for LogLevel {
 
 /// Sets the log level.
 pub fn set_log_level(level: LogLevel) {
+    // Safety: `av_log_set_level` is safe to call.
     unsafe {
         av_log_set_level(level.0);
     }
@@ -57,13 +67,21 @@ pub fn log_callback_set(callback: impl Fn(LogLevel, Option<String>, String) + Se
 /// Sets the log callback.
 pub fn log_callback_set_boxed(callback: Function) {
     LOG_CALLBACK.store(Some(Arc::new(callback)));
-    unsafe { av_log_set_callback(Some(log_cb)) };
+
+    // Safety: `av_log_set_callback` is safe to call.
+    unsafe {
+        av_log_set_callback(Some(log_cb));
+    }
 }
 
 /// Unsets the log callback.
 pub fn log_callback_unset() {
     LOG_CALLBACK.store(None);
-    unsafe { av_log_set_callback(None) };
+
+    // Safety: `av_log_set_callback` is safe to call.
+    unsafe {
+        av_log_set_callback(None);
+    }
 }
 
 unsafe extern "C" fn log_cb(ptr: *mut libc::c_void, level: libc::c_int, fmt: *const libc::c_char, va: *mut __va_list_tag) {
@@ -169,6 +187,7 @@ mod tests {
 
         for &level in &log_levels {
             set_log_level(level);
+            // Safety: `av_log_get_level` is safe to call.
             let current_level = unsafe { av_log_get_level() };
 
             assert_eq!(
@@ -189,6 +208,7 @@ mod tests {
         });
 
         let log_message = CString::new("Test warning log message").expect("Failed to create CString");
+        // Safety: `av_log` is safe to call.
         unsafe {
             av_log(std::ptr::null_mut(), LogLevel::Warning.0, log_message.as_ptr());
         }
@@ -204,35 +224,38 @@ mod tests {
 
     #[test]
     fn test_log_callback_with_class() {
+        // Safety: `avcodec_find_decoder` is safe to call.
+        let codec = unsafe { avcodec_find_decoder(AVCodecID::AV_CODEC_ID_H264) };
+        assert!(!codec.is_null(), "Failed to find H264 codec");
+
+        // Safety: `(*codec).priv_class` is safe to access.
+        let av_class_ptr = unsafe { (*codec).priv_class };
+        assert!(!av_class_ptr.is_null(), "AVClass for codec is null");
+
+        let captured_logs = Arc::new(Mutex::new(Vec::new()));
+
+        let callback_logs = Arc::clone(&captured_logs);
+        log_callback_set(move |level, class, message| {
+            let mut logs = callback_logs.lock().unwrap();
+            logs.push((level, class, message));
+        });
+
+        // Safety: `av_log` is safe to call.
         unsafe {
-            let codec = avcodec_find_decoder(AVCodecID::AV_CODEC_ID_H264);
-            assert!(!codec.is_null(), "Failed to find H264 codec");
-
-            let av_class_ptr = (*codec).priv_class;
-            assert!(!av_class_ptr.is_null(), "AVClass for codec is null");
-
-            let captured_logs = Arc::new(Mutex::new(Vec::new()));
-
-            let callback_logs = Arc::clone(&captured_logs);
-            log_callback_set(move |level, class, message| {
-                let mut logs = callback_logs.lock().unwrap();
-                logs.push((level, class, message));
-            });
-
             av_log(
                 &av_class_ptr as *const _ as *mut _,
                 LogLevel::Info.0,
                 CString::new("Test log message with real AVClass").unwrap().as_ptr(),
             );
-
-            let logs = captured_logs.lock().unwrap();
-            assert_eq!(logs.len(), 1, "Expected one log message to be captured");
-
-            let (level, class, message) = &logs[0];
-            assert_eq!(*level, LogLevel::Info, "Expected log level to be Info");
-            assert!(class.is_some(), "Expected class name to be captured");
-            assert_eq!(message, "Test log message with real AVClass", "Expected log message to match");
         }
+
+        let logs = captured_logs.lock().unwrap();
+        assert_eq!(logs.len(), 1, "Expected one log message to be captured");
+
+        let (level, class, message) = &logs[0];
+        assert_eq!(*level, LogLevel::Info, "Expected log level to be Info");
+        assert!(class.is_some(), "Expected class name to be captured");
+        assert_eq!(message, "Test log message with real AVClass", "Expected log message to match");
     }
 
     #[test]
@@ -244,6 +267,7 @@ mod tests {
             logs.push((level, class, message));
         });
 
+        // Safety: `av_log` is safe to call.
         unsafe {
             av_log(
                 std::ptr::null_mut(),
@@ -265,6 +289,7 @@ mod tests {
 
         log_callback_unset();
 
+        // Safety: `av_log` is safe to call.
         unsafe {
             av_log(
                 std::ptr::null_mut(),
@@ -309,6 +334,7 @@ mod tests {
 
         for (level, expected_tracing_level) in &levels_and_expected_tracing {
             let message = format!("Test {} log message", expected_tracing_level);
+            // Safety: `av_log` is safe to call.
             unsafe {
                 av_log(
                     std::ptr::null_mut(),
@@ -347,6 +373,7 @@ mod tests {
         log_callback_tracing();
 
         let deprecated_message = "deprecated pixel format used, make sure you did set range correctly";
+        // Safety: `av_log` is safe to call.
         unsafe {
             av_log(
                 std::ptr::null_mut(),
