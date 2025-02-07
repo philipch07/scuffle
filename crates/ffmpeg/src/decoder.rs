@@ -1,18 +1,22 @@
 use ffmpeg_sys_next::*;
 
 use crate::codec::DecoderCodec;
-use crate::error::{FfmpegError, AVERROR_EAGAIN};
-use crate::frame::{Frame, VideoFrame};
+use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::frame::{AudioFrame, Frame, VideoFrame};
 use crate::packet::Packet;
 use crate::smart_object::SmartPtr;
 use crate::stream::Stream;
 
+/// Either a [`VideoDecoder`] or an [`AudioDecoder`].
+///
+/// This is the most common way to interact with decoders.
 #[derive(Debug)]
 pub enum Decoder {
     Video(VideoDecoder),
     Audio(AudioDecoder),
 }
 
+/// A generic decoder that can be used to decode any type of media.
 pub struct GenericDecoder {
     decoder: SmartPtr<AVCodecContext>,
 }
@@ -29,6 +33,7 @@ impl std::fmt::Debug for GenericDecoder {
     }
 }
 
+/// A video decoder.
 pub struct VideoDecoder(GenericDecoder);
 
 impl std::fmt::Debug for VideoDecoder {
@@ -44,6 +49,7 @@ impl std::fmt::Debug for VideoDecoder {
     }
 }
 
+/// An audio decoder.
 pub struct AudioDecoder(GenericDecoder);
 
 impl std::fmt::Debug for AudioDecoder {
@@ -57,11 +63,15 @@ impl std::fmt::Debug for AudioDecoder {
     }
 }
 
+/// Options for creating a [`Decoder`].
 pub struct DecoderOptions {
+    /// The codec to use for decoding.
     pub codec: Option<DecoderCodec>,
+    /// The number of threads to use for decoding.
     pub thread_count: i32,
 }
 
+/// The default options for a [`Decoder`].
 impl Default for DecoderOptions {
     fn default() -> Self {
         Self {
@@ -72,10 +82,12 @@ impl Default for DecoderOptions {
 }
 
 impl Decoder {
+    /// Creates a new [`Decoder`] with the default options.
     pub fn new(ist: &Stream) -> Result<Self, FfmpegError> {
         Self::with_options(ist, Default::default())
     }
 
+    /// Creates a new [`Decoder`] with the given options.
     pub fn with_options(ist: &Stream, options: DecoderOptions) -> Result<Self, FfmpegError> {
         let Some(codec_params) = ist.codec_parameters() else {
             return Err(FfmpegError::NoDecoder);
@@ -85,7 +97,8 @@ impl Decoder {
             .codec
             .or_else(|| DecoderCodec::new(codec_params.codec_id))
             .ok_or(FfmpegError::NoDecoder)?;
-        if codec.as_ptr().is_null() {
+
+        if codec.is_empty() {
             return Err(FfmpegError::NoDecoder);
         }
 
@@ -96,10 +109,7 @@ impl Decoder {
                 .ok_or(FfmpegError::Alloc)?;
 
         // Safety: `codec_params` is a valid pointer, and `decoder` is a valid pointer.
-        let ret = unsafe { avcodec_parameters_to_context(decoder.as_mut_ptr(), codec_params) };
-        if ret < 0 {
-            return Err(FfmpegError::Code(ret.into()));
-        }
+        FfmpegErrorCode(unsafe { avcodec_parameters_to_context(decoder.as_mut_ptr(), codec_params) }).result()?;
 
         let decoder_mut = decoder.as_deref_mut_except();
 
@@ -127,10 +137,7 @@ impl Decoder {
             AVMediaType::AVMEDIA_TYPE_VIDEO | AVMediaType::AVMEDIA_TYPE_AUDIO
         ) {
             // Safety: `codec` is a valid pointer, and `decoder` is a valid pointer.
-            let ret = unsafe { avcodec_open2(decoder_mut, codec.as_ptr(), std::ptr::null_mut()) };
-            if ret < 0 {
-                return Err(FfmpegError::Code(ret.into()));
-            }
+            FfmpegErrorCode(unsafe { avcodec_open2(decoder_mut, codec.as_ptr(), std::ptr::null_mut()) }).result()?;
         }
 
         Ok(match decoder_mut.codec_type {
@@ -142,70 +149,76 @@ impl Decoder {
 }
 
 impl GenericDecoder {
-    pub fn codec_type(&self) -> AVMediaType {
+    /// Returns the codec type of the decoder.
+    pub const fn codec_type(&self) -> AVMediaType {
         self.decoder.as_deref_except().codec_type
     }
 
-    pub fn time_base(&self) -> AVRational {
+    /// Returns the time base of the decoder.
+    pub const fn time_base(&self) -> AVRational {
         self.decoder.as_deref_except().time_base
     }
 
+    /// Sends a packet to the decoder.
     pub fn send_packet(&mut self, packet: &Packet) -> Result<(), FfmpegError> {
         // Safety: `packet` is a valid pointer, and `self.decoder` is a valid pointer.
-        let ret = unsafe { avcodec_send_packet(self.decoder.as_mut_ptr(), packet.as_ptr()) };
-
-        match ret {
-            0 => Ok(()),
-            _ => Err(FfmpegError::Code(ret.into())),
-        }
+        FfmpegErrorCode(unsafe { avcodec_send_packet(self.decoder.as_mut_ptr(), packet.as_ptr()) }).result()?;
+        Ok(())
     }
 
+    /// Sends an end-of-file packet to the decoder.
     pub fn send_eof(&mut self) -> Result<(), FfmpegError> {
         // Safety: `self.decoder` is a valid pointer.
-        let ret = unsafe { avcodec_send_packet(self.decoder.as_mut_ptr(), std::ptr::null()) };
-
-        match ret {
-            0 => Ok(()),
-            _ => Err(FfmpegError::Code(ret.into())),
-        }
+        FfmpegErrorCode(unsafe { avcodec_send_packet(self.decoder.as_mut_ptr(), std::ptr::null()) }).result()?;
+        Ok(())
     }
 
-    pub fn receive_frame(&mut self) -> Result<Option<VideoFrame>, FfmpegError> {
+    /// Receives a frame from the decoder.
+    pub fn receive_frame(&mut self) -> Result<Option<Frame>, FfmpegError> {
         let mut frame = Frame::new()?;
 
         // Safety: `frame` is a valid pointer, and `self.decoder` is a valid pointer.
-        let ret = unsafe { avcodec_receive_frame(self.decoder.as_mut_ptr(), frame.as_mut_ptr()) };
+        let ret = FfmpegErrorCode(unsafe { avcodec_receive_frame(self.decoder.as_mut_ptr(), frame.as_mut_ptr()) });
 
         match ret {
-            AVERROR_EAGAIN | AVERROR_EOF => Ok(None),
-            0 => {
+            FfmpegErrorCode::Eagain | FfmpegErrorCode::Eof => Ok(None),
+            code if code.is_success() => {
                 frame.set_time_base(self.decoder.as_deref_except().time_base);
-                Ok(Some(frame.video()))
+                Ok(Some(frame))
             }
-            _ => Err(FfmpegError::Code(ret.into())),
+            code => Err(FfmpegError::Code(code)),
         }
     }
 }
 
 impl VideoDecoder {
-    pub fn width(&self) -> i32 {
+    /// Returns the width of the video frame.
+    pub const fn width(&self) -> i32 {
         self.0.decoder.as_deref_except().width
     }
 
-    pub fn height(&self) -> i32 {
+    /// Returns the height of the video frame.
+    pub const fn height(&self) -> i32 {
         self.0.decoder.as_deref_except().height
     }
 
-    pub fn pixel_format(&self) -> AVPixelFormat {
+    /// Returns the pixel format of the video frame.
+    pub const fn pixel_format(&self) -> AVPixelFormat {
         self.0.decoder.as_deref_except().pix_fmt
     }
 
-    pub fn frame_rate(&self) -> AVRational {
+    /// Returns the frame rate of the video frame.
+    pub const fn frame_rate(&self) -> AVRational {
         self.0.decoder.as_deref_except().framerate
     }
 
-    pub fn sample_aspect_ratio(&self) -> AVRational {
+    /// Returns the sample aspect ratio of the video frame.
+    pub const fn sample_aspect_ratio(&self) -> AVRational {
         self.0.decoder.as_deref_except().sample_aspect_ratio
+    }
+
+    pub fn receive_frame(&mut self) -> Result<Option<VideoFrame>, FfmpegError> {
+        Ok(self.0.receive_frame()?.map(|frame| frame.video()))
     }
 }
 
@@ -224,16 +237,24 @@ impl std::ops::DerefMut for VideoDecoder {
 }
 
 impl AudioDecoder {
-    pub fn sample_rate(&self) -> i32 {
+    /// Returns the sample rate of the audio frame.
+    pub const fn sample_rate(&self) -> i32 {
         self.0.decoder.as_deref_except().sample_rate
     }
 
-    pub fn channels(&self) -> i32 {
+    /// Returns the number of channels in the audio frame.
+    pub const fn channels(&self) -> i32 {
         self.0.decoder.as_deref_except().ch_layout.nb_channels
     }
 
-    pub fn sample_format(&self) -> AVSampleFormat {
+    /// Returns the sample format of the audio frame.
+    pub const fn sample_format(&self) -> AVSampleFormat {
         self.0.decoder.as_deref_except().sample_fmt
+    }
+
+    /// Receives a frame from the decoder.
+    pub fn receive_frame(&mut self) -> Result<Option<AudioFrame>, FfmpegError> {
+        Ok(self.0.receive_frame()?.map(|frame| frame.audio()))
     }
 }
 

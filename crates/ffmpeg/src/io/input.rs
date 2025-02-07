@@ -10,6 +10,7 @@ use crate::packet::{Packet, Packets};
 use crate::smart_object::SmartObject;
 use crate::stream::Streams;
 
+/// Represents an input stream.
 pub struct Input<T: Send + Sync> {
     inner: SmartObject<Inner<T>>,
 }
@@ -17,13 +18,18 @@ pub struct Input<T: Send + Sync> {
 /// Safety: `Input` is safe to send between threads.
 unsafe impl<T: Send + Sync> Send for Input<T> {}
 
+/// Represents the options for an input stream.
 #[derive(Debug, Clone)]
 pub struct InputOptions<I: FnMut() -> bool> {
+    /// The buffer size for the input stream.
     pub buffer_size: usize,
+    /// The dictionary for the input stream.
     pub dictionary: Dictionary,
+    /// The interrupt callback for the input stream.
     pub interrupt_callback: Option<I>,
 }
 
+/// Default implementation for `InputOptions`.
 impl Default for InputOptions<fn() -> bool> {
     fn default() -> Self {
         Self {
@@ -35,10 +41,12 @@ impl Default for InputOptions<fn() -> bool> {
 }
 
 impl<T: std::io::Read + Send + Sync> Input<T> {
+    /// Creates a new `Input` instance with default options.
     pub fn new(input: T) -> Result<Self, FfmpegError> {
         Self::with_options(input, &mut InputOptions::default())
     }
 
+    /// Creates a new `Input` instance with custom options.
     pub fn with_options(input: T, options: &mut InputOptions<impl FnMut() -> bool>) -> Result<Self, FfmpegError> {
         Self::create_input(
             Inner::new(
@@ -54,6 +62,7 @@ impl<T: std::io::Read + Send + Sync> Input<T> {
         )
     }
 
+    /// Creates a new `Input` instance with seekable options.
     pub fn seekable(input: T) -> Result<Self, FfmpegError>
     where
         T: std::io::Seek,
@@ -61,6 +70,7 @@ impl<T: std::io::Read + Send + Sync> Input<T> {
         Self::seekable_with_options(input, InputOptions::default())
     }
 
+    /// Creates a new `Input` instance with seekable options.
     pub fn seekable_with_options(input: T, mut options: InputOptions<impl FnMut() -> bool>) -> Result<Self, FfmpegError>
     where
         T: std::io::Seek,
@@ -82,26 +92,32 @@ impl<T: std::io::Read + Send + Sync> Input<T> {
 }
 
 impl<T: Send + Sync> Input<T> {
-    pub fn as_ptr(&self) -> *const AVFormatContext {
-        self.inner.context.as_ptr()
+    /// Returns a constant pointer to the input stream.
+    pub const fn as_ptr(&self) -> *const AVFormatContext {
+        self.inner.inner_ref().context.as_ptr()
     }
 
-    pub fn as_mut_ptr(&mut self) -> *mut AVFormatContext {
-        self.inner.context.as_mut_ptr()
+    /// Returns a mutable pointer to the input stream.
+    pub const fn as_mut_ptr(&mut self) -> *mut AVFormatContext {
+        self.inner.inner_mut().context.as_mut_ptr()
     }
 
-    pub fn streams(&self) -> Const<'_, Streams<'_>> {
-        Const::new(Streams::new(self.inner.context.as_deref_except()))
+    /// Returns the streams of the input stream.
+    pub const fn streams(&self) -> Const<'_, Streams<'_>> {
+        Const::new(Streams::new(self.inner.inner_ref().context.as_deref_except()))
     }
 
-    pub fn streams_mut(&mut self) -> Streams<'_> {
-        Streams::new(self.inner.context.as_deref_mut_except())
+    /// Returns a mutable reference to the streams of the input stream.
+    pub const fn streams_mut(&mut self) -> Streams<'_> {
+        Streams::new(self.inner.inner_mut().context.as_deref_mut_except())
     }
 
-    pub fn packets(&mut self) -> Packets<'_> {
-        Packets::new(self.inner.context.as_deref_mut_except())
+    /// Returns the packets of the input stream.
+    pub const fn packets(&mut self) -> Packets<'_> {
+        Packets::new(self.inner.inner_mut().context.as_deref_mut_except())
     }
 
+    /// Receives a packet from the input stream.
     pub fn receive_packet(&mut self) -> Result<Option<Packet>, FfmpegError> {
         self.packets().receive()
     }
@@ -143,6 +159,7 @@ impl<T: Send + Sync> Input<T> {
 }
 
 impl Input<()> {
+    /// Opens an input stream from a file path.
     pub fn open(path: &str) -> Result<Self, FfmpegError> {
         // We immediately create an input and setup the inner, before using it.
         let inner = unsafe { Inner::empty() };

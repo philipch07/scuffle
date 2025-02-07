@@ -1,6 +1,6 @@
 use ffmpeg_sys_next::*;
 
-use crate::error::FfmpegError;
+use crate::error::{FfmpegError, FfmpegErrorCode};
 use crate::frame::{Frame, VideoFrame};
 use crate::smart_object::SmartPtr;
 
@@ -16,6 +16,7 @@ pub struct Scalar {
 unsafe impl Send for Scalar {}
 
 impl Scalar {
+    /// Creates a new `Scalar` instance.
     pub fn new(
         input_width: i32,
         input_height: i32,
@@ -59,10 +60,7 @@ impl Scalar {
 
             // Safety: `av_frame_get_buffer` is safe to call, and the pointer returned is
             // valid.
-            match av_frame_get_buffer(frame_mut, 32) {
-                0 => {}
-                err => return Err(FfmpegError::Code(err.into())),
-            }
+            FfmpegErrorCode(av_frame_get_buffer(frame_mut, 32)).result()?;
         }
 
         Ok(Self {
@@ -74,21 +72,25 @@ impl Scalar {
         })
     }
 
-    pub fn pixel_format(&self) -> AVPixelFormat {
+    /// Returns the pixel format of the scalar.
+    pub const fn pixel_format(&self) -> AVPixelFormat {
         self.pixel_format
     }
 
-    pub fn width(&self) -> i32 {
+    /// Returns the width of the scalar.
+    pub const fn width(&self) -> i32 {
         self.width
     }
 
-    pub fn height(&self) -> i32 {
+    /// Returns the height of the scalar.
+    pub const fn height(&self) -> i32 {
         self.height
     }
 
+    /// Processes a frame through the scalar.
     pub fn process<'a>(&'a mut self, frame: &Frame) -> Result<&'a VideoFrame, FfmpegError> {
         // Safety: `frame` is a valid pointer, and `self.ptr` is a valid pointer.
-        let ret = unsafe {
+        FfmpegErrorCode(unsafe {
             sws_scale(
                 self.ptr.as_mut_ptr(),
                 frame.as_ptr().as_ref().unwrap().data.as_ptr() as *const *const u8,
@@ -98,10 +100,7 @@ impl Scalar {
                 self.frame.as_ptr().as_ref().unwrap().data.as_ptr(),
                 self.frame.as_ptr().as_ref().unwrap().linesize.as_ptr(),
             )
-        };
-        if ret < 0 {
-            return Err(FfmpegError::Code(ret.into()));
-        }
+        }).result()?;
 
         // Copy the other fields from the input frame to the output frame.
         self.frame.set_dts(frame.dts());

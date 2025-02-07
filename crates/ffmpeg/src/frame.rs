@@ -1,8 +1,8 @@
 use ffmpeg_sys_next::*;
 
-use crate::error::FfmpegError;
+use crate::error::{FfmpegError, FfmpegErrorCode};
 use crate::smart_object::SmartPtr;
-use crate::utils::check_i64;
+use crate::utils::{check_i64, or_nopts};
 
 pub struct Frame(SmartPtr<AVFrame>);
 
@@ -25,107 +25,123 @@ pub struct VideoFrame(pub Frame);
 pub struct AudioFrame(pub Frame);
 
 impl Frame {
+    /// Creates a new frame.
     pub fn new() -> Result<Self, FfmpegError> {
         // Safety: the pointer returned from av_frame_alloc is valid
-        unsafe { Self::wrap(av_frame_alloc()) }
+        unsafe { Self::wrap(av_frame_alloc()).ok_or(FfmpegError::Alloc) }
     }
 
-    /// Safety: `ptr` must be a valid pointer to an `AVFrame`.
-    unsafe fn wrap(ptr: *mut AVFrame) -> Result<Self, FfmpegError> {
-        Ok(Self(
-            // The caller guarantees that `ptr` is valid.
-            SmartPtr::wrap_non_null(ptr, |ptr| av_frame_free(ptr)).ok_or(FfmpegError::Alloc)?,
-        ))
+    /// Wraps a pointer to an `AVFrame`.
+    ///
+    /// # Safety
+    /// `ptr` must be a valid pointer to an `AVFrame`.
+    unsafe fn wrap(ptr: *mut AVFrame) -> Option<Self> {
+        SmartPtr::wrap_non_null(ptr, |ptr| av_frame_free(ptr)).map(Self)
     }
 
+    /// Allocates a buffer for the frame.
     pub fn alloc_frame_buffer(&mut self, alignment: Option<i32>) -> Result<(), FfmpegError> {
         // Safety: `self.as_mut_ptr()` is assumed to provide a valid mutable pointer to an
         // `AVFrame` structure. The `av_frame_get_buffer` function from FFMPEG allocates
         // and attaches a buffer to the `AVFrame` if it doesn't already exist.
         // It is the caller's responsibility to ensure that `self` is properly initialized
         // and represents a valid `AVFrame` instance.
-
-        unsafe {
-            let av_frame = self.as_mut_ptr();
-            let ret = ffmpeg_sys_next::av_frame_get_buffer(av_frame, alignment.unwrap_or(0));
-            if ret < 0 {
-                return Err(FfmpegError::Code(ret.into()));
-            }
-        }
+        FfmpegErrorCode(unsafe { av_frame_get_buffer(self.as_mut_ptr(), alignment.unwrap_or(0)) }).result()?;
         Ok(())
     }
 
-    pub fn as_ptr(&self) -> *const AVFrame {
+    /// Returns a pointer to the frame.
+    pub const fn as_ptr(&self) -> *const AVFrame {
         self.0.as_ptr()
     }
 
-    pub fn as_mut_ptr(&mut self) -> *mut AVFrame {
+    /// Returns a mutable pointer to the frame.
+    pub const fn as_mut_ptr(&mut self) -> *mut AVFrame {
         self.0.as_mut_ptr()
     }
 
-    pub fn video(self) -> VideoFrame {
+    /// Make this frame a video frame.
+    pub const fn video(self) -> VideoFrame {
         VideoFrame(self)
     }
 
-    pub fn audio(self) -> AudioFrame {
+    /// Make this frame an audio frame.
+    pub const fn audio(self) -> AudioFrame {
         AudioFrame(self)
     }
 
-    pub fn pts(&self) -> Option<i64> {
+    /// Returns the presentation timestamp of the frame.
+    pub const fn pts(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().pts)
     }
 
-    pub fn set_pts(&mut self, pts: Option<i64>) {
-        self.0.as_deref_mut_except().pts = pts.unwrap_or(AV_NOPTS_VALUE);
-        self.0.as_deref_mut_except().best_effort_timestamp = pts.unwrap_or(AV_NOPTS_VALUE);
+    /// Sets the presentation timestamp of the frame.
+    pub const fn set_pts(&mut self, pts: Option<i64>) {
+        self.0.as_deref_mut_except().pts = or_nopts(pts);
+        self.0.as_deref_mut_except().best_effort_timestamp = or_nopts(pts);
     }
 
-    pub fn duration(&self) -> Option<i64> {
+    /// Returns the duration of the frame.
+    pub const fn duration(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().duration)
     }
 
-    pub fn set_duration(&mut self, duration: Option<i64>) {
-        self.0.as_deref_mut_except().duration = duration.unwrap_or(AV_NOPTS_VALUE);
+    /// Sets the duration of the frame.
+    pub const fn set_duration(&mut self, duration: Option<i64>) {
+        self.0.as_deref_mut_except().duration = or_nopts(duration);
     }
 
-    pub fn best_effort_timestamp(&self) -> Option<i64> {
+    /// Returns the best effort timestamp of the frame.
+    pub const fn best_effort_timestamp(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().best_effort_timestamp)
     }
 
-    pub fn dts(&self) -> Option<i64> {
+    /// Returns the decoding timestamp of the frame.
+    pub const fn dts(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().pkt_dts)
     }
 
-    pub fn set_dts(&mut self, dts: Option<i64>) {
-        self.0.as_deref_mut_except().pkt_dts = dts.unwrap_or(AV_NOPTS_VALUE);
+    /// Sets the decoding timestamp of the frame.
+    pub const fn set_dts(&mut self, dts: Option<i64>) {
+        self.0.as_deref_mut_except().pkt_dts = or_nopts(dts);
     }
 
-    pub fn time_base(&self) -> AVRational {
+    /// Returns the time base of the frame.
+    pub const fn time_base(&self) -> AVRational {
         self.0.as_deref_except().time_base
     }
 
-    pub fn set_time_base(&mut self, time_base: AVRational) {
+    /// Sets the time base of the frame.
+    pub const fn set_time_base(&mut self, time_base: AVRational) {
         self.0.as_deref_mut_except().time_base = time_base;
     }
 
-    pub fn format(&self) -> i32 {
+    /// Returns the format of the frame.
+    pub const fn format(&self) -> i32 {
         self.0.as_deref_except().format
     }
 
-    pub fn set_format(&mut self, format: i32) {
+    /// Sets the format of the frame.
+    pub const fn set_format(&mut self, format: i32) {
         self.0.as_deref_mut_except().format = format;
     }
 
-    pub fn is_audio(&self) -> bool {
+    /// Returns true if the frame is an audio frame.
+    pub const fn is_audio(&self) -> bool {
         self.0.as_deref_except().ch_layout.nb_channels != 0
     }
 
-    pub fn is_video(&self) -> bool {
+    /// Returns true if the frame is a video frame.
+    pub const fn is_video(&self) -> bool {
         self.0.as_deref_except().width != 0
     }
 
-    pub fn linesize(&self, index: usize) -> Option<i32> {
-        self.0.as_deref_except().linesize.get(index).copied()
+    /// Returns the linesize of the frame.
+    pub const fn linesize(&self, index: usize) -> Option<i32> {
+        if index >= self.0.as_deref_except().linesize.len() {
+            return None;
+        }
+        Some(self.0.as_deref_except().linesize[index])
     }
 }
 
@@ -145,46 +161,54 @@ impl std::fmt::Debug for Frame {
 }
 
 impl VideoFrame {
-    pub fn width(&self) -> usize {
-        self.0 .0.as_deref_except().width as usize
+    /// Returns the width of the frame.
+    pub const fn width(&self) -> usize {
+        self.0.0.as_deref_except().width as usize
     }
 
-    pub fn height(&self) -> usize {
-        self.0 .0.as_deref_except().height as usize
+    /// Returns the height of the frame.
+    pub const fn height(&self) -> usize {
+        self.0.0.as_deref_except().height as usize
     }
 
-    pub fn sample_aspect_ratio(&self) -> AVRational {
-        self.0 .0.as_deref_except().sample_aspect_ratio
+    /// Returns the sample aspect ratio of the frame.
+    pub const fn sample_aspect_ratio(&self) -> AVRational {
+        self.0.0.as_deref_except().sample_aspect_ratio
     }
 
-    pub fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
-        self.0 .0.as_deref_mut_except().sample_aspect_ratio = sample_aspect_ratio;
+    /// Sets the sample aspect ratio of the frame.
+    pub const fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
+        self.0.0.as_deref_mut_except().sample_aspect_ratio = sample_aspect_ratio;
     }
 
-    pub fn set_width(&mut self, width: usize) {
-        self.0 .0.as_deref_mut_except().width = width as i32;
+    /// Sets the width of the frame.
+    pub const fn set_width(&mut self, width: usize) {
+        self.0.0.as_deref_mut_except().width = width as i32;
     }
 
-    pub fn set_height(&mut self, height: usize) {
-        self.0 .0.as_deref_mut_except().height = height as i32;
+    /// Sets the height of the frame.
+    pub const fn set_height(&mut self, height: usize) {
+        self.0.0.as_deref_mut_except().height = height as i32;
     }
 
-    pub fn is_keyframe(&self) -> bool {
-        self.0 .0.as_deref_except().key_frame != 0
+    /// Returns true if the frame is a keyframe.
+    pub const fn is_keyframe(&self) -> bool {
+        self.0.0.as_deref_except().key_frame != 0
     }
 
-    pub fn pict_type(&self) -> AVPictureType {
-        self.0 .0.as_deref_except().pict_type
+    /// Returns the picture type of the frame.
+    pub const fn pict_type(&self) -> AVPictureType {
+        self.0.0.as_deref_except().pict_type
     }
 
-    pub fn set_pict_type(&mut self, pict_type: AVPictureType) {
-        self.0 .0.as_deref_mut_except().pict_type = pict_type;
+    pub const fn set_pict_type(&mut self, pict_type: AVPictureType) {
+        self.0.0.as_deref_mut_except().pict_type = pict_type;
     }
 
     pub fn data(&self, index: usize) -> Option<&[u8]> {
         unsafe {
             self.0
-                 .0
+                .0
                 .as_deref_except()
                 .data
                 .get(index)
@@ -264,28 +288,34 @@ impl AudioFrame {
         Ok(())
     }
 
-    pub fn channel_layout(&self) -> ffmpeg_sys_next::AVChannelLayout {
-        self.0 .0.as_deref_except().ch_layout
+    /// Returns the channel layout of the frame.
+    pub const fn channel_layout(&self) -> ffmpeg_sys_next::AVChannelLayout {
+        self.0.0.as_deref_except().ch_layout
     }
 
-    pub fn channel_count(&self) -> usize {
-        self.0 .0.as_deref_except().ch_layout.nb_channels as usize
+    /// Returns the channel count of the frame.
+    pub const fn channel_count(&self) -> usize {
+        self.0.0.as_deref_except().ch_layout.nb_channels as usize
     }
 
-    pub fn nb_samples(&self) -> i32 {
-        self.0 .0.as_deref_except().nb_samples
+    /// Returns the number of samples in the frame.
+    pub const fn nb_samples(&self) -> i32 {
+        self.0.0.as_deref_except().nb_samples
     }
 
+    /// Sets the number of samples in the frame.
     pub fn set_nb_samples(&mut self, nb_samples: usize) {
         self.0 .0.as_deref_mut_except().nb_samples = nb_samples as i32;
     }
 
-    pub fn sample_rate(&self) -> i32 {
-        self.0 .0.as_deref_except().sample_rate
+    /// Returns the sample rate of the frame.
+    pub const fn sample_rate(&self) -> i32 {
+        self.0.0.as_deref_except().sample_rate
     }
 
-    pub fn set_sample_rate(&mut self, sample_rate: usize) {
-        self.0 .0.as_deref_mut_except().sample_rate = sample_rate as i32;
+    /// Sets the sample rate of the frame.
+    pub const fn set_sample_rate(&mut self, sample_rate: usize) {
+        self.0.0.as_deref_mut_except().sample_rate = sample_rate as i32;
     }
 }
 

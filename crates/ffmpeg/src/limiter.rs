@@ -10,7 +10,8 @@ pub struct FrameRateLimiter {
 }
 
 impl FrameRateLimiter {
-    pub fn new(frame_rate: i32, time_base: AVRational) -> Self {
+    /// Creates a new frame rate limiter.
+    pub const fn new(frame_rate: i32, time_base: AVRational) -> Self {
         let frame_timing = ((time_base.den / frame_rate) / time_base.num) as i64;
         Self {
             last_frame: 0,
@@ -19,8 +20,13 @@ impl FrameRateLimiter {
         }
     }
 
-    pub fn limit(&mut self, frame: &Frame) -> bool {
-        let ts = frame.dts().unwrap_or_else(|| frame.pts().unwrap());
+    /// Limits the frame rate.
+    pub const fn limit(&mut self, frame: &Frame) -> bool {
+        let ts = match frame.dts() {
+            Some(dts) => dts,
+            None => frame.pts().unwrap(),
+        };
+
         let delta = ts - self.last_frame;
         self.last_frame = ts;
         self.accumulated_time += delta;

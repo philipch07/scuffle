@@ -15,6 +15,7 @@ pub struct ChannelCompat<T: Send> {
 }
 
 impl<T: Send> ChannelCompat<T> {
+    /// Creates a new `ChannelCompat` instance.
     pub fn new(inner: T) -> Self {
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -26,10 +27,13 @@ impl<T: Send> ChannelCompat<T> {
 pub trait ChannelCompatRecv: Send {
     type Data: AsRef<[u8]>;
 
+    /// Receives data from the channel.
     fn channel_recv(&mut self) -> Option<Self::Data>;
 
+    /// Tries to receive data from the channel.
     fn try_channel_recv(&mut self) -> Option<Self::Data>;
 
+    /// Converts the channel to a `ChannelCompat` instance.
     fn into_compat(self) -> ChannelCompat<Self>
     where
         Self: Sized,
@@ -41,8 +45,10 @@ pub trait ChannelCompatRecv: Send {
 pub trait ChannelCompatSend: Send {
     type Data: From<Vec<u8>>;
 
+    /// Sends data to the channel.
     fn channel_send(&mut self, data: Self::Data) -> bool;
 
+    /// Converts the channel to a `ChannelCompat` instance.
     fn into_compat(self) -> ChannelCompat<Self>
     where
         Self: Sized,

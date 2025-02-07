@@ -111,6 +111,7 @@ impl Default for InnerOptions {
 }
 
 impl<T: Send + Sync> Inner<T> {
+    /// Creates a new `Inner` instance.
     pub fn new(data: T, options: InnerOptions) -> Result<Self, FfmpegError> {
         // Safety: av_malloc is safe to call
         let buffer = unsafe {
@@ -223,6 +224,7 @@ impl Inner<()> {
         }
     }
 
+    /// Opens an output stream to a file path.
     pub fn open_output(path: &str) -> Result<Self, FfmpegError> {
         let path = std::ffi::CString::new(path).expect("Failed to convert path to CString");
 

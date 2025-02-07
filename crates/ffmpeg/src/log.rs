@@ -1,126 +1,119 @@
-use std::ffi::CStr;
+use std::{ffi::CStr, ptr::NonNull};
 use std::sync::Arc;
 
-use arc_swap::ArcSwap;
+use arc_swap::ArcSwapOption;
 use ffmpeg_sys_next::*;
+use nutype_enum::nutype_enum;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-#[repr(i32)]
-pub enum LogLevel {
-    Quiet = AV_LOG_QUIET,
-    Panic = AV_LOG_PANIC,
-    Fatal = AV_LOG_FATAL,
-    Error = AV_LOG_ERROR,
-    Warning = AV_LOG_WARNING,
-    Info = AV_LOG_INFO,
-    Verbose = AV_LOG_VERBOSE,
-    Debug = AV_LOG_DEBUG,
-    Trace = AV_LOG_TRACE,
+nutype_enum! {
+    /// The logging level
+    pub enum LogLevel(i32) {
+        Quiet = AV_LOG_QUIET,
+        Panic = AV_LOG_PANIC,
+        Fatal = AV_LOG_FATAL,
+        Error = AV_LOG_ERROR,
+        Warning = AV_LOG_WARNING,
+        Info = AV_LOG_INFO,
+        Verbose = AV_LOG_VERBOSE,
+        Debug = AV_LOG_DEBUG,
+        Trace = AV_LOG_TRACE,
+    }
 }
 
-impl LogLevel {
-    pub const fn from_i32(value: i32) -> Self {
-        match value {
-            -8 => Self::Quiet,
-            0 => Self::Panic,
-            8 => Self::Fatal,
-            16 => Self::Error,
-            24 => Self::Warning,
-            32 => Self::Info,
-            40 => Self::Verbose,
-            48 => Self::Debug,
-            56 => Self::Trace,
-            _ => Self::Info,
-        }
-    }
-
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Quiet => "quiet",
-            Self::Panic => "panic",
-            Self::Fatal => "fatal",
-            Self::Error => "error",
-            Self::Warning => "warning",
-            Self::Info => "info",
-            Self::Verbose => "verbose",
-            Self::Debug => "debug",
-            Self::Trace => "trace",
+impl std::fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::Quiet => write!(f, "quiet"),
+            Self::Panic => write!(f, "panic"),
+            Self::Fatal => write!(f, "fatal"),
+            Self::Error => write!(f, "error"),
+            Self::Warning => write!(f, "warning"),
+            Self::Info => write!(f, "info"),
+            Self::Verbose => write!(f, "verbose"),
+            Self::Debug => write!(f, "debug"),
+            Self::Trace => write!(f, "trace"),
+            Self(int) => write!(f, "unknown({int})"),
         }
     }
 }
 
+/// Sets the log level.
 pub fn set_log_level(level: LogLevel) {
     unsafe {
-        av_log_set_level(level as i32);
+        av_log_set_level(level.0);
     }
 }
 
-pub fn log_callback_set<F: Fn(LogLevel, Option<String>, String) + Send + Sync + 'static>(callback: F) {
-    type Function = Box<dyn Fn(LogLevel, Option<String>, String) + Send + Sync>;
-    static LOG_CALLBACK: std::sync::OnceLock<ArcSwap<Option<Function>>> = std::sync::OnceLock::new();
+type Function = Box<dyn Fn(LogLevel, Option<String>, String) + Send + Sync>;
+static LOG_CALLBACK: ArcSwapOption<Function> = ArcSwapOption::const_empty();
 
-    unsafe extern "C" fn log_cb(
-        ptr: *mut libc::c_void,
-        level: libc::c_int,
-        fmt: *const libc::c_char,
-        va: *mut __va_list_tag,
-    ) {
-        let level = LogLevel::from_i32(level);
-        let class = if ptr.is_null() {
-            None
-        } else {
-            let class = &mut **(ptr as *mut *mut AVClass);
-            class
-                .item_name
-                .map(|im| CStr::from_ptr(im(ptr)).to_string_lossy().trim().to_owned())
-        };
-
-        let mut buf = [0u8; 1024];
-
-        vsnprintf(buf.as_mut_ptr() as *mut i8, buf.len() as _, fmt, va);
-
-        let msg = CStr::from_ptr(buf.as_ptr() as *const i8).to_string_lossy().trim().to_owned();
-
-        if let Some(cb) = LOG_CALLBACK.get() {
-            if let Some(cb) = cb.load().as_ref() {
-                cb(level, class, msg);
-            }
-        }
-    }
-
-    unsafe {
-        LOG_CALLBACK
-            .get_or_init(|| ArcSwap::new(Arc::new(None)))
-            .store(Arc::new(Some(Box::new(callback))));
-        av_log_set_callback(Some(log_cb));
-    }
+/// Sets the log callback.
+#[inline(always)]
+pub fn log_callback_set(callback: impl Fn(LogLevel, Option<String>, String) + Send + Sync + 'static) {
+    log_callback_set_boxed(Box::new(callback));
 }
 
+/// Sets the log callback.
+pub fn log_callback_set_boxed(callback: Function) {
+    LOG_CALLBACK.store(Some(Arc::new(callback)));
+    unsafe { av_log_set_callback(Some(log_cb)) };
+}
+
+/// Unsets the log callback.
 pub fn log_callback_unset() {
-    unsafe {
-        av_log_set_callback(None);
+    LOG_CALLBACK.store(None);
+    unsafe { av_log_set_callback(None) };
+}
+
+unsafe extern "C" fn log_cb(
+    ptr: *mut libc::c_void,
+    level: libc::c_int,
+    fmt: *const libc::c_char,
+    va: *mut __va_list_tag,
+) {
+    let level = LogLevel::from(level);
+    let class = NonNull::new(ptr as *mut *mut AVClass).and_then(|class| {
+        NonNull::new(*class.as_ptr())
+    }).and_then(|class| {
+        class
+            .as_ref()
+            .item_name
+            .map(|im| CStr::from_ptr(im(ptr)).to_string_lossy().trim().to_owned())
+    });
+
+    let mut buf = [0u8; 1024];
+
+    vsnprintf(buf.as_mut_ptr() as *mut i8, buf.len() as _, fmt, va);
+
+    let msg = CStr::from_ptr(buf.as_ptr() as *const i8).to_string_lossy().trim().to_owned();
+
+    if let Some(cb) = LOG_CALLBACK.load().as_ref() {
+        cb(level, class, msg);
     }
 }
 
+/// Sets the log callback to use tracing.
 #[cfg(feature = "tracing")]
 pub fn log_callback_tracing() {
     log_callback_set(|mut level, class, msg| {
-        let class = class.unwrap_or_else(|| "ffmpeg".to_owned());
+        let class = class.as_deref().unwrap_or("ffmpeg");
 
+        // We purposely ignore this message because it's a false positive
         if msg == "deprecated pixel format used, make sure you did set range correctly" {
             level = LogLevel::Debug;
         }
 
         match level {
-            LogLevel::Trace => tracing::trace!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Verbose => tracing::trace!("{}: [{class} @ {msg}", level.as_str()),
-            LogLevel::Debug => tracing::debug!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Info => tracing::info!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Warning => tracing::warn!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Quiet => tracing::error!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Error => tracing::error!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Panic => tracing::error!("{}: {class} @ {msg}", level.as_str()),
-            LogLevel::Fatal => tracing::error!("{}: {class} @ {msg}", level.as_str()),
+            LogLevel::Trace => tracing::trace!("{level}: {class} @ {msg}"),
+            LogLevel::Verbose => tracing::trace!("{level}: {class} @ {msg}"),
+            LogLevel::Debug => tracing::debug!("{level}: {class} @ {msg}"),
+            LogLevel::Info => tracing::info!("{level}: {class} @ {msg}"),
+            LogLevel::Warning => tracing::warn!("{level}: {class} @ {msg}"),
+            LogLevel::Quiet => tracing::error!("{level}: {class} @ {msg}"),
+            LogLevel::Error => tracing::error!("{level}: {class} @ {msg}"),
+            LogLevel::Panic => tracing::error!("{level}: {class} @ {msg}"),
+            LogLevel::Fatal => tracing::error!("{level}: {class} @ {msg}"),
+            LogLevel(_) => tracing::debug!("{level}: {class} @ {msg}"),
         }
     });
 }
@@ -138,28 +131,28 @@ mod tests {
     #[test]
     fn test_log_level_as_str_using_from_i32() {
         let test_cases = [
-            (-8, "quiet"),
-            (0, "panic"),
-            (8, "fatal"),
-            (16, "error"),
-            (24, "warning"),
-            (32, "info"),
-            (40, "verbose"),
-            (48, "debug"),
-            (56, "trace"),
-            (100, "info"),
-            (-1, "info"),
+            (LogLevel::Quiet, "quiet"),
+            (LogLevel::Panic, "panic"),
+            (LogLevel::Fatal, "fatal"),
+            (LogLevel::Error, "error"),
+            (LogLevel::Warning, "warning"),
+            (LogLevel::Info, "info"),
+            (LogLevel::Verbose, "verbose"),
+            (LogLevel::Debug, "debug"),
+            (LogLevel::Trace, "trace"),
+            (LogLevel(100), "unknown(100)"),
+            (LogLevel(-1), "unknown(-1)"),
         ];
 
         for &(input, expected) in &test_cases {
-            let log_level = LogLevel::from_i32(input);
+            let log_level = LogLevel::from(input);
             assert_eq!(
-                log_level.as_str(),
+                log_level.to_string(),
                 expected,
                 "Expected '{}' for input {}, but got '{}'",
                 expected,
                 input,
-                log_level.as_str()
+                log_level
             );
         }
     }
@@ -183,9 +176,9 @@ mod tests {
             let current_level = unsafe { av_log_get_level() };
 
             assert_eq!(
-                current_level, level as i32,
+                current_level, level.0,
                 "Expected log level to be {}, but got {}",
-                level as i32, current_level
+                level.0, current_level
             );
         }
     }
@@ -201,7 +194,7 @@ mod tests {
 
         let log_message = CString::new("Test warning log message").expect("Failed to create CString");
         unsafe {
-            av_log(std::ptr::null_mut(), LogLevel::Warning as i32, log_message.as_ptr());
+            av_log(std::ptr::null_mut(), LogLevel::Warning.0, log_message.as_ptr());
         }
 
         let logs = captured_logs.lock().unwrap();
@@ -232,7 +225,7 @@ mod tests {
 
             av_log(
                 &av_class_ptr as *const _ as *mut _,
-                LogLevel::Info as i32,
+                LogLevel::Info.0,
                 CString::new("Test log message with real AVClass").unwrap().as_ptr(),
             );
 
@@ -258,7 +251,7 @@ mod tests {
         unsafe {
             av_log(
                 std::ptr::null_mut(),
-                LogLevel::Info as i32,
+                LogLevel::Info.0,
                 CString::new("Test log message before unset").unwrap().as_ptr(),
             );
         }
@@ -279,7 +272,7 @@ mod tests {
         unsafe {
             av_log(
                 std::ptr::null_mut(),
-                LogLevel::Info as i32,
+                LogLevel::Info.0,
                 CString::new("Test log message after unset").unwrap().as_ptr(),
             );
         }
@@ -323,7 +316,7 @@ mod tests {
             unsafe {
                 av_log(
                     std::ptr::null_mut(),
-                    *level as i32,
+                    level.0,
                     CString::new(message.clone()).expect("Failed to create CString").as_ptr(),
                 );
             }
@@ -361,7 +354,7 @@ mod tests {
         unsafe {
             av_log(
                 std::ptr::null_mut(),
-                LogLevel::Trace as i32,
+                LogLevel::Trace.0,
                 CString::new(deprecated_message).expect("Failed to create CString").as_ptr(),
             );
         }

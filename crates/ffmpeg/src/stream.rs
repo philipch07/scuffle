@@ -4,6 +4,7 @@ use crate::consts::{Const, Mut};
 use crate::dict::Dictionary;
 use crate::utils::check_i64;
 
+/// A collection of streams. Streams implements [`IntoIterator`] to iterate over the streams.
 #[derive(Debug)]
 pub struct Streams<'a> {
     input: &'a AVFormatContext,
@@ -13,10 +14,12 @@ pub struct Streams<'a> {
 unsafe impl Send for Streams<'_> {}
 
 impl<'a> Streams<'a> {
-    pub(crate) fn new(input: &'a AVFormatContext) -> Self {
+    /// Creates a new `Streams` instance.
+    pub(crate) const fn new(input: &'a AVFormatContext) -> Self {
         Self { input }
     }
 
+    /// Returns the best stream of the given media type.
     pub fn best(&self, media_type: AVMediaType) -> Option<Const<'a, Stream<'a>>> {
         // Safety: av_find_best_stream is safe to call, 'input' is a valid pointer
         // We upcast the pointer to a mutable pointer because the function signature
@@ -33,6 +36,7 @@ impl<'a> Streams<'a> {
         Some(Const::new(Stream::new(stream, self.input)))
     }
 
+    /// Returns the best mutable stream of the given media type.
     pub fn best_mut(&mut self, media_type: AVMediaType) -> Option<Stream<'a>> {
         self.best(media_type).map(|s| s.0)
     }
@@ -58,15 +62,18 @@ impl<'a> Streams<'a> {
         }
     }
 
-    pub fn len(&self) -> usize {
+    /// Returns the length of the streams.
+    pub const fn len(&self) -> usize {
         self.input.nb_streams as usize
     }
 
-    pub fn is_empty(&self) -> bool {
+    /// Returns whether the streams are empty.
+    pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    pub fn get(&mut self, index: usize) -> Option<Stream<'_>> {
+    /// Returns the stream at the given index.
+    pub const fn get(&mut self, index: usize) -> Option<Stream<'_>> {
         if index >= self.len() {
             return None;
         }
@@ -76,6 +83,7 @@ impl<'a> Streams<'a> {
     }
 }
 
+/// An iterator over the streams.
 pub struct StreamIter<'a> {
     input: &'a AVFormatContext,
     index: usize,
@@ -106,110 +114,141 @@ impl std::iter::ExactSizeIterator for StreamIter<'_> {}
 pub struct Stream<'a>(&'a mut AVStream, &'a AVFormatContext);
 
 impl<'a> Stream<'a> {
-    pub(crate) fn new(stream: &'a mut AVStream, input: &'a AVFormatContext) -> Self {
+    /// Creates a new `Stream` instance.
+    pub(crate) const fn new(stream: &'a mut AVStream, input: &'a AVFormatContext) -> Self {
         Self(stream, input)
     }
 
-    pub fn as_ptr(&self) -> *const AVStream {
+    /// Returns a constant pointer to the stream.
+    pub const fn as_ptr(&self) -> *const AVStream {
         self.0
     }
 
-    pub fn as_mut_ptr(&mut self) -> *mut AVStream {
+    /// Returns a mutable pointer to the stream.
+    pub const fn as_mut_ptr(&mut self) -> *mut AVStream {
         self.0
     }
 }
 
 impl<'a> Stream<'a> {
-    pub fn index(&self) -> i32 {
+    /// Returns the index of the stream.
+    pub const fn index(&self) -> i32 {
         self.0.index
     }
 
-    pub fn id(&self) -> i32 {
+    /// Returns the ID of the stream.
+    pub const fn id(&self) -> i32 {
         self.0.id
     }
 
-    pub fn codec_parameters(&self) -> Option<&'a AVCodecParameters> {
+    /// Returns the codec parameters of the stream.
+    pub const fn codec_parameters(&self) -> Option<&'a AVCodecParameters> {
         // Safety: the pointer is valid
         unsafe { self.0.codecpar.as_ref() }
     }
 
-    pub fn time_base(&self) -> AVRational {
+    /// Returns the time base of the stream.
+    pub const fn time_base(&self) -> AVRational {
         self.0.time_base
     }
 
-    pub fn set_time_base(&mut self, time_base: AVRational) {
+    /// Sets the time base of the stream.
+    pub const fn set_time_base(&mut self, time_base: AVRational) {
         self.0.time_base = time_base;
     }
 
-    pub fn start_time(&self) -> Option<i64> {
+    /// Returns the start time of the stream.
+    pub const fn start_time(&self) -> Option<i64> {
         check_i64(self.0.start_time)
     }
 
-    pub fn set_start_time(&mut self, start_time: Option<i64>) {
-        self.0.start_time = start_time.unwrap_or(AV_NOPTS_VALUE)
+    /// Sets the start time of the stream.
+    pub const fn set_start_time(&mut self, start_time: Option<i64>) {
+        self.0.start_time = match start_time {
+            Some(start_time) => start_time,
+            None => AV_NOPTS_VALUE,
+        }
     }
 
-    pub fn duration(&self) -> Option<i64> {
+    /// Returns the duration of the stream.
+    pub const fn duration(&self) -> Option<i64> {
         check_i64(self.0.duration)
     }
 
-    pub fn set_duration(&mut self, duration: Option<i64>) {
-        self.0.duration = duration.unwrap_or(AV_NOPTS_VALUE)
+    /// Sets the duration of the stream.
+    pub const fn set_duration(&mut self, duration: Option<i64>) {
+        self.0.duration = match duration {
+            Some(duration) => duration,
+            None => AV_NOPTS_VALUE,
+        }
     }
 
-    pub fn nb_frames(&self) -> Option<i64> {
+    /// Returns the number of frames in the stream.
+    pub const fn nb_frames(&self) -> Option<i64> {
         check_i64(self.0.nb_frames)
     }
 
-    pub fn set_nb_frames(&mut self, nb_frames: i64) {
+    /// Sets the number of frames in the stream.
+    pub const fn set_nb_frames(&mut self, nb_frames: i64) {
         self.0.nb_frames = nb_frames;
     }
 
-    pub fn disposition(&self) -> i32 {
+    /// Returns the disposition of the stream.
+    pub const fn disposition(&self) -> i32 {
         self.0.disposition
     }
 
-    pub fn set_disposition(&mut self, disposition: i32) {
+    /// Sets the disposition of the stream.
+    pub const fn set_disposition(&mut self, disposition: i32) {
         self.0.disposition = disposition;
     }
 
-    pub fn discard(&self) -> AVDiscard {
+    /// Returns the discard flag of the stream.
+    pub const fn discard(&self) -> AVDiscard {
         self.0.discard
     }
 
-    pub fn set_discard(&mut self, discard: AVDiscard) {
+    /// Sets the discard flag of the stream.
+    pub const fn set_discard(&mut self, discard: AVDiscard) {
         self.0.discard = discard;
     }
 
-    pub fn sample_aspect_ratio(&self) -> AVRational {
+    /// Returns the sample aspect ratio of the stream.
+    pub const fn sample_aspect_ratio(&self) -> AVRational {
         self.0.sample_aspect_ratio
     }
 
-    pub fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
+    /// Sets the sample aspect ratio of the stream.
+    pub const fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
         self.0.sample_aspect_ratio = sample_aspect_ratio;
     }
 
-    pub fn metadata(&self) -> Const<'_, Dictionary> {
+    /// Returns the metadata of the stream.
+    pub const fn metadata(&self) -> Const<'_, Dictionary> {
         // Safety: the pointer metadata pointer does not live longer than this object,
         // see `Const::new`
         Const::new(unsafe { Dictionary::from_ptr_ref(self.0.metadata) })
     }
 
-    pub fn metadata_mut(&mut self) -> Mut<'_, Dictionary> {
+    /// Returns a mutable reference to the metadata of the stream.
+    pub const fn metadata_mut(&mut self) -> Mut<'_, Dictionary> {
         // Safety: the pointer metadata pointer does not live longer than this object,
         // see `Mut::new`
         Mut::new(unsafe { Dictionary::from_ptr_ref(self.0.metadata) })
     }
 
-    pub fn avg_frame_rate(&self) -> AVRational {
+    /// Returns the average frame rate of the stream.
+    pub const fn avg_frame_rate(&self) -> AVRational {
         self.0.avg_frame_rate
     }
 
-    pub fn r_frame_rate(&self) -> AVRational {
+    /// Returns the real frame rate of the stream.
+    pub const fn r_frame_rate(&self) -> AVRational {
         self.0.r_frame_rate
     }
 
-    pub fn format_context(&self) -> &'a AVFormatContext {
+    /// Returns the format context of the stream.
+    pub const fn format_context(&self) -> &'a AVFormatContext {
         self.1
     }
 }
