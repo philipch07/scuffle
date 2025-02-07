@@ -82,10 +82,7 @@ impl Packet {
     /// # Safety
     /// `ptr` must be a valid pointer to a packet.
     unsafe fn wrap(ptr: *mut AVPacket) -> Option<Self> {
-        match SmartPtr::wrap_non_null(ptr, |ptr| av_packet_free(ptr)) {
-            Some(packet) => Some(Self(packet)),
-            None => None,
-        }
+        SmartPtr::wrap_non_null(ptr, |ptr| av_packet_free(ptr)).map(Self)
     }
 
     /// Returns a pointer to the packet.

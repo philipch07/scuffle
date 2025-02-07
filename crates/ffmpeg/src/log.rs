@@ -1,4 +1,5 @@
-use std::{ffi::CStr, ptr::NonNull};
+use std::ffi::CStr;
+use std::ptr::NonNull;
 use std::sync::Arc;
 
 use arc_swap::ArcSwapOption;
@@ -65,21 +66,16 @@ pub fn log_callback_unset() {
     unsafe { av_log_set_callback(None) };
 }
 
-unsafe extern "C" fn log_cb(
-    ptr: *mut libc::c_void,
-    level: libc::c_int,
-    fmt: *const libc::c_char,
-    va: *mut __va_list_tag,
-) {
+unsafe extern "C" fn log_cb(ptr: *mut libc::c_void, level: libc::c_int, fmt: *const libc::c_char, va: *mut __va_list_tag) {
     let level = LogLevel::from(level);
-    let class = NonNull::new(ptr as *mut *mut AVClass).and_then(|class| {
-        NonNull::new(*class.as_ptr())
-    }).and_then(|class| {
-        class
-            .as_ref()
-            .item_name
-            .map(|im| CStr::from_ptr(im(ptr)).to_string_lossy().trim().to_owned())
-    });
+    let class = NonNull::new(ptr as *mut *mut AVClass)
+        .and_then(|class| NonNull::new(*class.as_ptr()))
+        .and_then(|class| {
+            class
+                .as_ref()
+                .item_name
+                .map(|im| CStr::from_ptr(im(ptr)).to_string_lossy().trim().to_owned())
+        });
 
     let mut buf = [0u8; 1024];
 
@@ -145,7 +141,7 @@ mod tests {
         ];
 
         for &(input, expected) in &test_cases {
-            let log_level = LogLevel::from(input);
+            let log_level = input;
             assert_eq!(
                 log_level.to_string(),
                 expected,

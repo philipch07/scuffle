@@ -100,7 +100,8 @@ impl Scalar {
                 self.frame.as_ptr().as_ref().unwrap().data.as_ptr(),
                 self.frame.as_ptr().as_ref().unwrap().linesize.as_ptr(),
             )
-        }).result()?;
+        })
+        .result()?;
 
         // Copy the other fields from the input frame to the output frame.
         self.frame.set_dts(frame.dts());

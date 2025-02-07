@@ -18,10 +18,12 @@ pub struct OutputOptions {
     format_ffi: *const AVOutputFormat,
 }
 
-
 impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
     /// Sets the format FFI.
-    pub fn format_ffi(self, format_ffi: *const AVOutputFormat) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
+    pub fn format_ffi(
+        self,
+        format_ffi: *const AVOutputFormat,
+    ) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
     where
         S::FormatFfi: output_options_builder::IsUnset,
     {
@@ -34,7 +36,10 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
 
     /// Gets the format ffi from the format name.
     #[inline]
-    pub fn format_name(self, format_name: &str) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
+    pub fn format_name(
+        self,
+        format_name: &str,
+    ) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
     where
         S::FormatFfi: output_options_builder::IsUnset,
     {
@@ -43,7 +48,10 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
 
     /// Gets the format ffi from the format mime type.
     #[inline]
-    pub fn format_mime_type(self, format_mime_type: &str) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
+    pub fn format_mime_type(
+        self,
+        format_mime_type: &str,
+    ) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
     where
         S::FormatFfi: output_options_builder::IsUnset,
     {
@@ -51,7 +59,11 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
     }
 
     /// Sets the format ffi from the format name and mime type.
-    pub fn format_name_mime_type(self, format_name: &str, format_mime_type: &str) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
+    pub fn format_name_mime_type(
+        self,
+        format_name: &str,
+        format_mime_type: &str,
+    ) -> Result<OutputOptionsBuilder<output_options_builder::SetFormatFfi<S>>, FfmpegError>
     where
         S::FormatFfi: output_options_builder::IsUnset,
     {
@@ -140,7 +152,8 @@ impl<T: Send + Sync> Output<T> {
     /// Adds a new stream to the output.
     pub fn add_stream(&mut self, codec: Option<*const AVCodec>) -> Option<Stream<'_>> {
         // Safety: `avformat_new_stream` is safe to call.
-        let mut stream = NonNull::new(unsafe { avformat_new_stream(self.as_mut_ptr(), codec.unwrap_or_else(std::ptr::null)) })?;
+        let mut stream =
+            NonNull::new(unsafe { avformat_new_stream(self.as_mut_ptr(), codec.unwrap_or_else(std::ptr::null)) })?;
         unsafe {
             let stream = stream.as_mut();
             stream.id = self.inner.context.as_deref_except().nb_streams as i32 - 1;
@@ -289,9 +302,8 @@ mod tests {
             Ok(_) => panic!("Expected error, got Ok"),
             Err(e) => {
                 assert_eq!(e, FfmpegError::Arguments("could not determine output format"));
-                return;
             }
-        };
+        }
     }
 
     #[test]

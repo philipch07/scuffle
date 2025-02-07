@@ -163,52 +163,52 @@ impl std::fmt::Debug for Frame {
 impl VideoFrame {
     /// Returns the width of the frame.
     pub const fn width(&self) -> usize {
-        self.0.0.as_deref_except().width as usize
+        self.0 .0.as_deref_except().width as usize
     }
 
     /// Returns the height of the frame.
     pub const fn height(&self) -> usize {
-        self.0.0.as_deref_except().height as usize
+        self.0 .0.as_deref_except().height as usize
     }
 
     /// Returns the sample aspect ratio of the frame.
     pub const fn sample_aspect_ratio(&self) -> AVRational {
-        self.0.0.as_deref_except().sample_aspect_ratio
+        self.0 .0.as_deref_except().sample_aspect_ratio
     }
 
     /// Sets the sample aspect ratio of the frame.
     pub const fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
-        self.0.0.as_deref_mut_except().sample_aspect_ratio = sample_aspect_ratio;
+        self.0 .0.as_deref_mut_except().sample_aspect_ratio = sample_aspect_ratio;
     }
 
     /// Sets the width of the frame.
     pub const fn set_width(&mut self, width: usize) {
-        self.0.0.as_deref_mut_except().width = width as i32;
+        self.0 .0.as_deref_mut_except().width = width as i32;
     }
 
     /// Sets the height of the frame.
     pub const fn set_height(&mut self, height: usize) {
-        self.0.0.as_deref_mut_except().height = height as i32;
+        self.0 .0.as_deref_mut_except().height = height as i32;
     }
 
     /// Returns true if the frame is a keyframe.
     pub const fn is_keyframe(&self) -> bool {
-        self.0.0.as_deref_except().key_frame != 0
+        self.0 .0.as_deref_except().key_frame != 0
     }
 
     /// Returns the picture type of the frame.
     pub const fn pict_type(&self) -> AVPictureType {
-        self.0.0.as_deref_except().pict_type
+        self.0 .0.as_deref_except().pict_type
     }
 
     pub const fn set_pict_type(&mut self, pict_type: AVPictureType) {
-        self.0.0.as_deref_mut_except().pict_type = pict_type;
+        self.0 .0.as_deref_mut_except().pict_type = pict_type;
     }
 
     pub fn data(&self, index: usize) -> Option<&[u8]> {
         unsafe {
             self.0
-                .0
+                 .0
                 .as_deref_except()
                 .data
                 .get(index)
@@ -290,17 +290,17 @@ impl AudioFrame {
 
     /// Returns the channel layout of the frame.
     pub const fn channel_layout(&self) -> ffmpeg_sys_next::AVChannelLayout {
-        self.0.0.as_deref_except().ch_layout
+        self.0 .0.as_deref_except().ch_layout
     }
 
     /// Returns the channel count of the frame.
     pub const fn channel_count(&self) -> usize {
-        self.0.0.as_deref_except().ch_layout.nb_channels as usize
+        self.0 .0.as_deref_except().ch_layout.nb_channels as usize
     }
 
     /// Returns the number of samples in the frame.
     pub const fn nb_samples(&self) -> i32 {
-        self.0.0.as_deref_except().nb_samples
+        self.0 .0.as_deref_except().nb_samples
     }
 
     /// Sets the number of samples in the frame.
@@ -310,12 +310,12 @@ impl AudioFrame {
 
     /// Returns the sample rate of the frame.
     pub const fn sample_rate(&self) -> i32 {
-        self.0.0.as_deref_except().sample_rate
+        self.0 .0.as_deref_except().sample_rate
     }
 
     /// Sets the sample rate of the frame.
     pub const fn set_sample_rate(&mut self, sample_rate: usize) {
-        self.0.0.as_deref_mut_except().sample_rate = sample_rate as i32;
+        self.0 .0.as_deref_mut_except().sample_rate = sample_rate as i32;
     }
 }
 

@@ -258,7 +258,6 @@ impl Encoder {
         // 'codec_options_ptr' are a valid pointers.
         FfmpegErrorCode(unsafe { avcodec_open2(encoder_mut, codec.as_ptr(), codec_options_ptr) }).result()?;
 
-
         // Safety: `avcodec_parameters_from_context` is safe to call, 'ost' and
         // 'encoder' are valid pointers.
         FfmpegErrorCode(unsafe { avcodec_parameters_from_context((*ost.as_mut_ptr()).codecpar, encoder_mut) }).result()?;
@@ -1048,7 +1047,7 @@ mod tests {
     fn test_encoder_getters() {
         let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
         let data = std::io::Cursor::new(Vec::new());
-            let options = OutputOptions::builder().format_name("mp4").unwrap().build();
+        let options = OutputOptions::builder().format_name("mp4").unwrap().build();
         let mut output = Output::new(data, options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };

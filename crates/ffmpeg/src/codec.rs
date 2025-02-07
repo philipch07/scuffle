@@ -14,8 +14,7 @@ impl std::fmt::Debug for DecoderCodec {
                 .field("id", &codec.id)
                 .finish()
         } else {
-            f
-                .debug_struct("DecoderCodec")
+            f.debug_struct("DecoderCodec")
                 .field("name", &"null")
                 .field("id", &AVCodecID::AV_CODEC_ID_NONE)
                 .finish()
@@ -86,8 +85,7 @@ impl std::fmt::Debug for EncoderCodec {
                 .field("id", &codec.id)
                 .finish()
         } else {
-            f
-                .debug_struct("EncoderCodec")
+            f.debug_struct("EncoderCodec")
                 .field("name", &"null")
                 .field("id", &AVCodecID::AV_CODEC_ID_NONE)
                 .finish()

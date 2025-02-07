@@ -53,7 +53,8 @@ impl FilterGraph {
                 std::ptr::null_mut(),
                 self.as_mut_ptr(),
             )
-        }).result()?;
+        })
+        .result()?;
 
         // Safety: 'filter_context' is a valid pointer
         Ok(FilterContext(unsafe {
@@ -260,7 +261,8 @@ impl FilterContextSource<'_> {
             } else {
                 av_buffersrc_write_frame(self.0, std::ptr::null())
             }
-        }).result()?;
+        })
+        .result()?;
         Ok(())
     }
 }

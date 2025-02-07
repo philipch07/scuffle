@@ -38,7 +38,9 @@ impl Clone for Dictionary {
 
     fn clone_from(&mut self, source: &Self) {
         // Safety: av_dict_copy is safe to call
-        FfmpegErrorCode::from(unsafe { av_dict_copy(self.as_mut_ptr_ref(), source.as_ptr(), 0) }).result().expect("Failed to clone dictionary");
+        FfmpegErrorCode::from(unsafe { av_dict_copy(self.as_mut_ptr_ref(), source.as_ptr(), 0) })
+            .result()
+            .expect("Failed to clone dictionary");
     }
 }
 
