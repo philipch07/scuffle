@@ -4,6 +4,8 @@
 //!
 //! This crate aims to provide a simple-safe interface to the native ffmpeg c-bindings.
 //!
+//! Currently this crate only supports the latest versions of ffmpeg (7.x.x)
+//!
 //! ## How is this different from other ffmpeg crates?
 //!
 //! The other main ffmpeg crate is [ffmpeg-next](https://github.com/zmwangx/rust-ffmpeg).
