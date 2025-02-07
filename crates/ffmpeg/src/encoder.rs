@@ -114,7 +114,7 @@ impl AudioEncoderSettings {
         }
 
         encoder.sample_rate = self.sample_rate;
-        encoder.ch_layout = self.ch_layout.into_inner();
+        self.ch_layout.apply(&mut encoder.ch_layout);
         encoder.sample_fmt = self.sample_fmt;
         encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
         encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);

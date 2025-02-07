@@ -269,14 +269,17 @@ impl Default for AudioChannelLayout {
         // Safety: this is a c-struct and those are safe to zero out.
         let zeroed_layout = unsafe { std::mem::zeroed() };
 
-        Self(SmartObject::new(zeroed_layout, |ptr: &mut AVChannelLayout| {
-            // Safety: `av_channel_layout_uninit` is safe to call.
-            unsafe { av_channel_layout_uninit(ptr) };
-        }))
+        Self(SmartObject::new(zeroed_layout, Self::destructor))
     }
 }
 
 impl AudioChannelLayout {
+    #[doc(hidden)]
+    fn destructor(ptr: &mut AVChannelLayout) {
+        // Safety: `av_channel_layout_uninit` is safe to call.
+        unsafe { av_channel_layout_uninit(ptr) };
+    }
+
     /// Creates a new `AudioChannelLayout` instance.
     pub fn new(channels: i32) -> Result<Self, FfmpegError> {
         let mut layout = Self::default();
@@ -304,10 +307,7 @@ impl AudioChannelLayout {
     /// # Safety
     /// Requires that the layout can be safely deallocated with `av_channel_layout_uninit`
     pub unsafe fn wrap(layout: AVChannelLayout) -> Self {
-        Self(SmartObject::new(layout, |ptr: &mut AVChannelLayout| {
-            // Safety: `av_channel_layout_uninit` is safe to call.
-            unsafe { av_channel_layout_uninit(ptr) };
-        }))
+        Self(SmartObject::new(layout, Self::destructor))
     }
 
     /// Returns the number of channels in the layout.
@@ -320,47 +320,34 @@ impl AudioChannelLayout {
     pub fn into_inner(self) -> AVChannelLayout {
         self.0.into_inner()
     }
+
+    pub(crate) fn apply(mut self, layout: &mut AVChannelLayout) {
+        std::mem::swap(layout, self.0.as_mut());
+    }
 }
 
 impl AudioFrame {
     /// Sets channel layout to default with a channel count of `channel_count`.
     pub fn set_channel_layout_default(&mut self, channel_count: usize) -> Result<(), FfmpegError> {
+        let layout = AudioChannelLayout::new(channel_count as i32)?;
+
         // Safety: Our pointer is valid.
         let av_frame = unsafe { self.as_mut_ptr().as_mut() }.ok_or(FfmpegError::Alloc)?;
 
-        // Safety: `av_channel_layout_uninit` is safe to call.
-        unsafe {
-            av_channel_layout_uninit(&mut av_frame.ch_layout);
-        }
-
-        // Safety: `std::mem::zeroed` is safe to call because this is a zero-initialized struct.
-        av_frame.ch_layout = unsafe { std::mem::zeroed() };
-
-        // Safety: `self.as_mut_ptr()` should return a valid mutable pointer to the internal
-        // `AVFrame` structure. This block modifies the `ch_layout` field of the `AVFrame`
-        // using FFMPEG's `av_channel_layout_default` function, which is expected to be safe
-        // as long as the provided `channel_count` is valid and within acceptable ranges.
-        unsafe {
-            ffmpeg_sys_next::av_channel_layout_default(&mut av_frame.ch_layout, channel_count as i32);
-        }
-
-        // Safety: `av_channel_layout_check` is safe to call.
-        if unsafe { av_channel_layout_check(&av_frame.ch_layout) } == 0 {
-            return Err(FfmpegError::Arguments("Invalid default channel layout."));
-        }
+        layout.apply(&mut av_frame.ch_layout);
 
         Ok(())
     }
 
     /// Sets channel layout to a custom layout. Note that the channel count
     /// is defined by the given `ffmpeg_sys_next::AVChannelLayout`.
-    pub fn set_channel_layout_custom(&mut self, mut custom_layout: AudioChannelLayout) -> Result<(), FfmpegError> {
+    pub fn set_channel_layout_custom(&mut self, custom_layout: AudioChannelLayout) -> Result<(), FfmpegError> {
         custom_layout.validate()?;
 
         // Safety: Our pointer is valid.
         let av_frame = unsafe { self.as_mut_ptr().as_mut() }.ok_or(FfmpegError::Alloc)?;
 
-        std::mem::swap(&mut av_frame.ch_layout, custom_layout.0.as_mut());
+        custom_layout.apply(&mut av_frame.ch_layout);
 
         Ok(())
     }
