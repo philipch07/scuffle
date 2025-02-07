@@ -1,8 +1,8 @@
 #[derive(Debug)]
-pub struct SmartPtr<T>(SmartObject<*mut T>);
+pub(crate) struct SmartPtr<T>(SmartObject<*mut T>);
 
 #[derive(Debug)]
-pub struct SmartObject<T> {
+pub(crate) struct SmartObject<T> {
     value: Option<T>,
     destructor: fn(&mut T),
 }

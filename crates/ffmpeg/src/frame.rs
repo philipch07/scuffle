@@ -1,7 +1,7 @@
 use ffmpeg_sys_next::*;
 
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::smart_object::SmartPtr;
+use crate::smart_object::{SmartObject, SmartPtr};
 use crate::utils::{check_i64, or_nopts};
 
 /// A frame. Thin wrapper around [`AVFrame`].
@@ -261,6 +261,67 @@ impl std::ops::DerefMut for VideoFrame {
     }
 }
 
+/// A thin wrapper around `AVChannelLayout` to make it easier to use.
+pub struct AudioChannelLayout(SmartObject<AVChannelLayout>);
+
+impl Default for AudioChannelLayout {
+    fn default() -> Self {
+        // Safety: this is a c-struct and those are safe to zero out.
+        let zeroed_layout = unsafe { std::mem::zeroed() };
+
+        Self(SmartObject::new(zeroed_layout, |ptr: &mut AVChannelLayout| {
+            // Safety: `av_channel_layout_uninit` is safe to call.
+            unsafe { av_channel_layout_uninit(ptr) };
+        }))
+    }
+}
+
+impl AudioChannelLayout {
+    /// Creates a new `AudioChannelLayout` instance.
+    pub fn new(channels: i32) -> Result<Self, FfmpegError> {
+        let mut layout = Self::default();
+
+        // Safety: `av_channel_layout_default` is safe to call.
+        unsafe { av_channel_layout_default(layout.0.as_mut(), channels) };
+
+        layout.validate()?;
+
+        Ok(layout)
+    }
+
+    /// Validates the channel layout.
+    pub fn validate(&self) -> Result<(), FfmpegError> {
+        // Safety: `av_channel_layout_check` is safe to call
+        if unsafe { av_channel_layout_check(self.0.as_ref()) } == 0 {
+            return Err(FfmpegError::Arguments("Invalid channel layout."));
+        }
+
+        Ok(())
+    }
+
+    /// Wraps an `AVChannelLayout` automatically calling `av_channel_layout_uninit` on drop.
+    ///
+    /// # Safety
+    /// Requires that the layout can be safely deallocated with `av_channel_layout_uninit`
+    pub unsafe fn wrap(layout: AVChannelLayout) -> Self {
+        Self(SmartObject::new(layout, |ptr: &mut AVChannelLayout| {
+            // Safety: `av_channel_layout_uninit` is safe to call.
+            unsafe { av_channel_layout_uninit(ptr) };
+        }))
+    }
+
+    /// Returns the number of channels in the layout.
+    pub fn channel_count(&self) -> i32 {
+        self.0.as_ref().nb_channels
+    }
+
+    /// Consumes the `AudioChannelLayout` and returns the inner `AVChannelLayout`.
+    /// The caller is responsible for calling `av_channel_layout_uninit` on the returned value.
+    pub fn into_inner(self) -> AVChannelLayout {
+        self.0.into_inner()
+    }
+}
+
 impl AudioFrame {
     /// Sets channel layout to default with a channel count of `channel_count`.
     pub fn set_channel_layout_default(&mut self, channel_count: usize) -> Result<(), FfmpegError> {
@@ -293,21 +354,13 @@ impl AudioFrame {
 
     /// Sets channel layout to a custom layout. Note that the channel count
     /// is defined by the given `ffmpeg_sys_next::AVChannelLayout`.
-    pub fn set_channel_layout_custom(&mut self, custom_layout: AVChannelLayout) -> Result<(), FfmpegError> {
+    pub fn set_channel_layout_custom(&mut self, mut custom_layout: AudioChannelLayout) -> Result<(), FfmpegError> {
+        custom_layout.validate()?;
+
         // Safety: Our pointer is valid.
         let av_frame = unsafe { self.as_mut_ptr().as_mut() }.ok_or(FfmpegError::Alloc)?;
 
-        // Safety: `av_channel_layout_uninit` is safe to call.
-        unsafe {
-            av_channel_layout_uninit(&mut av_frame.ch_layout);
-        }
-
-        av_frame.ch_layout = custom_layout;
-
-        // Safety: `av_channel_layout_check` is safe to call.
-        if unsafe { av_channel_layout_check(&av_frame.ch_layout) } == 0 {
-            return Err(FfmpegError::Arguments("Invalid custom channel layout."));
-        }
+        std::mem::swap(&mut av_frame.ch_layout, custom_layout.0.as_mut());
 
         Ok(())
     }
@@ -384,7 +437,7 @@ mod tests {
     use insta::assert_debug_snapshot;
     use rand::{thread_rng, Rng};
 
-    use crate::frame::Frame;
+    use crate::frame::{AudioChannelLayout, Frame};
 
     #[test]
     fn test_frame_clone() {
@@ -636,13 +689,16 @@ mod tests {
     fn test_set_channel_layout_custom_invalid_layout_error() {
         let frame = Frame::new().expect("Failed to create frame");
         let mut audio_frame = frame.audio();
-        let custom_layout = ffmpeg_sys_next::AVChannelLayout {
-            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
-            nb_channels: -1,
-            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
-                mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
-            },
-            opaque: std::ptr::null_mut(),
+        // Safety: This is safe to be deallocated by the layout destructor.
+        let custom_layout = unsafe {
+            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
+                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+                nb_channels: -1,
+                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
+                    mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
+                },
+                opaque: std::ptr::null_mut(),
+            })
         };
 
         assert!(
@@ -655,13 +711,16 @@ mod tests {
     fn test_set_channel_layout_custom() {
         let frame = Frame::new().expect("Failed to create frame");
         let mut audio_frame = frame.audio();
-        let custom_layout = ffmpeg_sys_next::AVChannelLayout {
-            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
-            nb_channels: 2,
-            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
-                mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
-            },
-            opaque: std::ptr::null_mut(),
+        // Safety: This is safe to be deallocated by the layout destructor.
+        let custom_layout = unsafe {
+            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
+                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+                nb_channels: 2,
+                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
+                    mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
+                },
+                opaque: std::ptr::null_mut(),
+            })
         };
 
         assert!(

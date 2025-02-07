@@ -5,10 +5,10 @@ use ffmpeg_sys_next::*;
 use crate::codec::EncoderCodec;
 use crate::dict::Dictionary;
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::frame::Frame;
+use crate::frame::{AudioChannelLayout, Frame};
 use crate::io::Output;
 use crate::packet::Packet;
-use crate::smart_object::{SmartObject, SmartPtr};
+use crate::smart_object::SmartPtr;
 
 /// Represents an encoder.
 pub struct Encoder {
@@ -92,8 +92,7 @@ impl VideoEncoderSettings {
 #[derive(bon::Builder)]
 pub struct AudioEncoderSettings {
     sample_rate: i32,
-    #[builder(setters(vis = "", name = ch_layout_internal))]
-    ch_layout: SmartObject<AVChannelLayout>,
+    ch_layout: AudioChannelLayout,
     sample_fmt: AVSampleFormat,
     thread_count: Option<i32>,
     thread_type: Option<i32>,
@@ -135,46 +134,6 @@ impl AudioEncoderSettings {
         }
 
         (timebase.den as i64) / (self.sample_rate as i64 * timebase.num as i64)
-    }
-}
-
-impl<S: audio_encoder_settings_builder::State> AudioEncoderSettingsBuilder<S> {
-    /// Sets the channel count for the audio encoder.
-    pub fn channel_count(
-        self,
-        channel_count: i32,
-    ) -> Result<AudioEncoderSettingsBuilder<audio_encoder_settings_builder::SetChLayout<S>>, FfmpegError>
-    where
-        S::ChLayout: audio_encoder_settings_builder::IsUnset,
-    {
-        // Safety: this is a c-struct and those are safe to zero out.
-        let zeroed_layout = unsafe { std::mem::zeroed() };
-        let destructor = |ptr: &mut AVChannelLayout| {
-            // Safety: The pointer here is valid.
-            unsafe { av_channel_layout_uninit(ptr) };
-        };
-        let mut ch_layout = SmartObject::new(zeroed_layout, destructor);
-
-        // Safety: This is safe to call and the ch_layout is allocated on the stack.
-        unsafe { av_channel_layout_default(ch_layout.as_mut(), channel_count) };
-
-        self.ch_layout(ch_layout)
-    }
-
-    /// Sets the channel layout for the audio encoder.
-    pub fn ch_layout(
-        self,
-        custom_layout: SmartObject<AVChannelLayout>,
-    ) -> Result<AudioEncoderSettingsBuilder<audio_encoder_settings_builder::SetChLayout<S>>, FfmpegError>
-    where
-        S::ChLayout: audio_encoder_settings_builder::IsUnset,
-    {
-        // Safety: This is safe to call and the ch_layout is allocated on the stack.
-        if unsafe { av_channel_layout_check(custom_layout.as_ref()) } == 0 {
-            return Err(FfmpegError::Arguments("Invalid channel layout."));
-        }
-
-        Ok(self.ch_layout_internal(custom_layout))
     }
 }
 
@@ -544,11 +503,11 @@ mod tests {
     use crate::codec::EncoderCodec;
     use crate::dict::Dictionary;
     use crate::encoder::{
-        AudioEncoderSettings, Encoder, EncoderSettings, MuxerEncoder, MuxerSettings, VideoEncoderSettings,
+        AudioChannelLayout, AudioEncoderSettings, Encoder, EncoderSettings, MuxerEncoder, MuxerSettings,
+        VideoEncoderSettings,
     };
     use crate::error::FfmpegError;
     use crate::io::{Output, OutputOptions};
-    use crate::smart_object::SmartObject;
 
     #[test]
     fn test_video_encoder_apply() {
@@ -729,8 +688,7 @@ mod tests {
 
         let settings = AudioEncoderSettings::builder()
             .sample_rate(sample_rate)
-            .channel_count(channel_count)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(channel_count).expect("channel_count is a valid value"))
             .sample_fmt(sample_fmt)
             .thread_count(thread_count)
             .thread_type(thread_type)
@@ -744,7 +702,7 @@ mod tests {
             .build();
 
         assert_eq!(settings.sample_rate, sample_rate);
-        assert_eq!(settings.ch_layout.nb_channels, 2);
+        assert_eq!(settings.ch_layout.channel_count(), 2);
         assert_eq!(settings.sample_fmt, sample_fmt);
         assert_eq!(settings.thread_count, Some(thread_count));
         assert_eq!(settings.thread_type, Some(thread_type));
@@ -763,32 +721,32 @@ mod tests {
 
     #[test]
     fn test_ch_layout_valid_layout() {
-        let result = AudioEncoderSettings::builder().ch_layout(SmartObject::new(
-            ffmpeg_sys_next::AVChannelLayout {
+        // Safety: This is safe to call and the channel layout is allocated on the stack.
+        let channel_layout = unsafe {
+            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
                 order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
                 nb_channels: 2,
                 u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0b11 },
                 opaque: std::ptr::null_mut(),
-            },
-            |_| {},
-        ));
+            })
+        };
 
-        assert!(result.is_ok(), "Expected valid channel layout.");
+        channel_layout.validate().expect("channel_layout is a valid value");
     }
 
     #[test]
     fn test_ch_layout_invalid_layout() {
-        let result = AudioEncoderSettings::builder().ch_layout(SmartObject::new(
-            ffmpeg_sys_next::AVChannelLayout {
+        // Safety: This is safe to call and the channel layout is allocated on the stack.
+        let channel_layout = unsafe {
+            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
                 order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
                 nb_channels: 0,
                 u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
                 opaque: std::ptr::null_mut(),
-            },
-            |_| {},
-        ));
-
-        assert!(result.is_err(), "Expected an error for invalid channel layout.");
+            })
+        };
+        let result: Result<(), FfmpegError> = channel_layout.validate();
+        assert_eq!(result.unwrap_err(), FfmpegError::Arguments("Invalid channel layout"));
     }
 
     #[test]
@@ -796,8 +754,7 @@ mod tests {
         let settings = AudioEncoderSettings::builder()
             .sample_rate(0)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_NONE)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .build();
 
         // Safety: We are zeroing the memory for the encoder context.
@@ -818,8 +775,7 @@ mod tests {
         let settings = AudioEncoderSettings::builder()
             .sample_rate(sample_rate)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .build();
         let expected_duration = 1;
         let actual_duration = settings.average_duration(timebase);
@@ -834,8 +790,7 @@ mod tests {
         let settings = AudioEncoderSettings::builder()
             .sample_rate(sample_rate)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .build();
         let actual_duration = settings.average_duration(timebase);
 
@@ -849,8 +804,7 @@ mod tests {
         let settings = AudioEncoderSettings::builder()
             .sample_rate(sample_rate)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .build();
         let expected_duration = 1;
         let actual_duration = settings.average_duration(timebase);
@@ -888,8 +842,7 @@ mod tests {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .build();
 
@@ -927,8 +880,7 @@ mod tests {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .codec_specific_options(audio_codec_options)
             .build();
@@ -960,8 +912,7 @@ mod tests {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .build();
         let encoder_settings = EncoderSettings::Audio(audio_settings);
@@ -1002,8 +953,7 @@ mod tests {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .expect("channel_count is a valid value")
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .build();
         let encoder_settings: EncoderSettings = audio_settings.into();
