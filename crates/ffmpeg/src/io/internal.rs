@@ -178,7 +178,8 @@ impl<T: Send + Sync> Inner<T> {
                     std::ptr::null(),
                     std::ptr::null_mut(),
                 )
-            }).result()?;
+            })
+            .result()?;
 
             if context.as_ptr().is_null() {
                 return Err(FfmpegError::Alloc);
@@ -239,7 +240,8 @@ impl Inner<()> {
         // Safety: avformat_alloc_output_context2 is safe to call and all arguments are valid
         FfmpegErrorCode(unsafe {
             avformat_alloc_output_context2(this.context.as_mut(), std::ptr::null(), std::ptr::null(), path.as_ptr())
-        }).result()?;
+        })
+        .result()?;
 
         // We are not moving the pointer so this is safe
         if this.context.as_ptr().is_null() {
@@ -247,7 +249,8 @@ impl Inner<()> {
         }
 
         // Safety: avio_open is safe to call and all arguments are valid
-        FfmpegErrorCode(unsafe { avio_open(&mut this.context.as_deref_mut_except().pb, path.as_ptr(), AVIO_FLAG_WRITE) }).result()?;
+        FfmpegErrorCode(unsafe { avio_open(&mut this.context.as_deref_mut_except().pb, path.as_ptr(), AVIO_FLAG_WRITE) })
+            .result()?;
 
         this.context.set_destructor(|mut_ref| {
             // We own this resource so we need to free it

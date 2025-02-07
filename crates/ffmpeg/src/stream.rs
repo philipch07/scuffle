@@ -36,7 +36,10 @@ impl<'a> Streams<'a> {
     /// This function is unsafe because the caller must ensure that the lifetime & the mutablity
     /// of the `AVFormatContext` matches the lifetime & mutability of the `Streams`.
     pub const unsafe fn new(input: *mut AVFormatContext) -> Self {
-        Self { input, _marker: PhantomData }
+        Self {
+            input,
+            _marker: PhantomData,
+        }
     }
 
     /// Returns the index of the best stream of the given media type.
@@ -44,8 +47,7 @@ impl<'a> Streams<'a> {
         // Safety: av_find_best_stream is safe to call, 'input' is a valid pointer
         // We upcast the pointer to a mutable pointer because the function signature
         // requires it, but it does not mutate the pointer.
-        let stream =
-            unsafe { av_find_best_stream(self.input, media_type, -1, -1, std::ptr::null_mut(), 0) };
+        let stream = unsafe { av_find_best_stream(self.input, media_type, -1, -1, std::ptr::null_mut(), 0) };
         if stream < 0 {
             return None;
         }
@@ -129,10 +131,7 @@ impl<'a> IntoIterator for Streams<'a> {
     type Item = Const<'a, Stream<'a>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        StreamIter {
-            input: self,
-            index: 0,
-        }
+        StreamIter { input: self, index: 0 }
     }
 }
 

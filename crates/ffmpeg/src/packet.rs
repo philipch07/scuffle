@@ -29,7 +29,10 @@ impl Packets<'_> {
     /// This function is unsafe because the caller must ensure that the lifetime & the mutablity
     /// of the `AVFormatContext` matches the lifetime & mutability of the `Packets`.
     pub const unsafe fn new(context: *mut AVFormatContext) -> Self {
-        Self { context, _marker: PhantomData }
+        Self {
+            context,
+            _marker: PhantomData,
+        }
     }
 
     /// Receives a packet from the context.
@@ -157,22 +160,16 @@ impl Packet {
     /// Converts the timebase of the packet.
     pub fn convert_timebase(&mut self, from: AVRational, to: AVRational) {
         // Safety: av_rescale_q_rnd is safe to call
-        self.set_pts(
-            self.pts()
-                .map(|pts| {
-                    // Safety: av_rescale_q_rnd is safe to call
-                    unsafe { av_rescale_q_rnd(pts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
-                }),
-        );
+        self.set_pts(self.pts().map(|pts| {
+            // Safety: av_rescale_q_rnd is safe to call
+            unsafe { av_rescale_q_rnd(pts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
+        }));
 
         // Safety: av_rescale_q_rnd is safe to call
-        self.set_dts(
-            self.dts()
-                .map(|dts| {
-                    // Safety: av_rescale_q_rnd is safe to call
-                    unsafe { av_rescale_q_rnd(dts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
-                }),
-        );
+        self.set_dts(self.dts().map(|dts| {
+            // Safety: av_rescale_q_rnd is safe to call
+            unsafe { av_rescale_q_rnd(dts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
+        }));
 
         // Safety: av_rescale_q is safe to call
         self.set_duration(self.duration().map(|duration| unsafe { av_rescale_q(duration, from, to) }));

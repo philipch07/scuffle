@@ -137,7 +137,8 @@ impl<T: Send + Sync> Input<T> {
                 std::ptr::null(),
                 dictionary.as_mut_ptr_ref(),
             )
-        }).result()?;
+        })
+        .result()?;
 
         if inner.context.as_ptr().is_null() {
             return Err(FfmpegError::Alloc);

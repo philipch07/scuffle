@@ -134,7 +134,8 @@ impl Dictionary {
         let key = CString::new(key).expect("Failed to convert key to CString");
 
         // Safety: av_dict_get is safe to call
-        let mut entry = NonNull::new(unsafe { av_dict_get(self.as_ptr(), key.as_ptr(), std::ptr::null_mut(), AV_DICT_IGNORE_SUFFIX) })?;
+        let mut entry =
+            NonNull::new(unsafe { av_dict_get(self.as_ptr(), key.as_ptr(), std::ptr::null_mut(), AV_DICT_IGNORE_SUFFIX) })?;
 
         // Safety: The pointer here is valid.
         let mut_ref = unsafe { entry.as_mut() };

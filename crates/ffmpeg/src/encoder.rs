@@ -763,9 +763,10 @@ mod tests {
 
     #[test]
     fn test_ch_layout_valid_layout() {
-        let result = AudioEncoderSettings::builder().ch_layout(SmartObject::new(ffmpeg_sys_next::AVChannelLayout {
-            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
-            nb_channels: 2,
+        let result = AudioEncoderSettings::builder().ch_layout(SmartObject::new(
+            ffmpeg_sys_next::AVChannelLayout {
+                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+                nb_channels: 2,
                 u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0b11 },
                 opaque: std::ptr::null_mut(),
             },
@@ -777,12 +778,13 @@ mod tests {
 
     #[test]
     fn test_ch_layout_invalid_layout() {
-        let result = AudioEncoderSettings::builder().ch_layout(SmartObject::new(ffmpeg_sys_next::AVChannelLayout {
-            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
-            nb_channels: 0,
-            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
-            opaque: std::ptr::null_mut(),
-        },
+        let result = AudioEncoderSettings::builder().ch_layout(SmartObject::new(
+            ffmpeg_sys_next::AVChannelLayout {
+                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
+                nb_channels: 0,
+                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
+                opaque: std::ptr::null_mut(),
+            },
             |_| {},
         ));
 

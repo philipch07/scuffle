@@ -165,9 +165,8 @@ impl<T: Send + Sync> Output<T> {
     /// Adds a new stream to the output.
     pub fn add_stream(&mut self, codec: Option<*const AVCodec>) -> Option<Stream<'_>> {
         // Safety: `avformat_new_stream` is safe to call.
-        let mut stream = NonNull::new(unsafe {
-            avformat_new_stream(self.as_mut_ptr(), codec.unwrap_or_else(std::ptr::null))
-        })?;
+        let mut stream =
+            NonNull::new(unsafe { avformat_new_stream(self.as_mut_ptr(), codec.unwrap_or_else(std::ptr::null)) })?;
 
         // Safety: The stream is a valid non-null pointer.
         let stream = unsafe { stream.as_mut() };
@@ -315,9 +314,8 @@ mod tests {
         let format_name = CString::new("mp4").unwrap();
         let format_mime_type = CString::new("").unwrap();
         // Safety: `av_guess_format` is safe to call and all arguments are valid.
-        let format_ptr = unsafe {
-            ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr())
-        };
+        let format_ptr =
+            unsafe { ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr()) };
 
         assert!(
             !format_ptr.is_null(),
@@ -417,7 +415,10 @@ mod tests {
         source_stream.set_time_base(AVRational { num: 1, den: 25 });
         source_stream.set_start_time(Some(1000));
         source_stream.set_duration(Some(500));
-        let copied_stream = output_two.copy_stream(&source_stream).expect("Failed to copy the stream").expect("Failed to copy the stream");
+        let copied_stream = output_two
+            .copy_stream(&source_stream)
+            .expect("Failed to copy the stream")
+            .expect("Failed to copy the stream");
 
         assert_eq!(copied_stream.index(), source_stream.index(), "Stream indices should match");
         assert_eq!(copied_stream.id(), source_stream.id(), "Stream IDs should match");

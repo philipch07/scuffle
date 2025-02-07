@@ -133,13 +133,8 @@ impl Decoder {
             let format_context = unsafe { ist.format_context() };
 
             // Safety: See above.
-            decoder_mut.framerate = unsafe {
-                av_guess_frame_rate(
-                    format_context,
-                    ist.as_ptr() as *mut AVStream,
-                    std::ptr::null_mut(),
-                )
-            };
+            decoder_mut.framerate =
+                unsafe { av_guess_frame_rate(format_context, ist.as_ptr() as *mut AVStream, std::ptr::null_mut()) };
         }
 
         if matches!(

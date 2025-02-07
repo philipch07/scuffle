@@ -198,8 +198,7 @@ impl<'a> FilterGraphParser<'a> {
 
         // Safety: 'avfilter_inout_alloc' is safe to call, and the returned pointer is
         // valid
-        let mut inout = unsafe { SmartPtr::wrap_non_null(inout, destructor) }
-            .ok_or(FfmpegError::Alloc)?;
+        let mut inout = unsafe { SmartPtr::wrap_non_null(inout, destructor) }.ok_or(FfmpegError::Alloc)?;
 
         let name = CString::new(name).map_err(|_| FfmpegError::Arguments("name must be non-empty"))?;
 
@@ -390,9 +389,7 @@ mod tests {
         let mut filter_graph = FilterGraph::new().expect("Failed to create filter graph");
         let filter_name = "buffer";
         // Safety: `avfilter_get_by_name` is safe to call.
-        let filter_ptr = unsafe {
-            avfilter_get_by_name(CString::new(filter_name).unwrap().as_ptr())
-        };
+        let filter_ptr = unsafe { avfilter_get_by_name(CString::new(filter_name).unwrap().as_ptr()) };
         assert!(
             !filter_ptr.is_null(),
             "avfilter_get_by_name should return a valid pointer for filter '{}'",
