@@ -23,7 +23,10 @@
 //!
 //! `SPDX-License-Identifier: MIT OR Apache-2.0`
 #![cfg_attr(all(coverage_nightly, test), feature(coverage_attribute))]
-#![deny(missing_docs, clippy::undocumented_unsafe_blocks, clippy::multiple_unsafe_ops_per_block, clippy::missing_const_for_fn)]
+#![deny(missing_docs)]
+#![deny(clippy::undocumented_unsafe_blocks)]
+#![deny(clippy::multiple_unsafe_ops_per_block)]
+#![deny(clippy::missing_const_for_fn)]
 
 /// Codec specific functionality.
 pub mod codec;
