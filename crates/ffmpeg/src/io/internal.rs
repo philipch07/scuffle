@@ -218,7 +218,6 @@ impl Inner<()> {
     pub unsafe fn empty() -> Self {
         Self {
             data: Some(Box::new(())),
-            // Safety: A null mut pointer is
             context: SmartPtr::null(|mut_ref| {
                 // We own this resource so we need to free it
                 let ptr = *mut_ref;

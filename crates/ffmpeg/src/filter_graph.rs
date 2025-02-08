@@ -171,18 +171,18 @@ impl<'a> FilterGraphParser<'a> {
 
         // Safety: 'avfilter_graph_parse_ptr' is safe to call and all the pointers are
         // valid.
-        unsafe {
-            match avfilter_graph_parse_ptr(
+        FfmpegErrorCode(unsafe {
+            avfilter_graph_parse_ptr(
                 self.graph.as_mut_ptr(),
                 spec.as_ptr(),
                 self.inputs.as_mut(),
                 self.outputs.as_mut(),
                 std::ptr::null_mut(),
-            ) {
-                n if n >= 0 => Ok(()),
-                e => Err(FfmpegError::Code(e.into())),
-            }
-        }
+            )
+        })
+        .result()?;
+
+        Ok(())
     }
 
     fn inout_impl(mut self, name: &str, pad: i32, output: bool) -> Result<Self, FfmpegError> {
@@ -287,17 +287,14 @@ impl FilterContextSource<'_> {
 
     /// Sends an EOF frame to the filter context.
     pub fn send_eof(&mut self, pts: Option<i64>) -> Result<(), FfmpegError> {
-        // Safety: `self.0` is a valid pointer.
-        FfmpegErrorCode({
-            if let Some(pts) = pts {
-                // Safety: `av_buffersrc_close` is safe to call.
-                unsafe { av_buffersrc_close(self.0, pts, 0) }
-            } else {
-                // Safety: `av_buffersrc_write_frame` is safe to call.
-                unsafe { av_buffersrc_write_frame(self.0, std::ptr::null()) }
-            }
-        })
-        .result()?;
+        if let Some(pts) = pts {
+            // Safety: `av_buffersrc_close` is safe to call.
+            FfmpegErrorCode(unsafe { av_buffersrc_close(self.0, pts, 0) }).result()?;
+        } else {
+            // Safety: `av_buffersrc_write_frame` is safe to call.
+            FfmpegErrorCode(unsafe { av_buffersrc_write_frame(self.0, std::ptr::null()) }).result()?;
+        }
+
         Ok(())
     }
 }
@@ -314,12 +311,10 @@ impl FilterContextSink<'_> {
         let mut frame = Frame::new()?;
 
         // Safety: `frame` is a valid pointer, and `self.0` is a valid pointer.
-        unsafe {
-            match FfmpegErrorCode(av_buffersink_get_frame(self.0, frame.as_mut_ptr())) {
-                code if code.is_success() => Ok(Some(frame)),
-                FfmpegErrorCode::Eagain | FfmpegErrorCode::Eof => Ok(None),
-                code => Err(FfmpegError::Code(code)),
-            }
+        match FfmpegErrorCode(unsafe { av_buffersink_get_frame(self.0, frame.as_mut_ptr()) }) {
+            code if code.is_success() => Ok(Some(frame)),
+            FfmpegErrorCode::Eagain | FfmpegErrorCode::Eof => Ok(None),
+            code => Err(FfmpegError::Code(code)),
         }
     }
 }

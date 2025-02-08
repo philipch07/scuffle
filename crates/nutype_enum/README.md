@@ -9,9 +9,11 @@
 
 The crate provides a macro to create a new enum type with a single field.
 
+## Why do we need this?
+
 This is useful when you have a value and you want to have enum like behavior and have a catch all case for all other values.
 
-# Examples
+## Examples
 
 ```rust
 nutype_enum! {

@@ -10,7 +10,7 @@
 //!
 //! The other main ffmpeg crate is [ffmpeg-next](https://github.com/zmwangx/rust-ffmpeg).
 //!
-//! This crate adds a few features and has a safer API. Notably it adds the ability to provide a an in-memory decode / encode buffer.
+//! This crate adds a few features and has a safer API. Notably it adds the ability to provide an in-memory decode / encode buffer.
 //!
 //! ## Status
 //!
