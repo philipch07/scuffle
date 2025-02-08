@@ -59,7 +59,6 @@
 //! #
 //! # fn test_fn() -> Result<(), Box<dyn std::error::Error>> {
 //! # let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets").join("avc_aac.mp4");
-//!
 //! let input = scuffle_ffmpeg::io::Input::seekable(std::fs::File::open(path)?)?;
 //! let streams = input.streams();
 //!
@@ -130,8 +129,8 @@
 //!
 //! output.write_trailer()?;
 //!
-//! let output_data = output.into_inner();
 //! // do something with the output data (write to disk, upload to s3, etc)
+//! let output_data = output.into_inner();
 //! # drop(output_data);
 //! # Ok(())
 //! # }

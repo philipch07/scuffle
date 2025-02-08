@@ -119,9 +119,8 @@ while let Some(packet) = audio_encoder.receive_packet()? {
 }
 
 output.write_trailer()?;
-let output_data = output.into_inner();
-
 // do something with the output data (write to disk, upload to s3, etc)
+let output_data = output.into_inner();
 ```
 
 ## Status
