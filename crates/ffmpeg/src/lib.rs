@@ -12,6 +12,34 @@
 //!
 //! This crate adds a few features and has a safer API. Notably it adds the ability to provide an in-memory decode / encode buffer.
 //!
+//! ## Examples
+//!
+//! ```rust
+//! # use std::path::PathBuf;
+//! # use scuffle_ffmpeg::ffi::AVMediaType;
+//! # fn test_fn() -> Result<(), Box<dyn std::error::Error>> {
+//! # let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets").join("avc_aac.mp4");
+//! let input = scuffle_ffmpeg::io::Input::seekable(std::fs::File::open(path)?)?;
+//! let streams = input.streams();
+//!
+//! dbg!(&streams);
+//!
+//! let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
+//! let best_audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("no audio stream found");
+//!
+//! dbg!(&best_video_stream);
+//! dbg!(&best_audio_stream);
+//!
+//! let video_decoder = scuffle_ffmpeg::decoder::Decoder::new(&best_video_stream)?.video().expect("not an video decoder");
+//! let audio_decoder = scuffle_ffmpeg::decoder::Decoder::new(&best_audio_stream)?.audio().expect("not an audio decoder");
+//!
+//! dbg!(&video_decoder);
+//! dbg!(&audio_decoder);
+//! # Ok(())
+//! # }
+//! # test_fn().expect("failed to run test");
+//! ```
+//!
 //! ## Status
 //!
 //! This crate is currently under development and is not yet stable.

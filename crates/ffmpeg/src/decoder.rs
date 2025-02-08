@@ -151,6 +151,22 @@ impl Decoder {
             _ => Err(FfmpegError::NoDecoder)?,
         })
     }
+
+    /// Returns the video decoder if the decoder is a video decoder.
+    pub fn video(self) -> Result<VideoDecoder, Self> {
+        match self {
+            Self::Video(video) => Ok(video),
+            _ => Err(self),
+        }
+    }
+
+    /// Returns the audio decoder if the decoder is an audio decoder.
+    pub fn audio(self) -> Result<AudioDecoder, Self> {
+        match self {
+            Self::Audio(audio) => Ok(audio),
+            _ => Err(self),
+        }
+    }
 }
 
 impl GenericDecoder {
