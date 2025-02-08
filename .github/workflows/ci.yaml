@@ -30,7 +30,7 @@ jobs:
 
       - name: Setup nasm
         run: |
-          sudo apt-get install nasm
+          sudo apt-get install nasm libx264-dev
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
@@ -101,7 +101,7 @@ jobs:
 
       - name: Setup nasm
         run: |
-          sudo apt-get install nasm
+          sudo apt-get install nasm libx264-dev
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
@@ -185,7 +185,7 @@ jobs:
 
       - name: Setup nasm
         run: |
-          sudo apt-get install nasm
+          sudo apt-get install nasm libx264-dev
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust

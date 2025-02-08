@@ -28,7 +28,7 @@ unsafe impl Send for Encoder {}
 pub struct VideoEncoderSettings {
     width: i32,
     height: i32,
-    frame_rate: i32,
+    frame_rate: AVRational,
     pixel_format: AVPixelFormat,
     gop_size: Option<i32>,
     qmax: Option<i32>,
@@ -48,7 +48,11 @@ pub struct VideoEncoderSettings {
 
 impl VideoEncoderSettings {
     fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
-        if self.width <= 0 || self.height <= 0 || self.frame_rate <= 0 || self.pixel_format == AVPixelFormat::AV_PIX_FMT_NONE
+        if self.width <= 0
+            || self.height <= 0
+            || self.frame_rate.num <= 0
+            || self.frame_rate.den <= 0
+            || self.pixel_format == AVPixelFormat::AV_PIX_FMT_NONE
         {
             return Err(FfmpegError::Arguments(
                 "width, height, frame_rate and pixel_format must be set",
@@ -59,10 +63,7 @@ impl VideoEncoderSettings {
         encoder.height = self.height;
         encoder.pix_fmt = self.pixel_format;
         encoder.sample_aspect_ratio = self.sample_aspect_ratio.unwrap_or(encoder.sample_aspect_ratio);
-        encoder.framerate = AVRational {
-            num: self.frame_rate,
-            den: 1,
-        };
+        encoder.framerate = self.frame_rate;
         encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
         encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);
         encoder.gop_size = self.gop_size.unwrap_or(encoder.gop_size);
@@ -80,11 +81,11 @@ impl VideoEncoderSettings {
     }
 
     const fn average_duration(&self, timebase: AVRational) -> i64 {
-        if self.frame_rate <= 0 {
+        if self.frame_rate.num <= 0 || self.frame_rate.den <= 0 {
             return 0;
         }
 
-        (timebase.den as i64) / (self.frame_rate as i64 * timebase.num as i64)
+        (timebase.den as i64) / (self.frame_rate.num as i64 * timebase.num as i64)
     }
 }
 
@@ -181,7 +182,8 @@ impl From<AudioEncoderSettings> for EncoderSettings {
 }
 
 impl Encoder {
-    fn new<T: Send + Sync>(
+    /// Creates a new encoder.
+    pub fn new<T: Send + Sync>(
         codec: EncoderCodec,
         output: &mut Output<T>,
         incoming_time_base: AVRational,
@@ -535,7 +537,7 @@ mod tests {
         let settings = VideoEncoderSettings::builder()
             .width(width)
             .height(height)
-            .frame_rate(frame_rate)
+            .frame_rate(AVRational { num: frame_rate, den: 1 })
             .pixel_format(pixel_format)
             .sample_aspect_ratio(sample_aspect_ratio)
             .gop_size(gop_size)
@@ -555,7 +557,7 @@ mod tests {
 
         assert_eq!(settings.width, width);
         assert_eq!(settings.height, height);
-        assert_eq!(settings.frame_rate, frame_rate);
+        assert_eq!(settings.frame_rate, AVRational { num: frame_rate, den: 1 });
         assert_eq!(settings.pixel_format, pixel_format);
         assert_eq!(settings.sample_aspect_ratio, Some(sample_aspect_ratio));
         assert_eq!(settings.gop_size, Some(gop_size));
@@ -606,7 +608,7 @@ mod tests {
             .width(0)
             .height(0)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(0)
+            .frame_rate(AVRational { num: 0, den: 1 })
             .build();
         // Safety: We are zeroing the memory for the encoder context.
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
@@ -627,7 +629,7 @@ mod tests {
             .width(0)
             .height(0)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(frame_rate)
+            .frame_rate(AVRational { num: frame_rate, den: 1 })
             .build();
 
         let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
@@ -645,7 +647,7 @@ mod tests {
             .width(0)
             .height(0)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(frame_rate)
+            .frame_rate(AVRational { num: frame_rate, den: 1 })
             .build();
 
         let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
@@ -662,7 +664,7 @@ mod tests {
             .width(0)
             .height(0)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(frame_rate)
+            .frame_rate(AVRational { num: frame_rate, den: 1 })
             .build();
 
         let actual_duration = settings.average_duration(timebase);
@@ -818,7 +820,7 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .sample_aspect_ratio(sample_aspect_ratio)
             .gop_size(12)
@@ -865,7 +867,7 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(8)
             .height(8)
-            .frame_rate(1)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .codec_specific_options(video_codec_options.clone())
             .build();
@@ -896,7 +898,7 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .build();
         let encoder_settings = EncoderSettings::Video(video_settings);
@@ -929,7 +931,7 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .sample_aspect_ratio(sample_aspect_ratio)
             .gop_size(12)
@@ -939,7 +941,7 @@ mod tests {
         if let EncoderSettings::Video(actual_video_settings) = encoder_settings {
             assert_eq!(actual_video_settings.width, 1920);
             assert_eq!(actual_video_settings.height, 1080);
-            assert_eq!(actual_video_settings.frame_rate, 30);
+            assert_eq!(actual_video_settings.frame_rate, AVRational { num: 30, den: 1 });
             assert_eq!(actual_video_settings.pixel_format, AVPixelFormat::AV_PIX_FMT_YUV420P);
             assert_eq!(actual_video_settings.sample_aspect_ratio, Some(sample_aspect_ratio));
             assert_eq!(actual_video_settings.gop_size, Some(12));
@@ -979,7 +981,7 @@ mod tests {
             .width(0)
             .height(0)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(0)
+            .frame_rate(AVRational { num: 0, den: 1 })
             .build();
         let result = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, settings);
 
@@ -998,7 +1000,7 @@ mod tests {
         let settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .build();
         let result = Encoder::new(codec.unwrap(), &mut output, incoming_time_base, outgoing_time_base, settings);
@@ -1022,7 +1024,7 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(640)
             .height(480)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .build();
         let mut encoder = Encoder::new(
@@ -1050,7 +1052,7 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(640)
             .height(480)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .build();
         let encoder = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, video_settings)
@@ -1120,7 +1122,7 @@ mod tests {
             .width(1920)
             .height(1080)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .build();
         let encoder_settings: EncoderSettings = video_settings.into();
         let mut muxer_options = Dictionary::new();
@@ -1189,7 +1191,7 @@ mod tests {
             .width(1920)
             .height(1080)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .build();
         let encoder_settings: EncoderSettings = video_settings.into();
         let muxer_settings = MuxerSettings::default();
@@ -1223,7 +1225,7 @@ mod tests {
             .width(1920)
             .height(1080)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .build();
         let encoder_settings: EncoderSettings = video_settings.into();
         let muxer_settings = MuxerSettings::default();
