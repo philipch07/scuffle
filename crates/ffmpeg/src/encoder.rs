@@ -1,50 +1,57 @@
+use std::ptr::NonNull;
+
 use ffmpeg_sys_next::*;
 
 use crate::codec::EncoderCodec;
 use crate::dict::Dictionary;
-use crate::error::FfmpegError;
-use crate::frame::Frame;
+use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::frame::{AudioChannelLayout, Frame};
 use crate::io::Output;
 use crate::packet::Packet;
-use crate::smart_object::{SmartObject, SmartPtr};
+use crate::smart_object::SmartPtr;
 
+/// Represents an encoder.
 pub struct Encoder {
     incoming_time_base: AVRational,
     outgoing_time_base: AVRational,
     encoder: SmartPtr<AVCodecContext>,
     stream_index: i32,
-    average_duration: i64,
     previous_dts: i64,
 }
 
 /// Safety: `Encoder` can be sent between threads.
 unsafe impl Send for Encoder {}
 
+/// Represents the settings for a video encoder.
 #[derive(bon::Builder)]
 pub struct VideoEncoderSettings {
-    pub width: i32,
-    pub height: i32,
-    pub frame_rate: i32,
-    pub pixel_format: AVPixelFormat,
-    pub gop_size: Option<i32>,
-    pub qmax: Option<i32>,
-    pub qmin: Option<i32>,
-    pub thread_count: Option<i32>,
-    pub thread_type: Option<i32>,
-    pub sample_aspect_ratio: Option<AVRational>,
-    pub bitrate: Option<i64>,
-    pub rc_min_rate: Option<i64>,
-    pub rc_max_rate: Option<i64>,
-    pub rc_buffer_size: Option<i32>,
-    pub max_b_frames: Option<i32>,
-    pub codec_specific_options: Option<Dictionary>,
-    pub flags: Option<i32>,
-    pub flags2: Option<i32>,
+    width: i32,
+    height: i32,
+    frame_rate: AVRational,
+    pixel_format: AVPixelFormat,
+    gop_size: Option<i32>,
+    qmax: Option<i32>,
+    qmin: Option<i32>,
+    thread_count: Option<i32>,
+    thread_type: Option<i32>,
+    sample_aspect_ratio: Option<AVRational>,
+    bitrate: Option<i64>,
+    rc_min_rate: Option<i64>,
+    rc_max_rate: Option<i64>,
+    rc_buffer_size: Option<i32>,
+    max_b_frames: Option<i32>,
+    codec_specific_options: Option<Dictionary>,
+    flags: Option<i32>,
+    flags2: Option<i32>,
 }
 
 impl VideoEncoderSettings {
     fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
-        if self.width <= 0 || self.height <= 0 || self.frame_rate <= 0 || self.pixel_format == AVPixelFormat::AV_PIX_FMT_NONE
+        if self.width <= 0
+            || self.height <= 0
+            || self.frame_rate.num <= 0
+            || self.frame_rate.den <= 0
+            || self.pixel_format == AVPixelFormat::AV_PIX_FMT_NONE
         {
             return Err(FfmpegError::Arguments(
                 "width, height, frame_rate and pixel_format must be set",
@@ -55,10 +62,7 @@ impl VideoEncoderSettings {
         encoder.height = self.height;
         encoder.pix_fmt = self.pixel_format;
         encoder.sample_aspect_ratio = self.sample_aspect_ratio.unwrap_or(encoder.sample_aspect_ratio);
-        encoder.framerate = AVRational {
-            num: self.frame_rate,
-            den: 1,
-        };
+        encoder.framerate = self.frame_rate;
         encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
         encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);
         encoder.gop_size = self.gop_size.unwrap_or(encoder.gop_size);
@@ -74,35 +78,23 @@ impl VideoEncoderSettings {
 
         Ok(())
     }
-
-    fn average_duration(&self, timebase: AVRational) -> i64 {
-        if self.frame_rate <= 0 {
-            return 0;
-        }
-
-        (timebase.den as i64) / (self.frame_rate as i64 * timebase.num as i64)
-    }
-
-    pub fn codec_specific_options(&self) -> Option<&Dictionary> {
-        self.codec_specific_options.as_ref()
-    }
 }
 
+/// Represents the settings for an audio encoder.
 #[derive(bon::Builder)]
 pub struct AudioEncoderSettings {
-    pub sample_rate: i32,
-    #[builder(setters(vis = "", name = ch_layout_internal))]
-    pub ch_layout: SmartObject<AVChannelLayout>,
-    pub sample_fmt: AVSampleFormat,
-    pub thread_count: Option<i32>,
-    pub thread_type: Option<i32>,
-    pub bitrate: Option<i64>,
-    pub rc_min_rate: Option<i64>,
-    pub rc_max_rate: Option<i64>,
-    pub rc_buffer_size: Option<i32>,
-    pub codec_specific_options: Option<Dictionary>,
-    pub flags: Option<i32>,
-    pub flags2: Option<i32>,
+    sample_rate: i32,
+    ch_layout: AudioChannelLayout,
+    sample_fmt: AVSampleFormat,
+    thread_count: Option<i32>,
+    thread_type: Option<i32>,
+    bitrate: Option<i64>,
+    rc_min_rate: Option<i64>,
+    rc_max_rate: Option<i64>,
+    rc_buffer_size: Option<i32>,
+    codec_specific_options: Option<Dictionary>,
+    flags: Option<i32>,
+    flags2: Option<i32>,
 }
 
 impl AudioEncoderSettings {
@@ -114,7 +106,7 @@ impl AudioEncoderSettings {
         }
 
         encoder.sample_rate = self.sample_rate;
-        encoder.ch_layout = self.ch_layout.into_inner();
+        self.ch_layout.apply(&mut encoder.ch_layout);
         encoder.sample_fmt = self.sample_fmt;
         encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
         encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);
@@ -127,50 +119,13 @@ impl AudioEncoderSettings {
 
         Ok(())
     }
-
-    fn average_duration(&self, timebase: AVRational) -> i64 {
-        if self.sample_rate <= 0 {
-            return 0;
-        }
-
-        (timebase.den as i64) / (self.sample_rate as i64 * timebase.num as i64)
-    }
 }
 
-impl<S: audio_encoder_settings_builder::State> AudioEncoderSettingsBuilder<S> {
-    pub fn channel_count(
-        self,
-        channel_count: i32,
-    ) -> AudioEncoderSettingsBuilder<audio_encoder_settings_builder::SetChLayout<S>>
-    where
-        S::ChLayout: audio_encoder_settings_builder::IsUnset,
-    {
-        let mut ch_layout = SmartObject::new(unsafe { std::mem::zeroed() }, |ptr| unsafe { av_channel_layout_uninit(ptr) });
-        unsafe { av_channel_layout_default(ch_layout.as_mut(), channel_count) };
-        self.ch_layout_internal(ch_layout)
-    }
-
-    pub fn ch_layout(
-        self,
-        custom_layout: AVChannelLayout,
-    ) -> Result<AudioEncoderSettingsBuilder<audio_encoder_settings_builder::SetChLayout<S>>, FfmpegError>
-    where
-        S::ChLayout: audio_encoder_settings_builder::IsUnset,
-    {
-        let smart_object = SmartObject::new(custom_layout, |ptr| unsafe { ffmpeg_sys_next::av_channel_layout_uninit(ptr) });
-
-        unsafe {
-            if ffmpeg_sys_next::av_channel_layout_check(&*smart_object) == 0 {
-                return Err(FfmpegError::Arguments("Invalid channel layout."));
-            }
-        }
-
-        Ok(self.ch_layout_internal(smart_object))
-    }
-}
-
+/// Represents the settings for an encoder.
 pub enum EncoderSettings {
+    /// Video encoder settings.
     Video(VideoEncoderSettings),
+    /// Audio encoder settings.
     Audio(AudioEncoderSettings),
 }
 
@@ -182,17 +137,10 @@ impl EncoderSettings {
         }
     }
 
-    fn codec_specific_options(&mut self) -> Option<&mut Dictionary> {
+    const fn codec_specific_options(&mut self) -> Option<&mut Dictionary> {
         match self {
             EncoderSettings::Video(video_settings) => video_settings.codec_specific_options.as_mut(),
             EncoderSettings::Audio(audio_settings) => audio_settings.codec_specific_options.as_mut(),
-        }
-    }
-
-    fn average_duration(&self, timebase: AVRational) -> i64 {
-        match self {
-            EncoderSettings::Video(video_settings) => video_settings.average_duration(timebase),
-            EncoderSettings::Audio(audio_settings) => audio_settings.average_duration(timebase),
         }
     }
 }
@@ -210,7 +158,8 @@ impl From<AudioEncoderSettings> for EncoderSettings {
 }
 
 impl Encoder {
-    fn new<T: Send + Sync>(
+    /// Creates a new encoder.
+    pub fn new<T: Send + Sync>(
         codec: EncoderCodec,
         output: &mut Output<T>,
         incoming_time_base: AVRational,
@@ -225,11 +174,16 @@ impl Encoder {
 
         let global_header = output.flags() & AVFMT_GLOBALHEADER != 0;
 
-        // Safety: `avcodec_alloc_context3` is safe to call, and the pointer returned is
-        // valid.
-        let mut encoder =
-            unsafe { SmartPtr::wrap_non_null(avcodec_alloc_context3(codec.as_ptr()), |ptr| avcodec_free_context(ptr)) }
-                .ok_or(FfmpegError::Alloc)?;
+        let destructor = |ptr: &mut *mut AVCodecContext| {
+            // Safety: `avcodec_free_context` is safe to call when the pointer is valid, and it is because it comes from `avcodec_alloc_context3`.
+            unsafe { avcodec_free_context(ptr) };
+        };
+
+        // Safety: `avcodec_alloc_context3` is safe to call.
+        let encoder = unsafe { avcodec_alloc_context3(codec.as_ptr()) };
+
+        // Safety: The pointer here is valid and the destructor has been setup to handle the cleanup.
+        let mut encoder = unsafe { SmartPtr::wrap_non_null(encoder, destructor) }.ok_or(FfmpegError::Alloc)?;
 
         let mut ost = output.add_stream(None).ok_or(FfmpegError::NoStream)?;
 
@@ -244,8 +198,6 @@ impl Encoder {
             .map(|options| options.as_mut_ptr_ref() as *mut *mut _)
             .unwrap_or(std::ptr::null_mut());
 
-        let average_duration = settings.average_duration(outgoing_time_base);
-
         settings.apply(encoder_mut)?;
 
         if global_header {
@@ -254,17 +206,14 @@ impl Encoder {
 
         // Safety: `avcodec_open2` is safe to call, 'encoder' and 'codec' and
         // 'codec_options_ptr' are a valid pointers.
-        let res = unsafe { avcodec_open2(encoder_mut, codec.as_ptr(), codec_options_ptr) };
-        if res < 0 {
-            return Err(FfmpegError::Code(res.into()));
-        }
+        FfmpegErrorCode(unsafe { avcodec_open2(encoder_mut, codec.as_ptr(), codec_options_ptr) }).result()?;
+
+        // Safety: The pointer here is valid.
+        let ost_mut = unsafe { NonNull::new(ost.as_mut_ptr()).ok_or(FfmpegError::NoStream)?.as_mut() };
 
         // Safety: `avcodec_parameters_from_context` is safe to call, 'ost' and
         // 'encoder' are valid pointers.
-        let ret = unsafe { avcodec_parameters_from_context((*ost.as_mut_ptr()).codecpar, encoder_mut) };
-        if ret < 0 {
-            return Err(FfmpegError::Code(ret.into()));
-        }
+        FfmpegErrorCode(unsafe { avcodec_parameters_from_context(ost_mut.codecpar, encoder_mut) }).result()?;
 
         ost.set_time_base(outgoing_time_base);
 
@@ -272,283 +221,90 @@ impl Encoder {
             incoming_time_base,
             outgoing_time_base,
             encoder,
-            average_duration,
             stream_index: ost.index(),
             previous_dts: 0,
         })
     }
 
+    /// Sends an EOF frame to the encoder.
     pub fn send_eof(&mut self) -> Result<(), FfmpegError> {
         // Safety: `self.encoder` is a valid pointer.
-        let ret = unsafe { avcodec_send_frame(self.encoder.as_mut_ptr(), std::ptr::null()) };
-        if ret == 0 {
-            Ok(())
-        } else {
-            Err(FfmpegError::Code(ret.into()))
-        }
+        FfmpegErrorCode(unsafe { avcodec_send_frame(self.encoder.as_mut_ptr(), std::ptr::null()) }).result()?;
+        Ok(())
     }
 
+    /// Sends a frame to the encoder.
     pub fn send_frame(&mut self, frame: &Frame) -> Result<(), FfmpegError> {
         // Safety: `self.encoder` and `frame` are valid pointers.
-        let ret = unsafe { avcodec_send_frame(self.encoder.as_mut_ptr(), frame.as_ptr()) };
-        if ret == 0 {
-            Ok(())
-        } else {
-            Err(FfmpegError::Code(ret.into()))
-        }
+        FfmpegErrorCode(unsafe { avcodec_send_frame(self.encoder.as_mut_ptr(), frame.as_ptr()) }).result()?;
+        Ok(())
     }
 
+    /// Receives a packet from the encoder.
     pub fn receive_packet(&mut self) -> Result<Option<Packet>, FfmpegError> {
         let mut packet = Packet::new()?;
 
-        const AVERROR_EAGAIN: i32 = AVERROR(EAGAIN);
-
         // Safety: `self.encoder` and `packet` are valid pointers.
-        let ret = unsafe { avcodec_receive_packet(self.encoder.as_mut_ptr(), packet.as_mut_ptr()) };
+        let ret = FfmpegErrorCode(unsafe { avcodec_receive_packet(self.encoder.as_mut_ptr(), packet.as_mut_ptr()) });
 
         match ret {
-            AVERROR_EAGAIN | AVERROR_EOF => Ok(None),
-            0 => {
-                assert!(packet.dts().is_some(), "packet dts is none");
-                let packet_dts = packet.dts().unwrap();
-                assert!(
-                    packet_dts >= self.previous_dts,
-                    "packet dts is less than previous dts: {} >= {}",
-                    packet_dts,
-                    self.previous_dts
-                );
-                self.previous_dts = packet_dts;
-                packet.rescale_timebase(self.incoming_time_base, self.outgoing_time_base);
+            FfmpegErrorCode::Eagain | FfmpegErrorCode::Eof => Ok(None),
+            code if code.is_success() => {
+                if cfg!(debug_assertions) {
+                    debug_assert!(
+                        packet.dts().is_some(),
+                        "packet dts is none, this should never happen, please report this bug"
+                    );
+                    let packet_dts = packet.dts().unwrap();
+                    debug_assert!(
+                        packet_dts >= self.previous_dts,
+                        "packet dts is less than previous dts: {} >= {}",
+                        packet_dts,
+                        self.previous_dts
+                    );
+                    self.previous_dts = packet_dts;
+                }
+
+                packet.convert_timebase(self.incoming_time_base, self.outgoing_time_base);
                 packet.set_stream_index(self.stream_index);
                 Ok(Some(packet))
             }
-            _ => Err(FfmpegError::Code(ret.into())),
+            code => Err(FfmpegError::Code(code)),
         }
     }
 
-    pub fn stream_index(&self) -> i32 {
+    /// Returns the stream index of the encoder.
+    pub const fn stream_index(&self) -> i32 {
         self.stream_index
     }
 
-    pub fn incoming_time_base(&self) -> AVRational {
+    /// Returns the incoming time base of the encoder.
+    pub const fn incoming_time_base(&self) -> AVRational {
         self.incoming_time_base
     }
 
-    pub fn outgoing_time_base(&self) -> AVRational {
+    /// Returns the outgoing time base of the encoder.
+    pub const fn outgoing_time_base(&self) -> AVRational {
         self.outgoing_time_base
-    }
-}
-
-pub struct MuxerEncoder<T: Send + Sync> {
-    encoder: Encoder,
-    output: Output<T>,
-    interleave: bool,
-    muxer_headers_written: bool,
-    muxer_options: Dictionary,
-    buffered_packet: Option<Packet>,
-    previous_dts: i64,
-    previous_pts: i64,
-}
-
-#[derive(Clone, Debug)]
-pub struct MuxerSettings {
-    pub interleave: bool,
-    pub muxer_options: Dictionary,
-}
-
-impl Default for MuxerSettings {
-    fn default() -> Self {
-        Self {
-            interleave: true,
-            muxer_options: Dictionary::new(),
-        }
-    }
-}
-
-impl MuxerSettings {
-    pub fn builder() -> MuxerSettingsBuilder {
-        MuxerSettingsBuilder::default()
-    }
-}
-
-#[derive(Clone, Default, Debug)]
-pub struct MuxerSettingsBuilder(MuxerSettings);
-
-impl MuxerSettingsBuilder {
-    pub fn interleave(mut self, interleave: bool) -> Self {
-        self.0.interleave = interleave;
-        self
-    }
-
-    pub fn muxer_options(mut self, muxer_options: Dictionary) -> Self {
-        self.0.muxer_options = muxer_options;
-        self
-    }
-
-    pub fn build(self) -> MuxerSettings {
-        self.0
-    }
-}
-
-impl<T: Send + Sync> MuxerEncoder<T> {
-    pub fn new(
-        codec: EncoderCodec,
-        mut output: Output<T>,
-        incoming_time_base: AVRational,
-        outgoing_time_base: AVRational,
-        settings: impl Into<EncoderSettings>,
-        muxer_settings: MuxerSettings,
-    ) -> Result<Self, FfmpegError> {
-        Ok(Self {
-            encoder: Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, settings)?,
-            output,
-            interleave: muxer_settings.interleave,
-            muxer_options: muxer_settings.muxer_options,
-            muxer_headers_written: false,
-            previous_dts: -1,
-            previous_pts: -1,
-            buffered_packet: None,
-        })
-    }
-
-    pub fn send_eof(&mut self) -> Result<(), FfmpegError> {
-        self.encoder.send_eof()?;
-        self.handle_packets()?;
-
-        if let Some(mut bufferd_packet) = self.buffered_packet.take() {
-            if let Some(dts) = bufferd_packet.dts() {
-                if dts == self.previous_dts {
-                    bufferd_packet.set_dts(Some(dts + 1));
-                }
-
-                self.previous_dts = dts;
-            }
-
-            if let Some(pts) = bufferd_packet.pts() {
-                if pts == self.previous_pts {
-                    bufferd_packet.set_pts(Some(pts + 1));
-                }
-
-                self.previous_pts = pts;
-            }
-
-            bufferd_packet.set_duration(Some(self.average_duration));
-
-            if self.interleave {
-                self.output.write_interleaved_packet(bufferd_packet)?;
-            } else {
-                self.output.write_packet(&bufferd_packet)?;
-            }
-        }
-
-        if !self.muxer_headers_written {
-            self.output.write_header_with_options(&mut self.muxer_options)?;
-            self.muxer_headers_written = true;
-        }
-
-        self.output.write_trailer()?;
-        Ok(())
-    }
-
-    pub fn send_frame(&mut self, frame: &Frame) -> Result<(), FfmpegError> {
-        self.encoder.send_frame(frame)?;
-        self.handle_packets()?;
-        Ok(())
-    }
-
-    pub fn handle_packets(&mut self) -> Result<(), FfmpegError> {
-        while let Some(packet) = self.encoder.receive_packet()? {
-            if !self.muxer_headers_written {
-                self.output.write_header_with_options(&mut self.muxer_options)?;
-                self.muxer_headers_written = true;
-            }
-
-            if let Some(mut bufferd_packet) = self.buffered_packet.take() {
-                if bufferd_packet.duration().unwrap_or(0) == 0 {
-                    match ((packet.dts(), bufferd_packet.dts()), (packet.pts(), bufferd_packet.pts())) {
-                        ((Some(packet_dts), Some(bufferd_dts)), _) if bufferd_dts < packet_dts => {
-                            bufferd_packet.set_duration(Some(packet_dts - bufferd_dts))
-                        }
-                        (_, (Some(packet_pts), Some(bufferd_pts))) if bufferd_pts < packet_pts => {
-                            bufferd_packet.set_duration(Some(packet_pts - bufferd_pts))
-                        }
-                        _ => bufferd_packet.set_duration(Some(self.encoder.average_duration)),
-                    }
-                }
-
-                if let Some(dts) = bufferd_packet.dts() {
-                    if dts == self.previous_dts {
-                        bufferd_packet.set_dts(Some(dts + 1));
-                    }
-
-                    self.previous_dts = dts;
-                }
-
-                if let Some(pts) = bufferd_packet.pts() {
-                    if pts == self.previous_pts {
-                        bufferd_packet.set_pts(Some(pts + 1));
-                    }
-
-                    self.previous_pts = pts;
-                }
-
-                if self.interleave {
-                    self.output.write_interleaved_packet(bufferd_packet)?;
-                } else {
-                    self.output.write_packet(&bufferd_packet)?;
-                }
-            }
-
-            self.buffered_packet = Some(packet);
-        }
-
-        Ok(())
-    }
-
-    pub fn stream_index(&self) -> i32 {
-        self.encoder.stream_index()
-    }
-
-    pub fn incoming_time_base(&self) -> AVRational {
-        self.encoder.incoming_time_base()
-    }
-
-    pub fn outgoing_time_base(&self) -> AVRational {
-        self.encoder.outgoing_time_base()
-    }
-
-    pub fn into_inner(self) -> Output<T> {
-        self.output
-    }
-}
-
-impl<T: Send + Sync> std::ops::Deref for MuxerEncoder<T> {
-    type Target = Encoder;
-
-    fn deref(&self) -> &Self::Target {
-        &self.encoder
-    }
-}
-
-impl<T: Send + Sync> std::ops::DerefMut for MuxerEncoder<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.encoder
     }
 }
 
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
+    use std::io::Write;
+
+    use bytes::{Buf, Bytes};
     use ffmpeg_sys_next::AVCodecID::AV_CODEC_ID_MPEG4;
-    use ffmpeg_sys_next::{AVCodecContext, AVPixelFormat, AVRational, AVSampleFormat};
+    use ffmpeg_sys_next::{AVCodecContext, AVMediaType, AVPixelFormat, AVRational, AVSampleFormat};
+    use sha2::Digest;
 
     use crate::codec::EncoderCodec;
+    use crate::decoder::Decoder;
     use crate::dict::Dictionary;
-    use crate::encoder::{
-        AudioEncoderSettings, Encoder, EncoderSettings, MuxerEncoder, MuxerSettings, VideoEncoderSettings,
-    };
+    use crate::encoder::{AudioChannelLayout, AudioEncoderSettings, Encoder, EncoderSettings, VideoEncoderSettings};
     use crate::error::FfmpegError;
-    use crate::io::{Output, OutputOptions};
+    use crate::io::{Input, Output, OutputOptions};
 
     #[test]
     fn test_video_encoder_apply() {
@@ -576,7 +332,7 @@ mod tests {
         let settings = VideoEncoderSettings::builder()
             .width(width)
             .height(height)
-            .frame_rate(frame_rate)
+            .frame_rate(AVRational { num: frame_rate, den: 1 })
             .pixel_format(pixel_format)
             .sample_aspect_ratio(sample_aspect_ratio)
             .gop_size(gop_size)
@@ -596,7 +352,7 @@ mod tests {
 
         assert_eq!(settings.width, width);
         assert_eq!(settings.height, height);
-        assert_eq!(settings.frame_rate, frame_rate);
+        assert_eq!(settings.frame_rate, AVRational { num: frame_rate, den: 1 });
         assert_eq!(settings.pixel_format, pixel_format);
         assert_eq!(settings.sample_aspect_ratio, Some(sample_aspect_ratio));
         assert_eq!(settings.gop_size, Some(gop_size));
@@ -610,12 +366,13 @@ mod tests {
         assert_eq!(settings.rc_buffer_size, Some(rc_buffer_size));
         assert_eq!(settings.max_b_frames, Some(max_b_frames));
         assert!(settings.codec_specific_options.is_some());
-        let actual_codec_specific_options = settings.codec_specific_options().unwrap();
-        assert_eq!(actual_codec_specific_options.get("preset").as_deref(), Some("ultrafast"));
-        assert_eq!(actual_codec_specific_options.get("crf").as_deref(), Some("23"));
+        let actual_codec_specific_options = settings.codec_specific_options.as_ref().unwrap();
+        assert_eq!(actual_codec_specific_options.get(c"preset"), Some(c"ultrafast"));
+        assert_eq!(actual_codec_specific_options.get(c"crf"), Some(c"23"));
         assert_eq!(settings.flags, Some(flags));
         assert_eq!(settings.flags2, Some(flags2));
 
+        // Safety: We are zeroing the memory for the encoder context.
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let result = settings.apply(&mut encoder);
         assert!(result.is_ok(), "Failed to apply settings: {:?}", result.err());
@@ -646,8 +403,9 @@ mod tests {
             .width(0)
             .height(0)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(0)
+            .frame_rate(AVRational { num: 0, den: 1 })
             .build();
+        // Safety: We are zeroing the memory for the encoder context.
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let result = settings.apply(&mut encoder);
 
@@ -656,56 +414,6 @@ mod tests {
             result.unwrap_err(),
             FfmpegError::Arguments("width, height, frame_rate and pixel_format must be set")
         );
-    }
-
-    #[test]
-    fn test_video_encoder_average_duration() {
-        let frame_rate = 30;
-        let timebase = AVRational { num: 1, den: 30000 };
-        let settings = VideoEncoderSettings::builder()
-            .width(0)
-            .height(0)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(frame_rate)
-            .build();
-
-        let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
-        let actual_duration = settings.average_duration(timebase);
-
-        assert_eq!(actual_duration, expected_duration);
-    }
-
-    #[test]
-    fn test_video_encoder_average_duration_with_custom_timebase() {
-        let frame_rate = 60;
-        let timebase = AVRational { num: 1, den: 60000 };
-
-        let settings = VideoEncoderSettings::builder()
-            .width(0)
-            .height(0)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(frame_rate)
-            .build();
-
-        let expected_duration = (timebase.den as i64) / (frame_rate as i64 * timebase.num as i64);
-        let actual_duration = settings.average_duration(timebase);
-
-        assert_eq!(actual_duration, expected_duration);
-    }
-
-    #[test]
-    fn test_video_encoder_average_duration_with_zero_frame_rate() {
-        let frame_rate = 0;
-        let timebase = AVRational { num: 1, den: 30000 };
-        let settings = VideoEncoderSettings::builder()
-            .width(0)
-            .height(0)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(frame_rate)
-            .build();
-
-        let actual_duration = settings.average_duration(timebase);
-        assert_eq!(actual_duration, 0);
     }
 
     #[test]
@@ -723,11 +431,13 @@ mod tests {
         let flags2 = 0x02;
 
         let mut codec_specific_options = Dictionary::new();
-        let _ = codec_specific_options.set("profile", "high");
+        codec_specific_options
+            .set(c"profile", c"high")
+            .expect("Failed to set profile");
 
         let settings = AudioEncoderSettings::builder()
             .sample_rate(sample_rate)
-            .channel_count(channel_count)
+            .ch_layout(AudioChannelLayout::new(channel_count).expect("channel_count is a valid value"))
             .sample_fmt(sample_fmt)
             .thread_count(thread_count)
             .thread_type(thread_type)
@@ -741,7 +451,7 @@ mod tests {
             .build();
 
         assert_eq!(settings.sample_rate, sample_rate);
-        assert_eq!(settings.ch_layout.nb_channels, 2);
+        assert_eq!(settings.ch_layout.channel_count(), 2);
         assert_eq!(settings.sample_fmt, sample_fmt);
         assert_eq!(settings.thread_count, Some(thread_count));
         assert_eq!(settings.thread_type, Some(thread_type));
@@ -752,7 +462,7 @@ mod tests {
         assert!(settings.codec_specific_options.is_some());
 
         let actual_codec_specific_options = settings.codec_specific_options.unwrap();
-        assert_eq!(actual_codec_specific_options.get("profile").as_deref(), Some("high"));
+        assert_eq!(actual_codec_specific_options.get(c"profile"), Some(c"high"));
 
         assert_eq!(settings.flags, Some(flags));
         assert_eq!(settings.flags2, Some(flags2));
@@ -760,26 +470,32 @@ mod tests {
 
     #[test]
     fn test_ch_layout_valid_layout() {
-        let result = AudioEncoderSettings::builder().ch_layout(ffmpeg_sys_next::AVChannelLayout {
-            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
-            nb_channels: 2,
-            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0b11 },
-            opaque: std::ptr::null_mut(),
-        });
+        // Safety: This is safe to call and the channel layout is allocated on the stack.
+        let channel_layout = unsafe {
+            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
+                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+                nb_channels: 2,
+                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0b11 },
+                opaque: std::ptr::null_mut(),
+            })
+        };
 
-        assert!(result.is_ok(), "Expected valid channel layout.");
+        channel_layout.validate().expect("channel_layout is a valid value");
     }
 
     #[test]
     fn test_ch_layout_invalid_layout() {
-        let result = AudioEncoderSettings::builder().ch_layout(ffmpeg_sys_next::AVChannelLayout {
-            order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
-            nb_channels: 0,
-            u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
-            opaque: std::ptr::null_mut(),
-        });
-
-        assert!(result.is_err(), "Expected an error for invalid channel layout.");
+        // Safety: This is safe to call and the channel layout is allocated on the stack.
+        let channel_layout = unsafe {
+            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
+                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
+                nb_channels: 0,
+                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
+                opaque: std::ptr::null_mut(),
+            })
+        };
+        let result: Result<(), FfmpegError> = channel_layout.validate();
+        assert_eq!(result.unwrap_err(), FfmpegError::Arguments("invalid channel layout"));
     }
 
     #[test]
@@ -787,8 +503,10 @@ mod tests {
         let settings = AudioEncoderSettings::builder()
             .sample_rate(0)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_NONE)
-            .channel_count(2)
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .build();
+
+        // Safety: We are zeroing the memory for the encoder context.
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let result = settings.apply(&mut encoder);
 
@@ -800,60 +518,18 @@ mod tests {
     }
 
     #[test]
-    fn test_average_duration() {
-        let sample_rate = 48000;
-        let timebase = AVRational { num: 1, den: 48000 };
-        let settings = AudioEncoderSettings::builder()
-            .sample_rate(sample_rate)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .build();
-        let expected_duration = 1;
-        let actual_duration = settings.average_duration(timebase);
-
-        assert_eq!(actual_duration, expected_duration);
-    }
-
-    #[test]
-    fn test_average_duration_with_zero_sample_rate() {
-        let sample_rate = 0;
-        let timebase = AVRational { num: 1, den: 48000 };
-        let settings = AudioEncoderSettings::builder()
-            .sample_rate(sample_rate)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .build();
-        let actual_duration = settings.average_duration(timebase);
-
-        assert_eq!(actual_duration, 0);
-    }
-
-    #[test]
-    fn test_average_duration_with_custom_timebase() {
-        let sample_rate = 96000;
-        let timebase = AVRational { num: 1, den: 96000 };
-        let settings = AudioEncoderSettings::builder()
-            .sample_rate(sample_rate)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .build();
-        let expected_duration = 1;
-        let actual_duration = settings.average_duration(timebase);
-
-        assert_eq!(actual_duration, expected_duration);
-    }
-
-    #[test]
     fn test_encoder_settings_apply_video() {
         let sample_aspect_ratio = AVRational { num: 1, den: 1 };
         let video_settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .sample_aspect_ratio(sample_aspect_ratio)
             .gop_size(12)
             .build();
+
+        // Safety: We are zeroing the memory for the encoder context.
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let encoder_settings = EncoderSettings::Video(video_settings);
         let result = encoder_settings.apply(&mut encoder);
@@ -871,9 +547,11 @@ mod tests {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .build();
+
+        // Safety: We are zeroing the memory for the encoder context.
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
         let encoder_settings = EncoderSettings::Audio(audio_settings);
         let result = encoder_settings.apply(&mut encoder);
@@ -887,12 +565,12 @@ mod tests {
     #[test]
     fn test_encoder_settings_codec_specific_options() {
         let mut video_codec_options = Dictionary::new();
-        let _ = video_codec_options.set("preset", "fast");
+        video_codec_options.set(c"preset", c"fast").expect("Failed to set preset");
 
         let video_settings = VideoEncoderSettings::builder()
             .width(8)
             .height(8)
-            .frame_rate(1)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .codec_specific_options(video_codec_options.clone())
             .build();
@@ -900,14 +578,14 @@ mod tests {
         let options = encoder_settings.codec_specific_options();
 
         assert!(options.is_some());
-        assert_eq!(options.unwrap().get("preset").as_deref(), Some("fast"));
+        assert_eq!(options.unwrap().get(c"preset"), Some(c"fast"));
 
         let mut audio_codec_options = Dictionary::new();
-        let _ = audio_codec_options.set("bitrate", "128k");
+        audio_codec_options.set(c"bitrate", c"128k").expect("Failed to set bitrate");
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .codec_specific_options(audio_codec_options)
             .build();
@@ -915,39 +593,7 @@ mod tests {
         let options = encoder_settings.codec_specific_options();
 
         assert!(options.is_some());
-        assert_eq!(options.unwrap().get("bitrate").as_deref(), Some("128k"));
-    }
-
-    #[test]
-    fn test_encoder_settings_average_duration_video() {
-        let video_settings = VideoEncoderSettings::builder()
-            .width(1920)
-            .height(1080)
-            .frame_rate(30)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .build();
-        let encoder_settings = EncoderSettings::Video(video_settings);
-        let timebase = AVRational { num: 1, den: 30000 };
-        let expected_duration = (timebase.den as i64) / (30 * timebase.num as i64);
-        let actual_duration = encoder_settings.average_duration(timebase);
-
-        assert_eq!(actual_duration, expected_duration);
-    }
-
-    #[test]
-    fn test_encoder_settings_average_duration_audio() {
-        let audio_settings = AudioEncoderSettings::builder()
-            .sample_rate(44100)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
-            .thread_count(4)
-            .build();
-        let encoder_settings = EncoderSettings::Audio(audio_settings);
-        let timebase = AVRational { num: 1, den: 44100 };
-        let expected_duration = (timebase.den as i64) / (44100 * timebase.num as i64);
-        let actual_duration = encoder_settings.average_duration(timebase);
-
-        assert_eq!(actual_duration, expected_duration);
+        assert_eq!(options.unwrap().get(c"bitrate"), Some(c"128k"));
     }
 
     #[test]
@@ -956,7 +602,7 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .sample_aspect_ratio(sample_aspect_ratio)
             .gop_size(12)
@@ -966,7 +612,7 @@ mod tests {
         if let EncoderSettings::Video(actual_video_settings) = encoder_settings {
             assert_eq!(actual_video_settings.width, 1920);
             assert_eq!(actual_video_settings.height, 1080);
-            assert_eq!(actual_video_settings.frame_rate, 30);
+            assert_eq!(actual_video_settings.frame_rate, AVRational { num: 30, den: 1 });
             assert_eq!(actual_video_settings.pixel_format, AVPixelFormat::AV_PIX_FMT_YUV420P);
             assert_eq!(actual_video_settings.sample_aspect_ratio, Some(sample_aspect_ratio));
             assert_eq!(actual_video_settings.gop_size, Some(12));
@@ -980,7 +626,7 @@ mod tests {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
-            .channel_count(2)
+            .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .build();
         let encoder_settings: EncoderSettings = audio_settings.into();
@@ -996,9 +642,9 @@ mod tests {
 
     #[test]
     fn test_encoder_new_with_null_codec() {
-        let codec = EncoderCodec::from_ptr(std::ptr::null());
+        let codec = EncoderCodec::empty();
         let data = std::io::Cursor::new(Vec::new());
-        let options = OutputOptions::default().format_name("mp4");
+        let options = OutputOptions::builder().format_name("mp4").unwrap().build();
         let mut output = Output::new(data, options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };
@@ -1006,7 +652,7 @@ mod tests {
             .width(0)
             .height(0)
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(0)
+            .frame_rate(AVRational { num: 0, den: 1 })
             .build();
         let result = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, settings);
 
@@ -1018,14 +664,14 @@ mod tests {
         let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4);
         assert!(codec.is_some(), "Failed to find MPEG-4 encoder");
         let data = std::io::Cursor::new(Vec::new());
-        let options = OutputOptions::default().format_name("mp4");
+        let options = OutputOptions::builder().format_name("mp4").unwrap().build();
         let mut output = Output::new(data, options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };
         let settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .build();
         let result = Encoder::new(codec.unwrap(), &mut output, incoming_time_base, outgoing_time_base, settings);
@@ -1044,12 +690,12 @@ mod tests {
     fn test_send_eof() {
         let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
         let data = std::io::Cursor::new(Vec::new());
-        let options = OutputOptions::default().format_name("mp4");
+        let options = OutputOptions::builder().format_name("mp4").unwrap().build();
         let mut output = Output::new(data, options).expect("Failed to create Output");
         let video_settings = VideoEncoderSettings::builder()
             .width(640)
             .height(480)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .build();
         let mut encoder = Encoder::new(
@@ -1070,14 +716,14 @@ mod tests {
     fn test_encoder_getters() {
         let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
         let data = std::io::Cursor::new(Vec::new());
-        let options = OutputOptions::default().format_name("mp4");
+        let options = OutputOptions::builder().format_name("mp4").unwrap().build();
         let mut output = Output::new(data, options).expect("Failed to create Output");
         let incoming_time_base = AVRational { num: 1, den: 1000 };
         let outgoing_time_base = AVRational { num: 1, den: 1000 };
         let video_settings = VideoEncoderSettings::builder()
             .width(640)
             .height(480)
-            .frame_rate(30)
+            .frame_rate(AVRational { num: 30, den: 1 })
             .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
             .build();
         let encoder = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, video_settings)
@@ -1102,182 +748,101 @@ mod tests {
     }
 
     #[test]
-    fn test_muxer_settings_default() {
-        let settings = MuxerSettings::default();
-
-        assert!(settings.interleave, "Default interleave should be true");
-        assert!(
-            settings.muxer_options.is_empty(),
-            "Default muxer_options should be an empty dictionary"
-        );
-    }
-
-    #[test]
-    fn test_muxer_settings_builder_custom_values() {
-        let mut custom_options = Dictionary::new();
-        custom_options.set("key1", "value1").unwrap();
-        custom_options.set("key2", "value2").unwrap();
-        let settings = MuxerSettings::builder()
-            .interleave(false)
-            .muxer_options(custom_options.clone())
-            .build();
-
-        assert!(!settings.interleave, "Interleave should be set to false");
-        assert_eq!(
-            settings.muxer_options.get("key1").as_deref(),
-            Some("value1"),
-            "Expected muxer_options to have key1 with value 'value1'"
-        );
-        assert_eq!(
-            settings.muxer_options.get("key2").as_deref(),
-            Some("value2"),
-            "Expected muxer_options to have key2 with value 'value2'"
-        );
-    }
-
-    #[test]
-    fn test_muxer_encoder_new() {
-        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
-        let data = std::io::Cursor::new(Vec::new());
-        let options = OutputOptions::default().format_name("mp4");
-        let output = Output::new(data, options).expect("Failed to create Output");
-        let incoming_time_base = AVRational { num: 1, den: 1000 };
-        let outgoing_time_base = AVRational { num: 1, den: 1000 };
-        let video_settings = VideoEncoderSettings::builder()
-            .width(1920)
-            .height(1080)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(30)
-            .build();
-        let encoder_settings: EncoderSettings = video_settings.into();
-        let mut muxer_options = Dictionary::new();
-        muxer_options.set("option1", "value1").unwrap();
-        muxer_options.set("option2", "value2").unwrap();
-        let muxer_settings = MuxerSettings {
-            interleave: false,
-            muxer_options,
-        };
-        let muxer_encoder = MuxerEncoder::new(
-            codec,
-            output,
-            incoming_time_base,
-            outgoing_time_base,
-            encoder_settings,
-            muxer_settings,
-        );
-
-        assert!(
-            muxer_encoder.is_ok(),
-            "Failed to create MuxerEncoder: {:?}",
-            muxer_encoder.err()
-        );
-        let muxer_encoder = muxer_encoder.unwrap();
-
-        assert!(!muxer_encoder.interleave, "Expected interleave to be false, but it was true");
-        assert_eq!(
-            muxer_encoder.muxer_options.get("option1").as_deref(),
-            Some("value1"),
-            "Expected muxer_options to have 'option1' with value 'value1'"
-        );
-        assert_eq!(
-            muxer_encoder.muxer_options.get("option2").as_deref(),
-            Some("value2"),
-            "Expected muxer_options to have 'option2' with value 'value2'"
-        );
-        assert!(
-            !muxer_encoder.muxer_headers_written,
-            "Expected muxer_headers_written to be false"
-        );
-        assert_eq!(muxer_encoder.previous_dts, -1, "Expected previous_dts to be -1");
-        assert_eq!(muxer_encoder.previous_pts, -1, "Expected previous_pts to be -1");
-        assert!(muxer_encoder.buffered_packet.is_none(), "Expected buffered_packet to be None");
-        assert_eq!(muxer_encoder.stream_index(), 0, "Expected stream index to be 0");
-        assert_eq!(
-            muxer_encoder.incoming_time_base(),
-            incoming_time_base,
-            "Expected incoming_time_base to match"
-        );
-        assert_eq!(
-            muxer_encoder.outgoing_time_base(),
-            outgoing_time_base,
-            "Expected outgoing_time_base to match"
-        );
-    }
-
-    #[test]
-    fn test_muxer_encoder_into_inner() {
-        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
-        let data = std::io::Cursor::new(Vec::new());
-        let options = OutputOptions::default().format_name("mp4");
-        let output = Output::new(data.clone(), options).expect("Failed to create Output");
-        let incoming_time_base = AVRational { num: 1, den: 1000 };
-        let outgoing_time_base = AVRational { num: 1, den: 1000 };
-        let video_settings = VideoEncoderSettings::builder()
-            .width(1920)
-            .height(1080)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(30)
-            .build();
-        let encoder_settings: EncoderSettings = video_settings.into();
-        let muxer_settings = MuxerSettings::default();
-        let muxer_encoder = MuxerEncoder::new(
-            codec,
-            output,
-            incoming_time_base,
-            outgoing_time_base,
-            encoder_settings,
-            muxer_settings,
+    fn test_encoder_encode_video() {
+        let mut input = Input::open("../../assets/avc_aac.mp4").expect("Failed to open input file");
+        let streams = input.streams();
+        let video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("No video stream found");
+        let mut decoder = Decoder::new(&video_stream)
+            .expect("Failed to create decoder")
+            .video()
+            .expect("Failed to create video decoder");
+        let mut output = Output::seekable(
+            std::io::Cursor::new(Vec::new()),
+            OutputOptions::builder().format_name("mp4").unwrap().build(),
         )
-        .expect("Failed to create MuxerEncoder");
+        .expect("Failed to create Output");
+        let mut encoder = Encoder::new(
+            EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder"),
+            &mut output,
+            AVRational { num: 1, den: 1000 },
+            video_stream.time_base(),
+            VideoEncoderSettings::builder()
+                .width(decoder.width())
+                .height(decoder.height())
+                .frame_rate(decoder.frame_rate())
+                .pixel_format(decoder.pixel_format())
+                .build(),
+        )
+        .expect("Failed to create encoder");
 
-        let output = muxer_encoder.into_inner();
-        assert_eq!(
-            output.into_inner(),
-            data,
-            "Expected the inner output data to match the original data"
-        );
+        output.write_header().expect("Failed to write header");
+
+        let input_stream_index = video_stream.index();
+
+        while let Some(packet) = input.receive_packet().expect("Failed to receive packet") {
+            if packet.stream_index() == input_stream_index {
+                decoder.send_packet(&packet).expect("Failed to send packet");
+                while let Some(frame) = decoder.receive_frame().expect("Failed to receive frame") {
+                    encoder.send_frame(&frame).expect("Failed to send frame");
+                    while let Some(packet) = encoder.receive_packet().expect("Failed to receive packet") {
+                        output.write_packet(&packet).expect("Failed to write packet");
+                    }
+                }
+            }
+        }
+
+        encoder.send_eof().expect("Failed to send EOF");
+        while let Some(packet) = encoder.receive_packet().expect("Failed to receive packet") {
+            output.write_packet(&packet).expect("Failed to write packet");
+        }
+
+        output.write_trailer().expect("Failed to write trailer");
+
+        let mut cursor = std::io::Cursor::new(Bytes::from(output.into_inner().into_inner()));
+        let mut boxes = Vec::new();
+        while cursor.has_remaining() {
+            let mut _box = mp4::DynBox::demux(&mut cursor).expect("Failed to demux box");
+            if let mp4::DynBox::Mdat(mdat) = &mut _box {
+                mdat.data.iter_mut().for_each(|buf| {
+                    let mut hash = sha2::Sha256::new();
+                    hash.write_all(buf).unwrap();
+                    *buf = hash.finalize().to_vec().into();
+                });
+            }
+
+            boxes.push(_box);
+        }
+
+        insta::assert_debug_snapshot!("test_encoder_encode_video", &boxes);
     }
 
+    /// make sure [#248](https://github.com/ScuffleCloud/scuffle/pull/248) doesn't happen again
     #[test]
-    fn test_muxer_encoder_deref() {
-        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
-        let data = std::io::Cursor::new(Vec::new());
-        let options = OutputOptions::default().format_name("mp4");
-        let output = Output::new(data, options).expect("Failed to create Output");
-        let incoming_time_base = AVRational { num: 1, den: 1000 };
-        let outgoing_time_base = AVRational { num: 1, den: 1000 };
-        let video_settings = VideoEncoderSettings::builder()
-            .width(1920)
-            .height(1080)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(30)
-            .build();
-        let encoder_settings: EncoderSettings = video_settings.into();
-        let muxer_settings = MuxerSettings::default();
-        let mut muxer_encoder = MuxerEncoder::new(
-            codec,
-            output,
-            incoming_time_base,
-            outgoing_time_base,
-            encoder_settings,
-            muxer_settings,
+    fn test_pr_248() {
+        let mut output = Output::seekable(
+            std::io::Cursor::new(Vec::new()),
+            OutputOptions::builder().format_name("mp4").unwrap().build(),
         )
-        .expect("Failed to create MuxerEncoder");
+        .expect("Failed to create Output");
 
-        let encoder_ref = &*muxer_encoder;
-        assert_eq!(
-            encoder_ref.stream_index(),
-            0,
-            "Expected stream index to be 0, but got {}",
-            encoder_ref.stream_index()
-        );
+        let mut settings = Dictionary::new();
+        settings.set(c"key", c"value").expect("Failed to set Dictionary entry");
 
-        let encoder_mut_ref = &mut *muxer_encoder;
-        encoder_mut_ref.previous_dts = 12345;
-        assert_eq!(
-            encoder_mut_ref.previous_dts, 12345,
-            "Expected previous_dts to be updated to 12345, but got {}",
-            encoder_mut_ref.previous_dts
-        );
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Missing MPEG-4 codec");
+
+        Encoder::new(
+            codec,
+            &mut output,
+            AVRational { num: 1, den: 100 },
+            AVRational { num: 1, den: 100 },
+            VideoEncoderSettings::builder()
+                .width(16)
+                .height(16)
+                .frame_rate(AVRational { num: 30, den: 1 })
+                .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+                .codec_specific_options(settings)
+                .build(),
+        )
+        .expect("Failed to create new Encoder");
     }
 }
