@@ -417,4 +417,18 @@ mod tests {
         }
         "#);
     }
+
+    #[test]
+    fn test_empty_string() {
+        let mut dict = Dictionary::new();
+        assert!(dict.set(c"", c"abc").is_err());
+        assert!(dict.set(c"abc", c"").is_err());
+        assert!(dict.get(c"").is_none());
+        assert!(dict.set("".to_owned(), "abc".to_owned()).is_err());
+        assert!(dict.set("abc".to_owned(), "".to_owned()).is_err());
+        assert!(dict.get("").is_none());
+        assert!(dict.set(c"".to_owned(), c"abc".to_owned()).is_err());
+        assert!(dict.set(c"abc".to_owned(), c"".to_owned()).is_err());
+        assert!(dict.get(c"").is_none());
+    }
 }
