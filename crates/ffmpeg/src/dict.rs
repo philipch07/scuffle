@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::borrow::Cow;
 use std::ffi::{CStr, CString};
 use std::ptr::NonNull;
 
@@ -50,21 +50,73 @@ impl Clone for Dictionary {
     }
 }
 
-/// A builder for the dictionary.
-pub struct DictionaryBuilder {
-    dict: Dictionary,
+/// A trait for types that can be converted to a `CStr`.
+///
+/// This is used to allow for a few different types:
+/// - [`&str`] - Will be copied and converted to a `CString`.
+/// - [`&CStr`] - Will be borrowed.
+/// - [`String`] - Will be copied and converted to a `CString`.
+/// - [`CString`] - Will be owned.
+///
+/// If the string is empty, the [`Option::None`] will be returned.
+///
+/// # Examples
+///
+/// ```rust
+/// use scuffle_ffmpeg::dict::Dictionary;
+///
+/// let mut dict = Dictionary::new();
+/// // "key" is a &CStr, so it will be borrowed.
+/// dict.set(c"key", c"value").expect("Failed to set key");
+/// // "key" is a &str, so it will be copied and converted to a CString.
+/// assert_eq!(dict.get("key"), Some(c"value"));
+/// // "nonexistent_key" is a &str, so it will be copied and converted to a CString.
+/// assert_eq!(dict.set("nonexistent_key".to_owned(), "value"), Ok(()));
+/// // "nonexistent_key" is a CString, so it will be borrowed.
+/// assert_eq!(dict.get(c"nonexistent_key".to_owned()), Some(c"value"));
+/// ```
+pub trait CStringLike<'a> {
+    /// Convert the type to a `CStr`.
+    fn into_c_str(self) -> Option<Cow<'a, CStr>>;
 }
 
-impl DictionaryBuilder {
-    /// Sets a key-value pair in the dictionary.
-    pub fn set(mut self, key: &str, value: &str) -> Self {
-        self.dict.set(key, value).expect("Failed to set dictionary entry");
-        self
-    }
+impl<'a> CStringLike<'a> for String {
+    fn into_c_str(self) -> Option<Cow<'a, CStr>> {
+        if self.is_empty() {
+            return None;
+        }
 
-    /// Builds the dictionary.
-    pub fn build(self) -> Dictionary {
-        self.dict
+        Some(Cow::Owned(CString::new(Vec::from(self)).ok()?))
+    }
+}
+
+impl<'a> CStringLike<'a> for &str {
+    fn into_c_str(self) -> Option<Cow<'a, CStr>> {
+        if self.is_empty() {
+            return None;
+        }
+
+        Some(Cow::Owned(CString::new(self.as_bytes().to_vec()).ok()?))
+    }
+}
+
+impl<'a> CStringLike<'a> for &'a CStr {
+    fn into_c_str(self) -> Option<Cow<'a, CStr>> {
+        if self.is_empty() {
+            return None;
+        }
+
+        Some(Cow::Borrowed(self))
+    }
+}
+
+impl<'a> CStringLike<'a> for CString {
+    fn into_c_str(self) -> Option<Cow<'a, CStr>> {
+        if self.is_empty() {
+            return None;
+        }
+
+        Some(Cow::Owned(self))
     }
 }
 
@@ -78,11 +130,6 @@ impl Dictionary {
                 unsafe { av_dict_free(ptr) }
             }),
         }
-    }
-
-    /// Creates a new dictionary builder.
-    pub const fn builder() -> DictionaryBuilder {
-        DictionaryBuilder { dict: Self::new() }
     }
 
     /// # Safety
@@ -108,17 +155,10 @@ impl Dictionary {
     }
 
     /// Sets a key-value pair in the dictionary.
-    pub fn set(&mut self, key: &str, value: &str) -> Result<(), FfmpegError> {
-        if key.is_empty() {
-            return Err(FfmpegError::Arguments("Keys cannot be empty"));
-        }
-
-        if value.is_empty() {
-            return Err(FfmpegError::Arguments("Values cannot be empty"));
-        }
-
-        let key = CString::new(key).expect("Failed to convert key to CString");
-        let value = CString::new(value).expect("Failed to convert value to CString");
+    /// Key and value must not be empty.
+    pub fn set<'a>(&mut self, key: impl CStringLike<'a>, value: impl CStringLike<'a>) -> Result<(), FfmpegError> {
+        let key = key.into_c_str().ok_or(FfmpegError::Arguments("key cannot be empty"))?;
+        let value = value.into_c_str().ok_or(FfmpegError::Arguments("value cannot be empty"))?;
 
         // Safety: av_dict_set is safe to call
         FfmpegErrorCode(unsafe { av_dict_set(self.ptr.as_mut(), key.as_ptr(), value.as_ptr(), 0) }).result()?;
@@ -126,12 +166,8 @@ impl Dictionary {
     }
 
     /// Returns the value associated with the given key.
-    pub fn get(&self, key: &str) -> Option<String> {
-        if key.is_empty() {
-            return None;
-        }
-
-        let key = CString::new(key).expect("Failed to convert key to CString");
+    pub fn get<'a>(&self, key: impl CStringLike<'a>) -> Option<&CStr> {
+        let key = key.into_c_str()?;
 
         let mut entry =
             // Safety: av_dict_get is safe to call
@@ -141,7 +177,7 @@ impl Dictionary {
         let mut_ref = unsafe { entry.as_mut() };
 
         // Safety: The pointer here is valid.
-        Some(unsafe { CStr::from_ptr(mut_ref.value) }.to_string_lossy().into_owned())
+        Some(unsafe { CStr::from_ptr(mut_ref.value) })
     }
 
     /// Returns true if the dictionary is empty.
@@ -167,6 +203,31 @@ impl Dictionary {
     /// Returns the pointer to the dictionary.
     pub fn leak(self) -> *mut AVDictionary {
         self.ptr.into_inner()
+    }
+
+    /// Extends a dictionary with an iterator of key-value pairs.
+    pub fn extend<'a, K, V>(&mut self, iter: impl IntoIterator<Item = (K, V)>) -> Result<(), FfmpegError>
+    where
+        K: CStringLike<'a>,
+        V: CStringLike<'a>,
+    {
+        for (key, value) in iter {
+            // This is less then ideal, we shouldnt ignore the error but it only happens if the key or value is empty.
+            self.set(key, value)?;
+        }
+
+        Ok(())
+    }
+
+    /// Creates a new dictionary from an iterator of key-value pairs.
+    pub fn try_from_iter<'a, K, V>(iter: impl IntoIterator<Item = (K, V)>) -> Result<Self, FfmpegError>
+    where
+        K: CStringLike<'a>,
+        V: CStringLike<'a>,
+    {
+        let mut dict = Self::new();
+        dict.extend(iter)?;
+        Ok(dict)
     }
 }
 
@@ -216,42 +277,12 @@ impl<'a> IntoIterator for &'a Dictionary {
     }
 }
 
-macro_rules! impl_map_for_dict {
-    ($map:ty) => {
-        impl From<$map> for Dictionary {
-            fn from(map: $map) -> Self {
-                let mut dict = Dictionary::new();
-
-                for (key, value) in map {
-                    if key.is_empty() || value.is_empty() {
-                        continue;
-                    }
-
-                    dict.set(&key, &value).expect("Failed to set dictionary entry");
-                }
-
-                dict
-            }
-        }
-
-        impl From<&Dictionary> for $map {
-            fn from(dict: &Dictionary) -> Self {
-                dict.into_iter()
-                    .map(|(key, value)| (key.to_string_lossy().into_owned(), value.to_string_lossy().into_owned()))
-                    .collect()
-            }
-        }
-    };
-}
-
-impl_map_for_dict!(HashMap<String, String>);
-impl_map_for_dict!(BTreeMap<String, String>);
-
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
 
     use std::collections::HashMap;
+    use std::ffi::CStr;
 
     use crate::dict::Dictionary;
 
@@ -266,11 +297,11 @@ mod tests {
         assert!(dict.is_empty(), "Default dictionary should be empty");
         assert!(dict.as_ptr().is_null(), "Default dictionary pointer should be null");
 
-        dict.set("key1", "value1").expect("Failed to set key1");
-        dict.set("key2", "value2").expect("Failed to set key2");
-        dict.set("key3", "value3").expect("Failed to set key3");
+        dict.set(c"key1", c"value1").expect("Failed to set key1");
+        dict.set(c"key2", c"value2").expect("Failed to set key2");
+        dict.set(c"key3", c"value3").expect("Failed to set key3");
 
-        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
+        let dict_hm: std::collections::HashMap<&CStr, &CStr> = HashMap::from_iter(&dict);
 
         insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
         {
@@ -284,7 +315,7 @@ mod tests {
     #[test]
     fn test_dict_set_empty_key() {
         let mut dict = Dictionary::new();
-        assert!(dict.set("", "value1").is_err());
+        assert!(dict.set(c"", c"value1").is_err());
     }
 
     #[test]
@@ -299,12 +330,12 @@ mod tests {
     #[test]
     fn test_dict_clone_non_empty() {
         let mut dict = Dictionary::new();
-        dict.set("key1", "value1").expect("Failed to set key1");
-        dict.set("key2", "value2").expect("Failed to set key2");
+        dict.set(c"key1", c"value1").expect("Failed to set key1");
+        dict.set(c"key2", c"value2").expect("Failed to set key2");
         let mut clone = dict.clone();
 
-        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
-        let clone_hm: std::collections::HashMap<String, String> = HashMap::from(&clone);
+        let dict_hm: std::collections::HashMap<&CStr, &CStr> = HashMap::from_iter(&dict);
+        let clone_hm: std::collections::HashMap<&CStr, &CStr> = HashMap::from_iter(&clone);
 
         insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
         {
@@ -319,10 +350,12 @@ mod tests {
         }
         "#);
 
-        clone.set("key3", "value3").expect("Failed to set key3 in cloned dictionary");
+        clone
+            .set(c"key3", c"value3")
+            .expect("Failed to set key3 in cloned dictionary");
 
-        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
-        let clone_hm: std::collections::HashMap<String, String> = HashMap::from(&clone);
+        let dict_hm: std::collections::HashMap<&CStr, &CStr> = HashMap::from_iter(&dict);
+        let clone_hm: std::collections::HashMap<&CStr, &CStr> = HashMap::from_iter(&clone);
         insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
         {
             "key1": "value1",
@@ -330,24 +363,6 @@ mod tests {
         }
         "#);
         insta::assert_debug_snapshot!(sort_hashmap(clone_hm), @r#"
-        {
-            "key1": "value1",
-            "key2": "value2",
-            "key3": "value3",
-        }
-        "#);
-    }
-
-    #[test]
-    fn test_dictionary_builder_set_and_build() {
-        let dict = Dictionary::builder()
-            .set("key1", "value1")
-            .set("key2", "value2")
-            .set("key3", "value3")
-            .build();
-
-        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
-        insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
         {
             "key1": "value1",
             "key2": "value2",
@@ -360,35 +375,27 @@ mod tests {
     fn test_dict_get() {
         let mut dict = Dictionary::new();
         assert!(
-            dict.get("nonexistent_key").is_none(),
+            dict.get(c"nonexistent_key").is_none(),
             "Getting a nonexistent key from an empty dictionary should return None"
         );
 
-        dict.set("key1", "value1").expect("Failed to set key1");
-        dict.set("key2", "value2").expect("Failed to set key2");
-        assert_eq!(
-            dict.get("key1"),
-            Some("value1".to_string()),
-            "The value for 'key1' should be 'value1'"
-        );
-        assert_eq!(
-            dict.get("key2"),
-            Some("value2".to_string()),
-            "The value for 'key2' should be 'value2'"
-        );
+        dict.set(c"key1", c"value1").expect("Failed to set key1");
+        dict.set(c"key2", c"value2").expect("Failed to set key2");
+        assert_eq!(dict.get(c"key1"), Some(c"value1"), "The value for 'key1' should be 'value1'");
+        assert_eq!(dict.get(c"key2"), Some(c"value2"), "The value for 'key2' should be 'value2'");
 
-        assert!(dict.get("key3").is_none(), "Getting a nonexistent key should return None");
+        assert!(dict.get(c"key3").is_none(), "Getting a nonexistent key should return None");
 
-        dict.set("special_key!", "special_value").expect("Failed to set special_key!");
+        dict.set(c"special_key!", c"special_value")
+            .expect("Failed to set special_key!");
         assert_eq!(
-            dict.get("special_key!"),
-            Some("special_value".to_string()),
+            dict.get(c"special_key!"),
+            Some(c"special_value"),
             "The value for 'special_key!' should be 'special_value'"
         );
 
-        dbg!(dict.get(""));
         assert!(
-            dict.get("").is_none(),
+            dict.get(c"").is_none(),
             "Getting an empty key should return None (empty keys are not allowed)"
         );
     }
@@ -399,28 +406,14 @@ mod tests {
         hash_map.insert("key1".to_string(), "value1".to_string());
         hash_map.insert("key2".to_string(), "value2".to_string());
         hash_map.insert("key3".to_string(), "value3".to_string());
-        let dict = Dictionary::from(hash_map);
+        let dict = Dictionary::try_from_iter(hash_map).expect("Failed to create dictionary from hashmap");
 
-        let dict_hm: std::collections::HashMap<String, String> = HashMap::from(&dict);
+        let dict_hm: std::collections::HashMap<&CStr, &CStr> = HashMap::from_iter(&dict);
         insta::assert_debug_snapshot!(sort_hashmap(dict_hm), @r#"
         {
             "key1": "value1",
             "key2": "value2",
             "key3": "value3",
-        }
-        "#);
-
-        let mut hash_map_with_empty = std::collections::HashMap::new();
-        hash_map_with_empty.insert("key1".to_string(), "value1".to_string());
-        hash_map_with_empty.insert("".to_string(), "value2".to_string());
-        hash_map_with_empty.insert("key3".to_string(), "".to_string());
-
-        let dict_with_empty = Dictionary::from(hash_map_with_empty);
-
-        let dict_with_empty_hm: std::collections::HashMap<String, String> = HashMap::from(&dict_with_empty);
-        insta::assert_debug_snapshot!(sort_hashmap(dict_with_empty_hm), @r#"
-        {
-            "key1": "value1",
         }
         "#);
     }

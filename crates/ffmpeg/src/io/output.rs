@@ -544,12 +544,18 @@ mod tests {
         output.copy_stream(&best_video_stream).expect("Failed to copy stream");
 
         output
-            .write_header_with_options(&mut Dictionary::builder().set("movflags", "frag_keyframe+empty_moov").build())
+            .write_header_with_options(
+                &mut Dictionary::try_from_iter([("movflags", "frag_keyframe+empty_moov")])
+                    .expect("Failed to create dictionary from hashmap"),
+            )
             .expect("Failed to write header");
         assert_eq!(output.state, OutputState::HeaderWritten, "Expected header to be written");
         assert!(
             output
-                .write_header_with_options(&mut Dictionary::builder().set("movflags", "frag_keyframe+empty_moov").build())
+                .write_header_with_options(
+                    &mut Dictionary::try_from_iter([("movflags", "frag_keyframe+empty_moov")],)
+                        .expect("Failed to create dictionary from hashmap")
+                )
                 .is_err(),
             "Expected error when writing header twice"
         );

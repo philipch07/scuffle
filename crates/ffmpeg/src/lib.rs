@@ -232,14 +232,12 @@ pub mod filter_graph;
 pub mod frame;
 /// Input/Output specific functionality.
 pub mod io;
-/// Limiter specific functionality.
-pub mod limiter;
 /// Logging specific functionality.
 pub mod log;
 /// Packet specific functionality.
 pub mod packet;
 /// Scalar specific functionality.
-pub mod scalar;
+pub mod scaler;
 /// Stream specific functionality.
 pub mod stream;
 /// Utility functionality.

@@ -4,8 +4,8 @@ use crate::error::{FfmpegError, FfmpegErrorCode};
 use crate::frame::{Frame, VideoFrame};
 use crate::smart_object::SmartPtr;
 
-/// A scalar is a wrapper around an [`SwsContext`]. Which is used to scale or transform video frames.
-pub struct Scalar {
+/// A scaler is a wrapper around an [`SwsContext`]. Which is used to scale or transform video frames.
+pub struct Scaler {
     ptr: SmartPtr<SwsContext>,
     frame: VideoFrame,
     pixel_format: AVPixelFormat,
@@ -13,11 +13,11 @@ pub struct Scalar {
     height: i32,
 }
 
-/// Safety: `Scalar` is safe to send between threads.
-unsafe impl Send for Scalar {}
+/// Safety: `Scaler` is safe to send between threads.
+unsafe impl Send for Scaler {}
 
-impl Scalar {
-    /// Creates a new `Scalar` instance.
+impl Scaler {
+    /// Creates a new `Scaler` instance.
     pub fn new(
         input_width: i32,
         input_height: i32,
@@ -131,7 +131,7 @@ mod tests {
 
     use crate::error::FfmpegErrorCode;
     use crate::frame::Frame;
-    use crate::scalar::{AVPixelFormat, Scalar};
+    use crate::scaler::{AVPixelFormat, Scaler};
 
     #[test]
     fn test_scalar_new() {
@@ -141,7 +141,7 @@ mod tests {
         let output_width = 1280;
         let output_height = 720;
         let output_pixel_fmt = AVPixelFormat::AV_PIX_FMT_RGB24;
-        let scalar = Scalar::new(
+        let scalar = Scaler::new(
             input_width,
             input_height,
             incoming_pixel_fmt,
@@ -179,7 +179,7 @@ mod tests {
         let output_height = 720;
         let output_pixel_fmt = AVPixelFormat::AV_PIX_FMT_RGB24;
 
-        let mut scalar = Scalar::new(
+        let mut scalar = Scaler::new(
             input_width,
             input_height,
             incoming_pixel_fmt,

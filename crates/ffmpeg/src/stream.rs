@@ -528,8 +528,10 @@ mod tests {
         let mut streams = input.streams_mut();
         let mut stream = streams.get(0).expect("Expected a valid stream");
         let mut metadata = stream.metadata_mut();
-        let _ = metadata.set("test_key", "test_value");
-        let _ = metadata.set("test_key_2", "test_value_2");
+        metadata.set(c"test_key", c"test_value").expect("Failed to set test_key");
+        metadata
+            .set(c"test_key_2", c"test_value_2")
+            .expect("Failed to set test_key_2");
         let metadata = stream.metadata();
 
         // sorting metadata as the order is not guaranteed

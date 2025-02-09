@@ -367,8 +367,8 @@ mod tests {
         assert_eq!(settings.max_b_frames, Some(max_b_frames));
         assert!(settings.codec_specific_options.is_some());
         let actual_codec_specific_options = settings.codec_specific_options.as_ref().unwrap();
-        assert_eq!(actual_codec_specific_options.get("preset").as_deref(), Some("ultrafast"));
-        assert_eq!(actual_codec_specific_options.get("crf").as_deref(), Some("23"));
+        assert_eq!(actual_codec_specific_options.get(c"preset"), Some(c"ultrafast"));
+        assert_eq!(actual_codec_specific_options.get(c"crf"), Some(c"23"));
         assert_eq!(settings.flags, Some(flags));
         assert_eq!(settings.flags2, Some(flags2));
 
@@ -431,7 +431,9 @@ mod tests {
         let flags2 = 0x02;
 
         let mut codec_specific_options = Dictionary::new();
-        let _ = codec_specific_options.set("profile", "high");
+        codec_specific_options
+            .set(c"profile", c"high")
+            .expect("Failed to set profile");
 
         let settings = AudioEncoderSettings::builder()
             .sample_rate(sample_rate)
@@ -460,7 +462,7 @@ mod tests {
         assert!(settings.codec_specific_options.is_some());
 
         let actual_codec_specific_options = settings.codec_specific_options.unwrap();
-        assert_eq!(actual_codec_specific_options.get("profile").as_deref(), Some("high"));
+        assert_eq!(actual_codec_specific_options.get(c"profile"), Some(c"high"));
 
         assert_eq!(settings.flags, Some(flags));
         assert_eq!(settings.flags2, Some(flags2));
@@ -563,7 +565,7 @@ mod tests {
     #[test]
     fn test_encoder_settings_codec_specific_options() {
         let mut video_codec_options = Dictionary::new();
-        let _ = video_codec_options.set("preset", "fast");
+        video_codec_options.set(c"preset", c"fast").expect("Failed to set preset");
 
         let video_settings = VideoEncoderSettings::builder()
             .width(8)
@@ -576,10 +578,10 @@ mod tests {
         let options = encoder_settings.codec_specific_options();
 
         assert!(options.is_some());
-        assert_eq!(options.unwrap().get("preset").as_deref(), Some("fast"));
+        assert_eq!(options.unwrap().get(c"preset"), Some(c"fast"));
 
         let mut audio_codec_options = Dictionary::new();
-        let _ = audio_codec_options.set("bitrate", "128k");
+        audio_codec_options.set(c"bitrate", c"128k").expect("Failed to set bitrate");
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
             .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
@@ -591,7 +593,7 @@ mod tests {
         let options = encoder_settings.codec_specific_options();
 
         assert!(options.is_some());
-        assert_eq!(options.unwrap().get("bitrate").as_deref(), Some("128k"));
+        assert_eq!(options.unwrap().get(c"bitrate"), Some(c"128k"));
     }
 
     #[test]
@@ -824,7 +826,7 @@ mod tests {
         .expect("Failed to create Output");
 
         let mut settings = Dictionary::new();
-        settings.set("key", "value").expect("Failed to set Dictionary entry");
+        settings.set(c"key", c"value").expect("Failed to set Dictionary entry");
 
         let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Missing MPEG-4 codec");
 
