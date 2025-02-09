@@ -813,4 +813,34 @@ mod tests {
 
         insta::assert_debug_snapshot!("test_encoder_encode_video", &boxes);
     }
+
+    /// make sure [#248](https://github.com/ScuffleCloud/scuffle/pull/248) doesn't happen again
+    #[test]
+    fn test_pr_248() {
+        let mut output = Output::seekable(
+            std::io::Cursor::new(Vec::new()),
+            OutputOptions::builder().format_name("mp4").unwrap().build(),
+        )
+        .expect("Failed to create Output");
+
+        let mut settings = Dictionary::new();
+        settings.set("key", "value").expect("Failed to set Dictionary entry");
+
+        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Missing MPEG-4 codec");
+
+        Encoder::new(
+            codec,
+            &mut output,
+            AVRational { num: 1, den: 100 },
+            AVRational { num: 1, den: 100 },
+            VideoEncoderSettings::builder()
+                .width(16)
+                .height(16)
+                .frame_rate(AVRational { num: 30, den: 1 })
+                .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+                .codec_specific_options(settings)
+                .build(),
+        )
+        .expect("Failed to create new Encoder");
+    }
 }
