@@ -552,7 +552,8 @@ mod tests {
             "Failed to set default channel layout"
         );
         assert!(
-            audio_frame.alloc_frame_buffer(None).is_ok(),
+            // Safety: `audio_frame` is a valid pointer. And we dont attempt to read from the frame until after the allocation.
+            unsafe { audio_frame.alloc_frame_buffer(None).is_ok() },
             "Failed to allocate frame buffer"
         );
 

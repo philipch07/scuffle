@@ -50,7 +50,12 @@ impl Frame {
     }
 
     /// Allocates a buffer for the frame.
-    pub fn alloc_frame_buffer(&mut self, alignment: Option<i32>) -> Result<(), FfmpegError> {
+    ///
+    /// # Safety
+    /// This function is unsafe because the caller must ensure the frame has not been allocated yet.
+    /// Also the frame must be properly initialized after the allocation as the data is not zeroed out.
+    /// Therefore reading from the frame after allocation will result in reading uninitialized data.
+    pub unsafe fn alloc_frame_buffer(&mut self, alignment: Option<i32>) -> Result<(), FfmpegError> {
         // Safety: `self.as_mut_ptr()` is assumed to provide a valid mutable pointer to an
         // `AVFrame` structure. The `av_frame_get_buffer` function from FFMPEG allocates
         // and attaches a buffer to the `AVFrame` if it doesn't already exist.
@@ -732,57 +737,58 @@ mod tests {
 
     #[test]
     fn test_alloc_frame_buffer() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
-        let mut audio_frame = frame.audio();
-        audio_frame.set_nb_samples(1024);
-        audio_frame.set_sample_rate(44100);
+        let cases = [
+            (None, true),
+            (Some(0), true),
+            (Some(32), true),
+            (Some(-1), false),
+        ];
 
-        assert!(
-            audio_frame.set_channel_layout_default(2).is_ok(),
-            "Failed to set default channel layout"
-        );
-        assert!(
-            audio_frame.alloc_frame_buffer(None).is_ok(),
-            "Failed to allocate buffer with no alignment (should default to 0)"
-        );
-        assert!(
-            audio_frame.alloc_frame_buffer(Some(0)).is_ok(),
-            "Failed to allocate buffer with None alignment"
-        );
-        assert!(
-            audio_frame.alloc_frame_buffer(Some(32)).is_ok(),
-            "Failed to allocate buffer with positive alignment"
-        );
-        assert!(
-            audio_frame.alloc_frame_buffer(Some(-1)).is_ok(),
-            "Failed to allocate buffer with negative alignment"
-        );
+        for alignment in cases {
+            let mut frame = Frame::new().expect("Failed to create frame");
+            frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+            let mut audio_frame = frame.audio();
+            audio_frame.set_nb_samples(1024);
+            audio_frame.set_sample_rate(44100);
+
+            assert!(
+                audio_frame.set_channel_layout_default(2).is_ok(),
+                "Failed to set default channel layout"
+            );
+
+            assert_eq!(
+                // Safety: `audio_frame` is a valid pointer. And we dont attempt to read from the frame until after the allocation.
+                unsafe { audio_frame.alloc_frame_buffer(alignment.0).is_ok() },
+                alignment.1,
+                "Failed to allocate buffer with alignment {:?}",
+                alignment
+            );
+        }
     }
 
     #[test]
     fn test_alloc_frame_buffer_error() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
-        let mut audio_frame = frame.audio();
-        audio_frame.set_nb_samples(1024);
+        let cases = [
+            None,
+            Some(0),
+            Some(32),
+            Some(-1),
+        ];
 
-        assert!(
-            audio_frame.alloc_frame_buffer(None).is_err(),
-            "Should fail to allocate buffer with invalid frame and None alignment"
-        );
-        assert!(
-            audio_frame.alloc_frame_buffer(Some(0)).is_err(),
-            "Should fail to allocate buffer with invalid frame and 0 alignment"
-        );
-        assert!(
-            audio_frame.alloc_frame_buffer(Some(32)).is_err(),
-            "Should fail to allocate buffer with invalid frame and positive alignment"
-        );
-        assert!(
-            audio_frame.alloc_frame_buffer(Some(-1)).is_err(),
-            "Should fail to allocate buffer with invalid frame and negative alignment"
-        );
+
+        for alignment in cases {
+            let mut frame = Frame::new().expect("Failed to create frame");
+            frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+            let mut audio_frame = frame.audio();
+            audio_frame.set_nb_samples(1024);
+
+            assert!(
+                // Safety: `audio_frame` is a valid pointer. And we dont attempt to read from the frame until after the allocation.
+                unsafe { audio_frame.alloc_frame_buffer(alignment).is_err() },
+                "Should fail to allocate buffer with invalid frame and alignment {:?}",
+                alignment
+            );
+        }
     }
 
     #[test]
