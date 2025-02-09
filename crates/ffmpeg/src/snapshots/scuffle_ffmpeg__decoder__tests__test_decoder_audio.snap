@@ -1,0 +1,1135 @@
+---
+source: crates/ffmpeg/src/decoder.rs
+expression: audio_frames
+snapshot_kind: text
+---
+[
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            0,
+        ),
+        dts: Some(
+            0,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            0,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            1024,
+        ),
+        dts: Some(
+            1024,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            1024,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            2048,
+        ),
+        dts: Some(
+            2048,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            2048,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            3072,
+        ),
+        dts: Some(
+            3072,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            3072,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            4096,
+        ),
+        dts: Some(
+            4096,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            4096,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            5120,
+        ),
+        dts: Some(
+            5120,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            5120,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            6144,
+        ),
+        dts: Some(
+            6144,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            6144,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            7168,
+        ),
+        dts: Some(
+            7168,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            7168,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            8192,
+        ),
+        dts: Some(
+            8192,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            8192,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            9216,
+        ),
+        dts: Some(
+            9216,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            9216,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            10240,
+        ),
+        dts: Some(
+            10240,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            10240,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            11264,
+        ),
+        dts: Some(
+            11264,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            11264,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            12288,
+        ),
+        dts: Some(
+            12288,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            12288,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            13312,
+        ),
+        dts: Some(
+            13312,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            13312,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            14336,
+        ),
+        dts: Some(
+            14336,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            14336,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            15360,
+        ),
+        dts: Some(
+            15360,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            15360,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            16384,
+        ),
+        dts: Some(
+            16384,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            16384,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            17408,
+        ),
+        dts: Some(
+            17408,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            17408,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            18432,
+        ),
+        dts: Some(
+            18432,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            18432,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            19456,
+        ),
+        dts: Some(
+            19456,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            19456,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            20480,
+        ),
+        dts: Some(
+            20480,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            20480,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            21504,
+        ),
+        dts: Some(
+            21504,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            21504,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            22528,
+        ),
+        dts: Some(
+            22528,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            22528,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            23552,
+        ),
+        dts: Some(
+            23552,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            23552,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            24576,
+        ),
+        dts: Some(
+            24576,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            24576,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            25600,
+        ),
+        dts: Some(
+            25600,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            25600,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            26624,
+        ),
+        dts: Some(
+            26624,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            26624,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            27648,
+        ),
+        dts: Some(
+            27648,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            27648,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            28672,
+        ),
+        dts: Some(
+            28672,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            28672,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            29696,
+        ),
+        dts: Some(
+            29696,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            29696,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            30720,
+        ),
+        dts: Some(
+            30720,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            30720,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            31744,
+        ),
+        dts: Some(
+            31744,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            31744,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            32768,
+        ),
+        dts: Some(
+            32768,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            32768,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            33792,
+        ),
+        dts: Some(
+            33792,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            33792,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            34816,
+        ),
+        dts: Some(
+            34816,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            34816,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            35840,
+        ),
+        dts: Some(
+            35840,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            35840,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            36864,
+        ),
+        dts: Some(
+            36864,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            36864,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            37888,
+        ),
+        dts: Some(
+            37888,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            37888,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            38912,
+        ),
+        dts: Some(
+            38912,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            38912,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            39936,
+        ),
+        dts: Some(
+            39936,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            39936,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            40960,
+        ),
+        dts: Some(
+            40960,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            40960,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            41984,
+        ),
+        dts: Some(
+            41984,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            41984,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            43008,
+        ),
+        dts: Some(
+            43008,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            43008,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            44032,
+        ),
+        dts: Some(
+            44032,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            44032,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            45056,
+        ),
+        dts: Some(
+            45056,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            45056,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            46080,
+        ),
+        dts: Some(
+            46080,
+        ),
+        duration: Some(
+            1024,
+        ),
+        best_effort_timestamp: Some(
+            46080,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+    AudioFrame {
+        channel_count: 2,
+        nb_samples: 1024,
+        sample_rate: 48000,
+        pts: Some(
+            47104,
+        ),
+        dts: Some(
+            47104,
+        ),
+        duration: Some(
+            992,
+        ),
+        best_effort_timestamp: Some(
+            47104,
+        ),
+        time_base: AVRational {
+            num: 1,
+            den: 48000,
+        },
+        format: 8,
+        is_audio: true,
+        is_video: false,
+    },
+]

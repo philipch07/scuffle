@@ -90,11 +90,18 @@ impl<S: output_options_builder::State> OutputOptionsBuilder<S> {
 /// A struct that represents the output.
 pub struct Output<T: Send + Sync> {
     inner: Inner<T>,
-    witten_header: bool,
+    state: OutputState,
 }
 
 /// Safety: `T` must be `Send` and `Sync`.
 unsafe impl<T: Send + Sync> Send for Output<T> {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OutputState {
+    Uninitialized,
+    HeaderWritten,
+    TrailerWritten,
+}
 
 impl<T: Send + Sync> Output<T> {
     /// Consumes the `Output` and returns the inner data.
@@ -116,7 +123,7 @@ impl<T: std::io::Write + Send + Sync> Output<T> {
                     ..Default::default()
                 },
             )?,
-            witten_header: false,
+            state: OutputState::Uninitialized,
         })
     }
 
@@ -136,7 +143,7 @@ impl<T: std::io::Write + Send + Sync> Output<T> {
                     ..Default::default()
                 },
             )?,
-            witten_header: false,
+            state: OutputState::Uninitialized,
         })
     }
 }
@@ -204,45 +211,45 @@ impl<T: Send + Sync> Output<T> {
 
     /// Writes the header to the output.
     pub fn write_header(&mut self) -> Result<(), FfmpegError> {
-        if self.witten_header {
+        if self.state != OutputState::Uninitialized {
             return Err(FfmpegError::Arguments("header already written"));
         }
 
         // Safety: `avformat_write_header` is safe to call, if the header has not been
         // written yet.
-        FfmpegErrorCode::from(unsafe { avformat_write_header(self.as_mut_ptr(), std::ptr::null_mut()) }).result()?;
-        self.witten_header = true;
+        FfmpegErrorCode(unsafe { avformat_write_header(self.as_mut_ptr(), std::ptr::null_mut()) }).result()?;
+        self.state = OutputState::HeaderWritten;
 
         Ok(())
     }
 
     /// Writes the header to the output with the given options.
     pub fn write_header_with_options(&mut self, options: &mut Dictionary) -> Result<(), FfmpegError> {
-        if self.witten_header {
+        if self.state != OutputState::Uninitialized {
             return Err(FfmpegError::Arguments("header already written"));
         }
 
         // Safety: `avformat_write_header` is safe to call, if the header has not been
         // written yet.
-        FfmpegErrorCode::from(unsafe { avformat_write_header(self.as_mut_ptr(), options.as_mut_ptr_ref()) }).result()?;
-        self.witten_header = true;
+        FfmpegErrorCode(unsafe { avformat_write_header(self.as_mut_ptr(), options.as_mut_ptr_ref()) }).result()?;
+        self.state = OutputState::HeaderWritten;
 
         Ok(())
     }
 
     /// Writes the trailer to the output.
     pub fn write_trailer(&mut self) -> Result<(), FfmpegError> {
-        if !self.witten_header {
-            return Err(FfmpegError::Arguments("header not written"));
+        if self.state != OutputState::HeaderWritten {
+            return Err(FfmpegError::Arguments(
+                "cannot write trailer before header or after trailer has been written",
+            ));
         }
 
         // Safety: `av_write_trailer` is safe to call, once the header has been written.
-        unsafe {
-            match av_write_trailer(self.as_mut_ptr()) {
-                n if n >= 0 => Ok(()),
-                e => Err(FfmpegError::Code(e.into())),
-            }
-        }
+        FfmpegErrorCode(unsafe { av_write_trailer(self.as_mut_ptr()) }).result()?;
+        self.state = OutputState::TrailerWritten;
+
+        Ok(())
     }
 
     /// Writes the interleaved packet to the output.
@@ -250,33 +257,29 @@ impl<T: Send + Sync> Output<T> {
     /// writes the packet to the output and reorders the packets based on the
     /// dts and pts.
     pub fn write_interleaved_packet(&mut self, mut packet: Packet) -> Result<(), FfmpegError> {
-        if !self.witten_header {
-            return Err(FfmpegError::Arguments("header not written"));
+        if self.state != OutputState::HeaderWritten {
+            return Err(FfmpegError::Arguments(
+                "cannot write interleaved packet before header or after trailer has been written",
+            ));
         }
 
         // Safety: `av_interleaved_write_frame` is safe to call, once the header has
         // been written.
-        unsafe {
-            match av_interleaved_write_frame(self.as_mut_ptr(), packet.as_mut_ptr()) {
-                0 => Ok(()),
-                e => Err(FfmpegError::Code(e.into())),
-            }
-        }
+        FfmpegErrorCode(unsafe { av_interleaved_write_frame(self.as_mut_ptr(), packet.as_mut_ptr()) }).result()?;
+        Ok(())
     }
 
     /// Writes the packet to the output. Without reordering the packets.
     pub fn write_packet(&mut self, packet: &Packet) -> Result<(), FfmpegError> {
-        if !self.witten_header {
-            return Err(FfmpegError::Arguments("header not written"));
+        if self.state != OutputState::HeaderWritten {
+            return Err(FfmpegError::Arguments(
+                "cannot write packet before header or after trailer has been written",
+            ));
         }
 
         // Safety: `av_write_frame` is safe to call, once the header has been written.
-        unsafe {
-            match av_write_frame(self.as_mut_ptr(), packet.as_ptr() as *mut _) {
-                0 => Ok(()),
-                e => Err(FfmpegError::Code(e.into())),
-            }
-        }
+        FfmpegErrorCode(unsafe { av_write_frame(self.as_mut_ptr(), packet.as_ptr() as *mut _) }).result()?;
+        Ok(())
     }
 
     /// Returns the flags for the output.
@@ -290,7 +293,7 @@ impl Output<()> {
     pub fn open(path: &str) -> Result<Self, FfmpegError> {
         Ok(Self {
             inner: Inner::open_output(path)?,
-            witten_header: false,
+            state: OutputState::Uninitialized,
         })
     }
 }
@@ -300,14 +303,19 @@ impl Output<()> {
 mod tests {
     use std::ffi::CString;
     use std::io::Cursor;
+    use std::path::PathBuf;
     use std::ptr;
+    use sha2::Digest;
+    use std::io::Write;
 
+    use bytes::{Buf, Bytes};
+    use ffmpeg_sys_next::AVMediaType;
     use tempfile::Builder;
 
     use crate::dict::Dictionary;
     use crate::error::FfmpegError;
-    use crate::io::output::{AVCodec, AVRational, AVFMT_FLAG_AUTO_BSF};
-    use crate::io::{Output, OutputOptions};
+    use crate::io::output::{AVCodec, AVRational, OutputState, AVFMT_FLAG_AUTO_BSF};
+    use crate::io::{Input, Output, OutputOptions};
 
     #[test]
     fn test_output_options_get_format_ffi_null() {
@@ -458,5 +466,113 @@ mod tests {
 
         assert!(output.is_ok(), "Expected Output::open to succeed");
         std::fs::remove_file(temp_path).expect("Failed to remove temporary file");
+    }
+
+    macro_rules! get_boxes {
+        ($output:expr) => {{
+            let binary = $output.inner.data.as_mut().unwrap().get_mut().as_slice();
+            let mut cursor = Cursor::new(Bytes::copy_from_slice(binary));
+            let mut boxes = Vec::new();
+            while cursor.has_remaining() {
+                let mut box_ = mp4::DynBox::demux(&mut cursor).expect("Failed to demux mp4");
+                if let mp4::DynBox::Mdat(mdat) = &mut box_ {
+                    mdat.data.iter_mut().for_each(|buf| {
+                        let mut hash = sha2::Sha256::new();
+                        hash.write_all(buf).unwrap();
+                        *buf = hash.finalize().to_vec().into();
+                    });
+                }
+                boxes.push(box_);
+            }
+
+            boxes
+        }};
+    }
+
+    #[test]
+    fn test_output_write_mp4() {
+        let data = Cursor::new(Vec::new());
+        let options = OutputOptions::builder().format_name("mp4").unwrap().build();
+
+        let mut output = Output::seekable(data, options).expect("Failed to create Output");
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets");
+
+        let mut input = Input::seekable(std::fs::File::open(dir.join("avc_aac.mp4")).expect("Failed to open file"))
+            .expect("Failed to create Input");
+        let streams = input.streams();
+        let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
+
+        output.copy_stream(&best_video_stream).expect("Failed to copy stream");
+
+        output.write_header().expect("Failed to write header");
+        assert_eq!(output.state, OutputState::HeaderWritten, "Expected header to be written");
+        assert!(output.write_header().is_err(), "Expected error when writing header twice");
+
+        insta::assert_debug_snapshot!("test_output_write_mp4_header", get_boxes!(output));
+
+        let best_video_stream_index = best_video_stream.index();
+
+        while let Some(packet) = input.receive_packet().expect("Failed to receive packet") {
+            if packet.stream_index() != best_video_stream_index {
+                continue;
+            }
+
+            output.write_interleaved_packet(packet).expect("Failed to write packet");
+        }
+
+        insta::assert_debug_snapshot!("test_output_write_mp4_packets", get_boxes!(output));
+
+        output.write_trailer().expect("Failed to write trailer");
+        assert!(output.write_trailer().is_err(), "Expected error when writing trailer twice");
+        assert_eq!(output.state, OutputState::TrailerWritten, "Expected trailer to be written");
+
+        insta::assert_debug_snapshot!("test_output_write_mp4_trailer", get_boxes!(output));
+    }
+
+    #[test]
+    fn test_output_write_mp4_fragmented() {
+        let data = Cursor::new(Vec::new());
+        let options = OutputOptions::builder().format_name("mp4").unwrap().build();
+
+        let mut output = Output::seekable(data, options).expect("Failed to create Output");
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets");
+
+        let mut input = Input::seekable(std::fs::File::open(dir.join("avc_aac.mp4")).expect("Failed to open file"))
+            .expect("Failed to create Input");
+        let streams = input.streams();
+        let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
+
+        output.copy_stream(&best_video_stream).expect("Failed to copy stream");
+
+        output
+            .write_header_with_options(&mut Dictionary::builder().set("movflags", "frag_keyframe+empty_moov").build())
+            .expect("Failed to write header");
+        assert_eq!(output.state, OutputState::HeaderWritten, "Expected header to be written");
+        assert!(
+            output
+                .write_header_with_options(&mut Dictionary::builder().set("movflags", "frag_keyframe+empty_moov").build())
+                .is_err(),
+            "Expected error when writing header twice"
+        );
+
+        insta::assert_debug_snapshot!("test_output_write_mp4_fragmented_header", get_boxes!(output));
+
+        let best_video_stream_index = best_video_stream.index();
+
+        while let Some(packet) = input.receive_packet().expect("Failed to receive packet") {
+            if packet.stream_index() != best_video_stream_index {
+                continue;
+            }
+
+            output.write_packet(&packet).expect("Failed to write packet");
+        }
+
+        insta::assert_debug_snapshot!("test_output_write_mp4_fragmented_packets", get_boxes!(output));
+
+        output.write_trailer().expect("Failed to write trailer");
+        assert_eq!(output.state, OutputState::TrailerWritten, "Expected trailer to be written");
+        assert!(output.write_trailer().is_err(), "Expected error when writing trailer twice");
+
+        insta::assert_debug_snapshot!("test_output_write_mp4_fragmented_trailer", get_boxes!(output));
     }
 }

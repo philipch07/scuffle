@@ -1,0 +1,903 @@
+---
+source: crates/ffmpeg/src/encoder.rs
+expression: "&boxes"
+snapshot_kind: text
+---
+[
+    Ftyp(
+        Ftyp {
+            header: BoxHeader {
+                box_type: b"ftyp",
+            },
+            major_brand: Unknown(
+                [
+                    105,
+                    115,
+                    111,
+                    109,
+                ],
+            ),
+            minor_version: 512,
+            compatible_brands: [
+                Unknown(
+                    [
+                        105,
+                        115,
+                        111,
+                        109,
+                    ],
+                ),
+                Unknown(
+                    [
+                        105,
+                        115,
+                        111,
+                        50,
+                    ],
+                ),
+                Mp41,
+            ],
+        },
+    ),
+    Unknown(
+        (
+            BoxHeader {
+                box_type: b"free",
+            },
+            b"",
+        ),
+    ),
+    Mdat(
+        Mdat {
+            header: BoxHeader {
+                box_type: b"mdat",
+            },
+            data: [
+                b"\xc1\xda\xc4\xa0<\xadq9\xa8\xe5\xf6\x9e\x93\n\xfcg\xea\x91>\\\x1a0\xfe|H>\xe2f\xc0#\xd1\xee",
+            ],
+        },
+    ),
+    Moov(
+        Moov {
+            header: BoxHeader {
+                box_type: b"moov",
+            },
+            mvhd: Mvhd {
+                header: FullBoxHeader {
+                    header: BoxHeader {
+                        box_type: b"mvhd",
+                    },
+                    version: 0,
+                    flags: 0,
+                },
+                creation_time: 0,
+                modification_time: 0,
+                timescale: 1000,
+                duration: 70145,
+                rate: 1,
+                volume: 1,
+                reserved: 0,
+                reserved2: [
+                    0,
+                    0,
+                ],
+                matrix: [
+                    65536,
+                    0,
+                    0,
+                    0,
+                    65536,
+                    0,
+                    0,
+                    0,
+                    1073741824,
+                ],
+                pre_defined: [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ],
+                next_track_id: 2,
+            },
+            traks: [
+                Trak {
+                    header: BoxHeader {
+                        box_type: b"trak",
+                    },
+                    tkhd: Tkhd {
+                        header: FullBoxHeader {
+                            header: BoxHeader {
+                                box_type: b"tkhd",
+                            },
+                            version: 0,
+                            flags: 3,
+                        },
+                        creation_time: 0,
+                        modification_time: 0,
+                        track_id: 1,
+                        reserved: 0,
+                        duration: 70145,
+                        reserved2: [
+                            0,
+                            0,
+                        ],
+                        layer: 0,
+                        alternate_group: 0,
+                        volume: 0,
+                        reserved3: 0,
+                        matrix: [
+                            65536,
+                            0,
+                            0,
+                            0,
+                            65536,
+                            0,
+                            0,
+                            0,
+                            1073741824,
+                        ],
+                        width: 480,
+                        height: 852,
+                    },
+                    edts: Some(
+                        Edts {
+                            header: BoxHeader {
+                                box_type: b"edts",
+                            },
+                            elst: Some(
+                                Elst {
+                                    header: FullBoxHeader {
+                                        header: BoxHeader {
+                                            box_type: b"elst",
+                                        },
+                                        version: 0,
+                                        flags: 0,
+                                    },
+                                    entries: [
+                                        ElstEntry {
+                                            segment_duration: 70145,
+                                            media_time: 0,
+                                            media_rate_integer: 1,
+                                            media_rate_fraction: 0,
+                                        },
+                                    ],
+                                },
+                            ),
+                            unknown: [],
+                        },
+                    ),
+                    mdia: Mdia {
+                        header: BoxHeader {
+                            box_type: b"mdia",
+                        },
+                        mdhd: Mdhd {
+                            header: FullBoxHeader {
+                                header: BoxHeader {
+                                    box_type: b"mdhd",
+                                },
+                                version: 0,
+                                flags: 0,
+                            },
+                            creation_time: 0,
+                            modification_time: 0,
+                            timescale: 15360,
+                            duration: 1077412,
+                            language: 21956,
+                            pre_defined: 0,
+                        },
+                        hdlr: Hdlr {
+                            header: FullBoxHeader {
+                                header: BoxHeader {
+                                    box_type: b"hdlr",
+                                },
+                                version: 0,
+                                flags: 0,
+                            },
+                            pre_defined: 0,
+                            handler_type: Vide,
+                            reserved: [
+                                0,
+                                0,
+                                0,
+                            ],
+                            name: "VideoHandler",
+                        },
+                        minf: Minf {
+                            header: BoxHeader {
+                                box_type: b"minf",
+                            },
+                            vmhd: Some(
+                                Vmhd {
+                                    header: FullBoxHeader {
+                                        header: BoxHeader {
+                                            box_type: b"vmhd",
+                                        },
+                                        version: 0,
+                                        flags: 1,
+                                    },
+                                    graphics_mode: 0,
+                                    opcolor: [
+                                        0,
+                                        0,
+                                        0,
+                                    ],
+                                },
+                            ),
+                            smhd: None,
+                            hmhd: None,
+                            nmhd: None,
+                            dinf: Dinf {
+                                header: BoxHeader {
+                                    box_type: b"dinf",
+                                },
+                                dref: Dref {
+                                    header: FullBoxHeader {
+                                        header: BoxHeader {
+                                            box_type: b"dref",
+                                        },
+                                        version: 0,
+                                        flags: 0,
+                                    },
+                                    entries: [
+                                        Url(
+                                            Url {
+                                                header: FullBoxHeader {
+                                                    header: BoxHeader {
+                                                        box_type: b"url ",
+                                                    },
+                                                    version: 0,
+                                                    flags: 1,
+                                                },
+                                                location: None,
+                                            },
+                                        ),
+                                    ],
+                                },
+                                unknown: [],
+                            },
+                            stbl: Stbl {
+                                header: BoxHeader {
+                                    box_type: b"stbl",
+                                },
+                                stsd: Stsd {
+                                    header: FullBoxHeader {
+                                        header: BoxHeader {
+                                            box_type: b"stsd",
+                                        },
+                                        version: 0,
+                                        flags: 0,
+                                    },
+                                    entries: [
+                                        Unknown(
+                                            (
+                                                BoxHeader {
+                                                    box_type: b"mp4v",
+                                                },
+                                                b"\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\xe0\x03T\0H\0\0\0H\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x18\xff\xff\0\0\0,esds\0\0\0\0\x03\x80\x80\x80\x1b\0\x01\0\x04\x80\x80\x80\r \x11\0\0\0\0\x04\x1c\xf4\0\x04\x1c\xf4\x06\x80\x80\x80\x01\x02\0\0\0\x14btrt\0\0\0\0\0\x04\x1c\xf4\0\x04\x1c\xf4",
+                                            ),
+                                        ),
+                                    ],
+                                },
+                                stts: Stts {
+                                    header: FullBoxHeader {
+                                        header: BoxHeader {
+                                            box_type: b"stts",
+                                        },
+                                        version: 0,
+                                        flags: 0,
+                                    },
+                                    entries: [
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 3,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 3,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 3,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 3,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 3,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 2,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7865,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 7864,
+                                        },
+                                        SttsEntry {
+                                            sample_count: 1,
+                                            sample_delta: 0,
+                                        },
+                                    ],
+                                },
+                                ctts: None,
+                                stsc: Stsc {
+                                    header: FullBoxHeader {
+                                        header: BoxHeader {
+                                            box_type: b"stsc",
+                                        },
+                                        version: 0,
+                                        flags: 0,
+                                    },
+                                    entries: [
+                                        StscEntry {
+                                            first_chunk: 1,
+                                            samples_per_chunk: 83,
+                                            sample_description_index: 1,
+                                        },
+                                        StscEntry {
+                                            first_chunk: 2,
+                                            samples_per_chunk: 42,
+                                            sample_description_index: 1,
+                                        },
+                                        StscEntry {
+                                            first_chunk: 3,
+                                            samples_per_chunk: 13,
+                                            sample_description_index: 1,
+                                        },
+                                    ],
+                                },
+                                stsz: Some(
+                                    Stsz {
+                                        header: FullBoxHeader {
+                                            header: BoxHeader {
+                                                box_type: b"stsz",
+                                            },
+                                            version: 0,
+                                            flags: 0,
+                                        },
+                                        sample_size: 0,
+                                        samples: [
+                                            31326,
+                                            19960,
+                                            19892,
+                                            16337,
+                                            17880,
+                                            15282,
+                                            7481,
+                                            7768,
+                                            9170,
+                                            7883,
+                                            18523,
+                                            13449,
+                                            36901,
+                                            10641,
+                                            12404,
+                                            9498,
+                                            13533,
+                                            11151,
+                                            10871,
+                                            10000,
+                                            14609,
+                                            16448,
+                                            12233,
+                                            10015,
+                                            28696,
+                                            10146,
+                                            10850,
+                                            8898,
+                                            10126,
+                                            9363,
+                                            13477,
+                                            10877,
+                                            11768,
+                                            10390,
+                                            8721,
+                                            8797,
+                                            28159,
+                                            9663,
+                                            12146,
+                                            13437,
+                                            9047,
+                                            10977,
+                                            11135,
+                                            13348,
+                                            11695,
+                                            9488,
+                                            7924,
+                                            7068,
+                                            19944,
+                                            6539,
+                                            6106,
+                                            6501,
+                                            12460,
+                                            7418,
+                                            11281,
+                                            7000,
+                                            11997,
+                                            7701,
+                                            10499,
+                                            10003,
+                                            24440,
+                                            5899,
+                                            7935,
+                                            8908,
+                                            7415,
+                                            10022,
+                                            15562,
+                                            14710,
+                                            9964,
+                                            7254,
+                                            15313,
+                                            9230,
+                                            15462,
+                                            8034,
+                                            9015,
+                                            10282,
+                                            11850,
+                                            11916,
+                                            12789,
+                                            12171,
+                                            15562,
+                                            22300,
+                                            21755,
+                                            21296,
+                                            42253,
+                                            16687,
+                                            20716,
+                                            25465,
+                                            21832,
+                                            23338,
+                                            30944,
+                                            15555,
+                                            18332,
+                                            16987,
+                                            17562,
+                                            23708,
+                                            43995,
+                                            22303,
+                                            15415,
+                                            19481,
+                                            19616,
+                                            19207,
+                                            24142,
+                                            24864,
+                                            19816,
+                                            24708,
+                                            26682,
+                                            24540,
+                                            59533,
+                                            24021,
+                                            21828,
+                                            23806,
+                                            21987,
+                                            23772,
+                                            21316,
+                                            22908,
+                                            22379,
+                                            29706,
+                                            31012,
+                                            20697,
+                                            37203,
+                                            24588,
+                                            26474,
+                                            26136,
+                                            22797,
+                                            25201,
+                                            19730,
+                                            21704,
+                                            18792,
+                                            22218,
+                                            18798,
+                                            20694,
+                                            47988,
+                                            20503,
+                                            16837,
+                                            14691,
+                                            12022,
+                                            19996,
+                                        ],
+                                    },
+                                ),
+                                stz2: None,
+                                stco: Stco {
+                                    header: FullBoxHeader {
+                                        header: BoxHeader {
+                                            box_type: b"stco",
+                                        },
+                                        version: 0,
+                                        flags: 0,
+                                    },
+                                    entries: [
+                                        44,
+                                        1044732,
+                                        2084339,
+                                    ],
+                                },
+                                co64: None,
+                                stss: Some(
+                                    Stss {
+                                        header: FullBoxHeader {
+                                            header: BoxHeader {
+                                                box_type: b"stss",
+                                            },
+                                            version: 0,
+                                            flags: 0,
+                                        },
+                                        entries: [
+                                            1,
+                                            13,
+                                            25,
+                                            37,
+                                            49,
+                                            61,
+                                            73,
+                                            85,
+                                            97,
+                                            109,
+                                            121,
+                                            133,
+                                        ],
+                                    },
+                                ),
+                                stsh: None,
+                                padb: None,
+                                stdp: None,
+                                sdtp: None,
+                                sbgp: None,
+                                subs: None,
+                                unknown: [],
+                            },
+                            unknown: [],
+                        },
+                        unknown: [],
+                    },
+                    unknown: [],
+                },
+            ],
+            mvex: None,
+            unknown: [
+                Unknown(
+                    (
+                        BoxHeader {
+                            box_type: b"udta",
+                        },
+                        b"\0\0\0Ymeta\0\0\0\0\0\0\0!hdlr\0\0\0\0\0\0\0\0mdirappl\0\0\0\0\0\0\0\0\0\0\0\0,ilst\0\0\0$\xa9too\0\0\0\x1cdata\0\0\0\x01\0\0\0\0Lavf61.7.100",
+                    ),
+                ),
+            ],
+        },
+    ),
+]

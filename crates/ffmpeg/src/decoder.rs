@@ -590,4 +590,47 @@ mod tests {
         assert_eq!(time_base.num, 48000, "Expected time_base.num to be updated via DerefMut");
         assert_eq!(time_base.den, 1, "Expected time_base.den to be updated via DerefMut");
     }
+
+    #[test]
+    fn test_decoder_video() {
+        let valid_file_path = "../../assets/avc_aac_large.mp4";
+        let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
+        let streams = input.streams();
+        let video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("No video stream found");
+        let audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("No audio stream found");
+        let mut video_decoder = Decoder::new(&video_stream).expect("Failed to create decoder").video().expect("Failed to get video decoder");
+        let mut audio_decoder = Decoder::new(&audio_stream).expect("Failed to create decoder").audio().expect("Failed to get audio decoder");
+        let mut video_frames = Vec::new();
+        let mut audio_frames = Vec::new();
+
+        let video_stream_index = video_stream.index();
+        let audio_stream_index = audio_stream.index();
+
+        while let Some(packet) = input.receive_packet().expect("Failed to receive packet") {
+            if packet.stream_index() == video_stream_index {
+                video_decoder.send_packet(&packet).expect("Failed to send packet");
+                while let Some(frame) = video_decoder.receive_frame().expect("Failed to receive frame") {
+                    video_frames.push(frame);
+                }
+            } else if packet.stream_index() == audio_stream_index {
+                audio_decoder.send_packet(&packet).expect("Failed to send packet");
+                while let Some(frame) = audio_decoder.receive_frame().expect("Failed to receive frame") {
+                    audio_frames.push(frame);
+                }
+            }
+        }
+
+        video_decoder.send_eof().expect("Failed to send eof");
+        while let Some(frame) = video_decoder.receive_frame().expect("Failed to receive frame") {
+            video_frames.push(frame);
+        }
+
+        audio_decoder.send_eof().expect("Failed to send eof");
+        while let Some(frame) = audio_decoder.receive_frame().expect("Failed to receive frame") {
+            audio_frames.push(frame);
+        }
+
+        insta::assert_debug_snapshot!("test_decoder_video", video_frames);
+        insta::assert_debug_snapshot!("test_decoder_audio", audio_frames);
+    }
 }

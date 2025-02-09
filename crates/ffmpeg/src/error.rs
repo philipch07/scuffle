@@ -30,11 +30,11 @@ pub enum FfmpegError {
     Arguments(&'static str),
 }
 
-pub(crate) const AVERROR_EAGAIN: i32 = AVERROR(EAGAIN);
-
 nutype_enum! {
     /// An enum that represents the ffmpeg error code.
     pub enum FfmpegErrorCode(i32) {
+        /// FFmpeg error code for invalid arguments.
+        Einval = AVERROR(EINVAL),
         /// FFmpeg error code for end of file.
         EndOfFile = AVERROR_EOF,
         /// FFmpeg error code for invalid data.
@@ -56,7 +56,7 @@ nutype_enum! {
         /// FFmpeg error code for eof.
         Eof = AVERROR_EOF,
         /// FFmpeg error code for eagain.
-        Eagain = AVERROR_EAGAIN,
+        Eagain = AVERROR(EAGAIN),
         /// FFmpeg error code for buffer too small.
         BufferTooSmall = AVERROR_BUFFER_TOO_SMALL,
         /// FFmpeg error code for decoder not found.
