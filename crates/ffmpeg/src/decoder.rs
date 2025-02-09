@@ -478,11 +478,17 @@ mod tests {
         let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
         let mut streams = input.streams_mut();
         let mut stream = streams.get(0).expect("Expected a valid stream");
+        // Safety: Stream is a valid pointer.
+        let codecpar = unsafe { (*stream.as_mut_ptr()).codecpar };
         // Safety: We are setting the `codecpar` to `null` to simulate a missing codec parameters.
         unsafe {
             (*stream.as_mut_ptr()).codecpar = std::ptr::null_mut();
         }
         let decoder_result = Decoder::with_options(&stream, DecoderOptions::default());
+        // Safety: Stream is a valid pointer.
+        unsafe {
+            (*stream.as_mut_ptr()).codecpar = codecpar;
+        }
 
         assert!(decoder_result.is_err(), "Expected Decoder creation to fail");
         if let Err(err) = decoder_result {

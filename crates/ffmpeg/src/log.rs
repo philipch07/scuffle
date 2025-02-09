@@ -220,6 +220,7 @@ mod tests {
         assert_eq!(*level, LogLevel::Warning, "Expected log level to be Warning");
         assert!(class.is_none(), "Expected class to be None for this test");
         assert_eq!(message, "Test warning log message", "Expected log message to match");
+        log_callback_unset();
     }
 
     #[test]
@@ -256,6 +257,7 @@ mod tests {
         assert_eq!(*level, LogLevel::Info, "Expected log level to be Info");
         assert!(class.is_some(), "Expected class name to be captured");
         assert_eq!(message, "Test log message with real AVClass", "Expected log message to match");
+        log_callback_unset();
     }
 
     #[test]
@@ -356,6 +358,7 @@ mod tests {
                 expected_message
             );
         }
+        log_callback_unset();
     }
 
     #[cfg(feature = "tracing")]
@@ -387,5 +390,6 @@ mod tests {
             "Expected log message for '{}'",
             deprecated_message
         );
+        log_callback_unset();
     }
 }
