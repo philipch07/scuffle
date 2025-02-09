@@ -598,8 +598,14 @@ mod tests {
         let streams = input.streams();
         let video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("No video stream found");
         let audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("No audio stream found");
-        let mut video_decoder = Decoder::new(&video_stream).expect("Failed to create decoder").video().expect("Failed to get video decoder");
-        let mut audio_decoder = Decoder::new(&audio_stream).expect("Failed to create decoder").audio().expect("Failed to get audio decoder");
+        let mut video_decoder = Decoder::new(&video_stream)
+            .expect("Failed to create decoder")
+            .video()
+            .expect("Failed to get video decoder");
+        let mut audio_decoder = Decoder::new(&audio_stream)
+            .expect("Failed to create decoder")
+            .audio()
+            .expect("Failed to get audio decoder");
         let mut video_frames = Vec::new();
         let mut audio_frames = Vec::new();
 

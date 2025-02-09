@@ -3132,6 +3132,7 @@ dependencies = [
  "clap_builder",
  "config",
  "crossbeam-utils",
+ "digest",
  "either",
  "fastrand",
  "ffmpeg-sys-next",

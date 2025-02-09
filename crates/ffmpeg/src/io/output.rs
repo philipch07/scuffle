@@ -302,14 +302,13 @@ impl Output<()> {
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
     use std::ffi::CString;
-    use std::io::Cursor;
+    use std::io::{Cursor, Write};
     use std::path::PathBuf;
     use std::ptr;
-    use sha2::Digest;
-    use std::io::Write;
 
     use bytes::{Buf, Bytes};
     use ffmpeg_sys_next::AVMediaType;
+    use sha2::Digest;
     use tempfile::Builder;
 
     use crate::dict::Dictionary;

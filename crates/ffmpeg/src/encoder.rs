@@ -750,14 +750,26 @@ mod tests {
         let mut input = Input::open("../../assets/avc_aac.mp4").expect("Failed to open input file");
         let streams = input.streams();
         let video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("No video stream found");
-        let mut decoder = Decoder::new(&video_stream).expect("Failed to create decoder").video().expect("Failed to create video decoder");
-        let mut output = Output::seekable(std::io::Cursor::new(Vec::new()), OutputOptions::builder().format_name("mp4").unwrap().build()).expect("Failed to create Output");
+        let mut decoder = Decoder::new(&video_stream)
+            .expect("Failed to create decoder")
+            .video()
+            .expect("Failed to create video decoder");
+        let mut output = Output::seekable(
+            std::io::Cursor::new(Vec::new()),
+            OutputOptions::builder().format_name("mp4").unwrap().build(),
+        )
+        .expect("Failed to create Output");
         let mut encoder = Encoder::new(
             EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder"),
             &mut output,
             AVRational { num: 1, den: 1000 },
             video_stream.time_base(),
-            VideoEncoderSettings::builder().width(decoder.width()).height(decoder.height()).frame_rate(decoder.frame_rate()).pixel_format(decoder.pixel_format()).build(),
+            VideoEncoderSettings::builder()
+                .width(decoder.width())
+                .height(decoder.height())
+                .frame_rate(decoder.frame_rate())
+                .pixel_format(decoder.pixel_format())
+                .build(),
         )
         .expect("Failed to create encoder");
 
