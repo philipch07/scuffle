@@ -66,11 +66,11 @@
 //!     }
 //! }
 //!
-//! // 8. Send the EOF to the decoders.
+//! // 9. Send the EOF to the decoders.
 //! video_decoder.send_eof()?;
 //! audio_decoder.send_eof()?;
 //!
-//! // 9. Receive the remaining frames from the decoders.
+//! // 10. Receive the remaining frames from the decoders.
 //! while let Some(frame) = video_decoder.receive_frame()? {
 //!     dbg!(&frame);
 //! }
