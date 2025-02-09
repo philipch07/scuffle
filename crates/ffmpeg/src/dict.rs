@@ -54,9 +54,9 @@ impl Clone for Dictionary {
 ///
 /// This is used to allow for a few different types:
 /// - [`&str`] - Will be copied and converted to a `CString`.
-/// - [`&std::ffi::CStr`] - Will be borrowed.
-/// - [`std::string::String`] - Will be copied and converted to a `CString`.
-/// - [`std::ffi::CString`] - Will be owned.
+/// - [`CStr`] - Will be borrowed.
+/// - [`String`] - Will be copied and converted to a `CString`.
+/// - [`CString`] - Will be owned.
 ///
 /// If the string is empty, the [`Option::None`] will be returned.
 ///
