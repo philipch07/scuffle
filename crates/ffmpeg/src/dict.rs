@@ -67,12 +67,16 @@ impl Clone for Dictionary {
 /// use scuffle_ffmpeg::dict::Dictionary;
 ///
 /// let mut dict = Dictionary::new();
+///
 /// // "key" is a &CStr, so it will be borrowed.
 /// dict.set(c"key", c"value").expect("Failed to set key");
+///
 /// // "key" is a &str, so it will be copied and converted to a CString.
 /// assert_eq!(dict.get("key"), Some(c"value"));
+///
 /// // "nonexistent_key" is a &str, so it will be copied and converted to a CString.
 /// assert_eq!(dict.set("nonexistent_key".to_owned(), "value"), Ok(()));
+///
 /// // "nonexistent_key" is a CString, so it will be borrowed.
 /// assert_eq!(dict.get(c"nonexistent_key".to_owned()), Some(c"value"));
 /// ```
