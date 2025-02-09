@@ -127,6 +127,7 @@ impl Scalar {
 mod tests {
     use ffmpeg_sys_next::av_frame_get_buffer;
     use insta::assert_debug_snapshot;
+    use rand::Rng;
 
     use crate::error::FfmpegErrorCode;
     use crate::frame::Frame;
@@ -200,6 +201,35 @@ mod tests {
         FfmpegErrorCode(unsafe { av_frame_get_buffer(frame_mut, 32) })
             .result()
             .expect("Failed to allocate input frame buffer");
+
+        // We need to fill the buffer with random data otherwise the result will be based off uninitialized data.
+
+        for y in 0..input_height {
+            // Safety: `frame_mut.data[0]` is a valid pointer
+            let row = unsafe { frame_mut.data[0].add((y * frame_mut.linesize[0]) as usize) };
+            // Safety: `row` is a valid pointer
+            let row = unsafe { std::slice::from_raw_parts_mut(row, input_width as usize) };
+            rand::thread_rng().fill(row);
+        }
+
+        let half_height = (input_height + 1) / 2;
+        let half_width = (input_width + 1) / 2;
+
+        for y in 0..half_height {
+            // Safety: `frame_mut.data[1]` is a valid pointer
+            let row = unsafe { frame_mut.data[1].add((y * frame_mut.linesize[1]) as usize) };
+            // Safety: `row` is a valid pointer
+            let row = unsafe { std::slice::from_raw_parts_mut(row, half_width as usize) };
+            rand::thread_rng().fill(row);
+        }
+
+        for y in 0..half_height {
+            // Safety: `frame_mut.data[2]` is a valid pointer
+            let row = unsafe { frame_mut.data[2].add((y * frame_mut.linesize[2]) as usize) };
+            // Safety: `row` is a valid pointer
+            let row = unsafe { std::slice::from_raw_parts_mut(row, half_width as usize) };
+            rand::thread_rng().fill(row);
+        }
 
         let result = scalar.process(&input_frame);
 
