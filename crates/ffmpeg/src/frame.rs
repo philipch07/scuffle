@@ -737,12 +737,7 @@ mod tests {
 
     #[test]
     fn test_alloc_frame_buffer() {
-        let cases = [
-            (None, true),
-            (Some(0), true),
-            (Some(32), true),
-            (Some(-1), false),
-        ];
+        let cases = [(None, true), (Some(0), true), (Some(32), true), (Some(-1), false)];
 
         for alignment in cases {
             let mut frame = Frame::new().expect("Failed to create frame");
@@ -768,13 +763,7 @@ mod tests {
 
     #[test]
     fn test_alloc_frame_buffer_error() {
-        let cases = [
-            None,
-            Some(0),
-            Some(32),
-            Some(-1),
-        ];
-
+        let cases = [None, Some(0), Some(32), Some(-1)];
 
         for alignment in cases {
             let mut frame = Frame::new().expect("Failed to create frame");
