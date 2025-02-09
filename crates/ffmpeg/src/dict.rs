@@ -133,6 +133,8 @@ impl Dictionary {
         }
     }
 
+    /// Wrap a pointer to a [`AVDictionary`] in a [`Dictionary`].
+    /// Without taking ownership of the dictionary.
     /// # Safety
     /// `ptr` must be a valid pointer.
     /// The caller must also ensure that the dictionary is not freed while this
@@ -144,6 +146,9 @@ impl Dictionary {
         }
     }
 
+    /// Wrap a pointer to a [`AVDictionary`] in a [`Dictionary`].
+    /// Takes ownership of the dictionary.
+    /// Meaning it will be freed when the [`Dictionary`] is dropped.
     /// # Safety
     /// `ptr` must be a valid pointer.
     pub const unsafe fn from_ptr_owned(ptr: *mut AVDictionary) -> Self {
@@ -167,6 +172,7 @@ impl Dictionary {
     }
 
     /// Returns the value associated with the given key.
+    /// If the key is not found, the [`Option::None`] will be returned.
     pub fn get<'a>(&self, key: impl CStringLike<'a>) -> Option<&CStr> {
         let key = key.into_c_str()?;
 
