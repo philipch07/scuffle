@@ -1,5 +1,6 @@
 use std::borrow::Cow;
-use std::ffi::{CStr, CString};
+use core::ffi::CStr;
+use std::ffi::CString;
 use std::ptr::NonNull;
 
 use ffmpeg_sys_next::*;
