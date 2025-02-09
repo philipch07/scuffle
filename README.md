@@ -24,7 +24,7 @@
 <p align="center">
     <a href="https://codecov.io/gh/ScuffleCloud/scuffle"><img height="30" src="https://img.shields.io/codecov/c/github/ScuffleCloud/scuffle?logo=codecov&token=LJCYSZR4IV&style=for-the-badge"/></a>
     &nbsp;
-    <a href="https://github.com/ScuffleCloud/scuffle/actions"><img height="30" src="https://img.shields.io/github/checks-status/ScuffleCloud/scuffle/main?style=for-the-badge&logo=githubactions&logoColor=white"/></a>
+    <a href="https://github.com/ScuffleCloud/scuffle/actions?query=branch%3Amain"><img height="30" src="https://img.shields.io/github/check-runs/ScuffleCloud/Scuffle/main?style=for-the-badge&logo=githubactions&logoColor=white"/></a>
 </p>
 
 > [!WARNING]  
