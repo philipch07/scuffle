@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Context;
-use cargo_metadata::{camino::{Utf8Path, Utf8PathBuf}, DependencyKind};
-
+use cargo_metadata::camino::{Utf8Path, Utf8PathBuf};
+use cargo_metadata::DependencyKind;
 
 #[derive(Debug, Clone, clap::Parser)]
 pub struct Publish {
@@ -26,10 +26,7 @@ fn relative_path(start: &Utf8Path, end: &Utf8Path) -> Utf8PathBuf {
 
     // Find the common prefix length
     let mut i = 0;
-    while i < start_components.len()
-        && i < end_components.len()
-        && start_components[i] == end_components[i]
-    {
+    while i < start_components.len() && i < end_components.len() && start_components[i] == end_components[i] {
         i += 1;
     }
 
@@ -62,17 +59,30 @@ impl Publish {
 
         let workspace_package_ids = metadata.workspace_members.iter().cloned().collect::<HashSet<_>>();
 
-        let workspace_packages = metadata.packages.iter().filter(|p| workspace_package_ids.contains(&p.id)).map(|p| (&p.id, p)).collect::<HashMap<_, _>>();
+        let workspace_packages = metadata
+            .packages
+            .iter()
+            .filter(|p| workspace_package_ids.contains(&p.id))
+            .map(|p| (&p.id, p))
+            .collect::<HashMap<_, _>>();
 
-        let path_to_package = workspace_packages.values().map(|p| (p.manifest_path.parent().unwrap(), &p.id)).collect::<HashMap<_, _>>();
+        let path_to_package = workspace_packages
+            .values()
+            .map(|p| (p.manifest_path.parent().unwrap(), &p.id))
+            .collect::<HashMap<_, _>>();
 
         for package in metadata.packages.iter().filter(|p| workspace_package_ids.contains(&p.id)) {
-            if (IGNORED_PACKAGES.contains(&package.name.as_str()) || self.exclude_packages.contains(&package.name)) && (self.packages.is_empty() || !self.packages.contains(&package.name)) {
+            if (IGNORED_PACKAGES.contains(&package.name.as_str()) || self.exclude_packages.contains(&package.name))
+                && (self.packages.is_empty() || !self.packages.contains(&package.name))
+            {
                 continue;
             }
 
-            let toml = std::fs::read_to_string(&package.manifest_path).with_context(|| format!("failed to read manifest for {}", package.name))?;
-            let mut doc = toml.parse::<toml_edit::DocumentMut>().with_context(|| format!("failed to parse manifest for {}", package.name))?;
+            let toml = std::fs::read_to_string(&package.manifest_path)
+                .with_context(|| format!("failed to read manifest for {}", package.name))?;
+            let mut doc = toml
+                .parse::<toml_edit::DocumentMut>()
+                .with_context(|| format!("failed to parse manifest for {}", package.name))?;
             let mut changes = false;
 
             for dependency in package.dependencies.iter() {
@@ -111,7 +121,8 @@ impl Publish {
             }
 
             if changes {
-                std::fs::write(&package.manifest_path, doc.to_string()).with_context(|| format!("failed to write manifest for {}", package.name))?;
+                std::fs::write(&package.manifest_path, doc.to_string())
+                    .with_context(|| format!("failed to write manifest for {}", package.name))?;
                 println!("Replaced paths in {} for {}", package.name, package.manifest_path);
             }
         }

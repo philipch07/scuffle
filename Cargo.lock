@@ -2834,7 +2834,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-expgolomb"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "bytes",
  "scuffle-bytes-util",
@@ -2867,7 +2867,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-flv"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2894,7 +2894,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-h264"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2905,7 +2905,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-h265"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2979,7 +2979,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-metrics"
-version = "0.0.5"
+version = "0.0.4"
 dependencies = [
  "insta",
  "opentelemetry",
@@ -3019,7 +3019,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-mp4"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",
@@ -3057,7 +3057,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-rtmp"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "byteorder",
@@ -3081,7 +3081,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-settings"
-version = "0.0.3"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -3121,7 +3121,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-transmuxer"
-version = "0.0.2"
+version = "0.0.1"
 dependencies = [
  "byteorder",
  "bytes",

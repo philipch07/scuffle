@@ -261,6 +261,8 @@ jobs:
 
       - name: Run Checks
         run: |
+          set -xeo pipefail
+
           echo "## 🤖 New releases" > semver-check.txt
           echo "" >> semver-check.txt
           release-plz update --no-changelog | tee -a semver-check.txt
