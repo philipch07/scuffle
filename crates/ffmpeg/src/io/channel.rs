@@ -62,6 +62,7 @@ pub trait ChannelCompatSend: Send {
 }
 
 #[cfg(feature = "tokio-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-channel")))]
 impl<D: AsRef<[u8]> + Send> ChannelCompatRecv for tokio::sync::mpsc::Receiver<D> {
     type Data = D;
 
@@ -75,6 +76,7 @@ impl<D: AsRef<[u8]> + Send> ChannelCompatRecv for tokio::sync::mpsc::Receiver<D>
 }
 
 #[cfg(feature = "tokio-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-channel")))]
 impl<D: From<Vec<u8>> + Send> ChannelCompatSend for tokio::sync::mpsc::Sender<D> {
     type Data = D;
 
@@ -84,6 +86,7 @@ impl<D: From<Vec<u8>> + Send> ChannelCompatSend for tokio::sync::mpsc::Sender<D>
 }
 
 #[cfg(feature = "tokio-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-channel")))]
 impl<D: AsRef<[u8]> + Send> ChannelCompatRecv for tokio::sync::mpsc::UnboundedReceiver<D> {
     type Data = D;
 
@@ -97,6 +100,7 @@ impl<D: AsRef<[u8]> + Send> ChannelCompatRecv for tokio::sync::mpsc::UnboundedRe
 }
 
 #[cfg(feature = "tokio-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-channel")))]
 impl<D: From<Vec<u8>> + Send> ChannelCompatSend for tokio::sync::mpsc::UnboundedSender<D> {
     type Data = D;
 
@@ -106,6 +110,7 @@ impl<D: From<Vec<u8>> + Send> ChannelCompatSend for tokio::sync::mpsc::Unbounded
 }
 
 #[cfg(feature = "tokio-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-channel")))]
 impl<D: AsRef<[u8]> + Clone + Send> ChannelCompatRecv for tokio::sync::broadcast::Receiver<D> {
     type Data = D;
 
@@ -119,6 +124,7 @@ impl<D: AsRef<[u8]> + Clone + Send> ChannelCompatRecv for tokio::sync::broadcast
 }
 
 #[cfg(feature = "tokio-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-channel")))]
 impl<D: From<Vec<u8>> + Clone + Send> ChannelCompatSend for tokio::sync::broadcast::Sender<D> {
     type Data = D;
 
@@ -128,6 +134,7 @@ impl<D: From<Vec<u8>> + Clone + Send> ChannelCompatSend for tokio::sync::broadca
 }
 
 #[cfg(feature = "crossbeam-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "crossbeam-channel")))]
 impl<D: AsRef<[u8]> + Send> ChannelCompatRecv for crossbeam_channel::Receiver<D> {
     type Data = D;
 
@@ -141,6 +148,7 @@ impl<D: AsRef<[u8]> + Send> ChannelCompatRecv for crossbeam_channel::Receiver<D>
 }
 
 #[cfg(feature = "crossbeam-channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "crossbeam-channel")))]
 impl<D: From<Vec<u8>> + Send> ChannelCompatSend for crossbeam_channel::Sender<D> {
     type Data = D;
 

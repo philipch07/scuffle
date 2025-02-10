@@ -53,3 +53,7 @@ additive-features = [
     "crossbeam-channel",
     "tracing",
 ]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

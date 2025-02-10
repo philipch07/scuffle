@@ -2,6 +2,10 @@
 allow_dirty = true
 changelog_update = true
 git_release_body = """
+See [crates.io](https://crates.io/crates/{{ package }}/{{ version }})
+
+See [docs.rs](https://docs.rs/{{ package }}/{{ version }})
+
 {{ changelog }}
 {% if remote.contributors %}
 ### Contributors
