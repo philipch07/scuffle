@@ -60,7 +60,7 @@ scuffle-metrics = { path = "crates/metrics", version = "0.0.4" }
 scuffle-metrics-derive = { path = "crates/metrics/derive", version = "0.0.2" }
 postcompile = { path = "crates/postcompile", version = "0.0.6" }
 scuffle-pprof = { path = "crates/pprof", version = "0.0.3" }
-scuffle-settings = { path = "crates/settings", version = "0.0.2" }
+scuffle-settings = { path = "crates/settings", version = "0.0.3" }
 scuffle-signal = { path = "crates/signal", version = "0.0.3" }
 nutype-enum = { path = "crates/nutype_enum", version = "0.0.1" }
 scuffle-h264 = { path = "crates/h264", version = "0.0.1" }
