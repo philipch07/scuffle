@@ -29,6 +29,10 @@ jobs:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
           shared-key: release
 
+      - name: Remove cargo registries
+        run: |
+          rm -rf ~/.cargo/registry
+
       - name: Fix workspace deps
         run: cargo xtask workspace-deps
 
