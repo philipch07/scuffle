@@ -23,10 +23,9 @@ jobs:
       - name: Fix workspace deps
         run: cargo xtask workspace-deps
 
-      - name: Run release-plz
-        uses: release-plz/action@v0.5
+      - uses: taiki-e/install-action@v2
         with:
-          command: release --allow-dirty
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          tool: release-plz
+
+      - name: Run release-plz
+        run: release-plz release --allow-dirty --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --git-token ${{ secrets.GITHUB_TOKEN }}
