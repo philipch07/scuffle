@@ -27,5 +27,7 @@ jobs:
         with:
           tool: release-plz
 
+      - uses: fregante/setup-git-user@v2
+
       - name: Run release-plz
         run: release-plz release --allow-dirty --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --git-token ${{ secrets.GITHUB_TOKEN }}
