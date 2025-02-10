@@ -5,7 +5,7 @@ use cargo_metadata::camino::{Utf8Path, Utf8PathBuf};
 use cargo_metadata::DependencyKind;
 
 #[derive(Debug, Clone, clap::Parser)]
-pub struct Publish {
+pub struct WorkspaceDeps {
     #[clap(long, short, value_delimiter = ',')]
     #[clap(alias = "package")]
     /// Packages to test
@@ -51,7 +51,7 @@ fn relative_path(start: &Utf8Path, end: &Utf8Path) -> Utf8PathBuf {
     result
 }
 
-impl Publish {
+impl WorkspaceDeps {
     pub fn run(self) -> anyhow::Result<()> {
         let start = std::time::Instant::now();
 

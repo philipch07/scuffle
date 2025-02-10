@@ -263,6 +263,8 @@ jobs:
         run: |
           set -xeo pipefail
 
+          cargo +${{ env.RUST_TOOLCHAIN }} xtask workspace-deps
+
           echo "## 🤖 New releases" > semver-check.txt
           echo "" >> semver-check.txt
           release-plz update --no-changelog | tee -a semver-check.txt

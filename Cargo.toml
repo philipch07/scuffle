@@ -57,7 +57,7 @@ scuffle-future-ext = { path = "crates/future-ext", version = "0.0.1" }
 scuffle-h3-webtransport = { path = "crates/h3-webtransport", version = "0.0.3" }
 scuffle-http = { path = "crates/http", version = "0.0.5" }
 scuffle-metrics = { path = "crates/metrics", version = "0.0.4" }
-scuffle-metrics-derive = { path = "crates/metrics/derive", version = "0.0.3" }
+scuffle-metrics-derive = { path = "crates/metrics/derive", version = "0.0.2" }
 postcompile = { path = "crates/postcompile", version = "0.0.6" }
 scuffle-pprof = { path = "crates/pprof", version = "0.0.3" }
 scuffle-settings = { path = "crates/settings", version = "0.0.2" }

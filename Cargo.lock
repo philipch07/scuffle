@@ -2994,7 +2994,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-metrics-derive"
-version = "0.0.3"
+version = "0.0.2"
 dependencies = [
  "darling",
  "proc-macro2",
