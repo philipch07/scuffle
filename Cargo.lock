@@ -1861,7 +1861,7 @@ dependencies = [
 
 [[package]]
 name = "nutype-enum"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "scuffle-workspace-hack",
 ]
@@ -2132,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "postcompile"
-version = "0.0.6"
+version = "0.1.0"
 dependencies = [
  "cargo-platform",
  "cargo_metadata",
@@ -2682,7 +2682,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "scuffle-aac"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2694,7 +2694,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-amf0"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2707,7 +2707,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-av1"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2718,7 +2718,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-batching"
-version = "0.0.5"
+version = "0.1.0"
 dependencies = [
  "criterion",
  "futures",
@@ -2739,7 +2739,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-bootstrap"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "futures",
@@ -2756,7 +2756,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-bootstrap-derive"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "darling",
  "insta",
@@ -2769,7 +2769,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-bootstrap-examples"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "scuffle-bootstrap",
@@ -2786,7 +2786,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-bootstrap-telemetry"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2813,7 +2813,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-bytes-util"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "bytes",
  "scuffle-workspace-hack",
@@ -2821,7 +2821,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-context"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "futures-lite",
  "pin-project-lite",
@@ -2834,7 +2834,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-expgolomb"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "bytes",
  "scuffle-bytes-util",
@@ -2843,7 +2843,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-ffmpeg"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "arc-swap",
  "bon",
@@ -2867,7 +2867,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-flv"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2886,7 +2886,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-future-ext"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "scuffle-workspace-hack",
  "tokio",
@@ -2894,7 +2894,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-h264"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2905,7 +2905,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-h265"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
@@ -2916,7 +2916,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-h3-webtransport"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "bytes",
  "futures-util",
@@ -2929,7 +2929,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-http"
-version = "0.0.5"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum-core",
@@ -2964,7 +2964,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-http-examples"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "bytes",
  "http",
@@ -2979,7 +2979,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-metrics"
-version = "0.0.4"
+version = "0.1.0"
 dependencies = [
  "insta",
  "opentelemetry",
@@ -2994,7 +2994,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-metrics-derive"
-version = "0.0.2"
+version = "0.1.0"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -3006,7 +3006,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-metrics-examples"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "opentelemetry",
  "opentelemetry-stdout",
@@ -3019,7 +3019,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-mp4"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
@@ -3037,7 +3037,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-pprof"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "flate2",
  "pprof",
@@ -3047,7 +3047,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-pprof-examples"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "flate2",
  "rand",
@@ -3057,7 +3057,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-rtmp"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "byteorder",
@@ -3081,7 +3081,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-settings"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3095,7 +3095,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-settings-examples"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "scuffle-settings",
  "scuffle-workspace-hack",
@@ -3106,7 +3106,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-signal"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "futures",
@@ -3121,7 +3121,7 @@ dependencies = [
 
 [[package]]
 name = "scuffle-transmuxer"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
