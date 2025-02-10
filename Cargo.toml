@@ -51,7 +51,7 @@ scuffle-bootstrap-telemetry = { path = "crates/bootstrap/telemetry", version = "
 scuffle-bytes-util = { path = "crates/bytes-util", version = "0.1.0" }
 scuffle-context = { path = "crates/context", version = "0.1.0" }
 scuffle-expgolomb = { path = "crates/expgolomb", version = "0.1.0" }
-scuffle-ffmpeg = { path = "crates/ffmpeg", version = "0.1.1" }
+scuffle-ffmpeg = { path = "crates/ffmpeg", version = "0.1.2" }
 scuffle-flv = { path = "crates/flv", version = "0.1.0" }
 scuffle-future-ext = { path = "crates/future-ext", version = "0.1.0" }
 scuffle-h3-webtransport = { path = "crates/h3-webtransport", version = "0.1.0" }
