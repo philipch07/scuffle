@@ -26,7 +26,7 @@ jobs:
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
-          command: release
+          command: release --allow-dirty
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
