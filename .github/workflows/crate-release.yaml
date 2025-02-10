@@ -1,0 +1,45 @@
+name: Crate Releases
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    environment: crates
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup system deps
+        run: |
+          sudo apt-get install -y --no-install-recommends nasm libx264-dev libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2
+
+      - uses: dtolnay/rust-toolchain@stable
+        id: setup-rust
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
+          shared-key: release
+
+      - name: Remove cargo registries
+        run: |
+          rm -rf ~/.cargo/registry
+
+      - name: Fix workspace deps
+        run: cargo xtask workspace-deps
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: release-plz
+
+      - uses: fregante/setup-git-user@v2
+
+      - name: Run release-plz
+        run: release-plz release --allow-dirty --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --git-token ${{ secrets.GITHUB_TOKEN }}

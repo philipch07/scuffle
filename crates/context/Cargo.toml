@@ -1,6 +1,6 @@
 [package]
 name = "scuffle-context"
-version = "0.0.2"
+version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/scufflecloud/scuffle"
 authors = ["Scuffle <opensource@scuffle.cloud>"]
@@ -22,4 +22,4 @@ scuffle-workspace-hack.workspace = true
 
 [dev-dependencies]
 tokio-test = "0.4.4"
-scuffle-future-ext = { workspace = true }
+scuffle-future-ext.workspace = true
