@@ -325,7 +325,10 @@ jobs:
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: just
+          tool: just,cargo-hakari
+
+      - name: Disable Hakari
+        run: cargo hakari disable
 
       - name: Run Powerset
         run: |
