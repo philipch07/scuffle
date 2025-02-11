@@ -1,0 +1,18 @@
+name: Brawl Override
+description: Get the correct PR / Commit SHA when running brawl
+outputs:
+  pr-number:
+    description: "The PR number"
+  commit-sha:
+    description: "The commit SHA"
+runs:
+  using: "composite"
+  steps:
+    - name: Brawl Override
+      id: brawl-override
+      if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
+      run: |
+        PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
+        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+        RUN_COMMIT_SHA=$(git log -1 --pretty=format:%H)
+        echo "RUN_COMMIT_SHA=$RUN_COMMIT_SHA" >> $GITHUB_ENV

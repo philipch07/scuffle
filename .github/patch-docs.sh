@@ -3,8 +3,8 @@ set -eo pipefail
 
 repo_url=$1
 commit_hash=$2
-short_commit_hash=$3
-pull_request_number=${4:-}
+short_commit_hash=$(echo $2 | cut -c 1-7)
+pull_request_number=${3:-}
 
 pull_request_code=""
 if [ -n "$pull_request_number" ]; then
