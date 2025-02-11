@@ -2,11 +2,7 @@
    ignore pthread_create
    Memcheck:Leak
    match-leak-kinds: possible
-   fun:calloc
-   fun:calloc
-   fun:allocate_dtv
-   fun:_dl_allocate_tls
-   fun:allocate_stack
+   ...
    fun:pthread_create@@*
    ...
 }
@@ -14,7 +10,6 @@
    ignore tracing_subscriber::registry::extensions::ExtensionsInner::insert
    Memcheck:Leak
    match-leak-kinds: possible
-   fun:malloc
    ...
    fun:_ZN18tracing_subscriber8registry10extensions15ExtensionsInner6insert*
 }
