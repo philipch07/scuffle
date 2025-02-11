@@ -33,7 +33,7 @@ grind *args:
     # Runs valgrind on the tests.
     # If there are errors due to tests using global (and not actual memory leaks) then use the
     # information given by valgrind to replace the "<insert_a_suppression_name_here>" with the actual test name.
-    RUSTFLAGS="--cfg=valgrind" CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=$(pwd)/valgrind_suppressions.log" cargo nextest run --all-features --no-fail-fast -- {{args}}
+    RUSTFLAGS="--cfg=valgrind" CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=$(pwd)/valgrind_suppressions.log" cargo +{{RUST_TOOLCHAIN}} nextest run --all-features --no-fail-fast -- {{args}}
 
 alias docs := doc
 doc *args:
