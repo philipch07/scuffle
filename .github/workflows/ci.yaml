@@ -218,7 +218,7 @@ jobs:
 
       - name: Run valgrind
         run: |
-          RUSTFLAGS="--cfg=valgrind" CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --leak-check=full --suppressions=$(pwd)/valgrind_suppressions.log" cargo nextest run --all-features --no-fail-fast -- {{args}}
+          RUSTFLAGS="--cfg=valgrind" CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --leak-check=full --suppressions=$(pwd)/valgrind_suppressions.log" cargo nextest run --all-features --no-fail-fast --profile ci
 
   docs:
     name: Docs
