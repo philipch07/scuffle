@@ -11,6 +11,7 @@ runs:
     - name: Brawl Override
       id: brawl-override
       if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
+      shell: bash
       run: |
         PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
         echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
