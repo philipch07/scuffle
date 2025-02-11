@@ -236,6 +236,8 @@ jobs:
     name: Package
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-24.04
+    env:
+      RUST_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
         with:
@@ -247,7 +249,7 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           shared-key: package
           tools: just,cargo-hakari
 
