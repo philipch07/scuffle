@@ -84,7 +84,18 @@ pub fn log_callback_unset() {
     }
 }
 
-unsafe extern "C" fn log_cb(ptr: *mut libc::c_void, level: libc::c_int, fmt: *const libc::c_char, va: *mut __va_list_tag) {
+#[cfg(unix)]
+type VaList = *mut __va_list_tag;
+
+#[cfg(windows)]
+type VaList = va_list;
+
+#[cfg(windows)]
+extern "C" {
+    fn vsnprintf(buffer: *mut libc::c_char, count: libc::size_t, format: *const libc::c_char, ap: VaList) -> i32;
+}
+
+unsafe extern "C" fn log_cb(ptr: *mut libc::c_void, level: libc::c_int, fmt: *const libc::c_char, va: VaList) {
     let level = LogLevel::from(level);
     let class = NonNull::new(ptr as *mut *mut AVClass)
         .and_then(|class| NonNull::new(*class.as_ptr()))

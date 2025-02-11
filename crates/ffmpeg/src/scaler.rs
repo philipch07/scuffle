@@ -1,4 +1,6 @@
 use ffmpeg_sys_next::*;
+#[cfg(windows)]
+use SwsFlags::*;
 
 use crate::error::{FfmpegError, FfmpegErrorCode};
 use crate::frame::{Frame, VideoFrame};
@@ -35,7 +37,7 @@ impl Scaler {
                 width,
                 height,
                 pixel_format,
-                SWS_BILINEAR,
+                SWS_BILINEAR as i32,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
                 std::ptr::null(),
