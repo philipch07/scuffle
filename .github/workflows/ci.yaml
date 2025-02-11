@@ -283,9 +283,60 @@ jobs:
           accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
           command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ env.PR_NUMBER || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} --commit-dirty=true ./target/doc
 
+  powerset:
+    name: Powerset
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+
+      - name: Setup system deps
+        run: |
+          set -xeo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2 nasm libx264-dev valgrind
+
+      - uses: dtolnay/rust-toolchain@stable
+        id: setup-rust
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy
+
+      - name: Install ffmpeg
+        run: |
+          set -xeo pipefail
+
+          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz
+          tar -xvf ffmpeg.tar.xz
+
+          sudo mv ffmpeg-7.1-linux-clang-default/include/* /usr/include
+          sudo mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib
+          sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
+          sudo rm -rf ffmpeg-7.1-linux-clang-default
+          sudo rm -rf ffmpeg.tar.xz
+          sudo ldconfig
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
+          shared-key: powerset
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just,cargo-hakari
+
+      - name: Disable Hakari
+        run: cargo hakari disable
+
+      - name: Run Powerset
+        run: |
+          just powerset clippy
+
   brawl-done:
     runs-on: ubuntu-24.04
-    needs: [hakari, test, clippy, fmt, grind, docs]
+    needs: [hakari, test, clippy, fmt, grind, docs, powerset]
     if: ${{ !cancelled() && github.event_name == 'push' }}
     steps:
       - name: calculate the correct exit status
