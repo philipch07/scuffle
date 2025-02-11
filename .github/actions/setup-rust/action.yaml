@@ -1,19 +1,35 @@
-name: Brawl Override
-description: Get the correct PR / Commit SHA when running brawl
-outputs:
-  pr-number:
-    description: "The PR number"
-  commit-sha:
-    description: "The commit SHA"
+name: Setup Rust
+description: Configures the Rust toolchain
+inputs:
+  toolchain:
+    description: "The toolchain to use"
+    required: true
+    default: "stable"
+  components:
+    description: "The components to install"
+    required: false
+  shared-key:
+    description: "The key to use for the shared cache"
+    required: false
+  tools:
+    description: "The tools to install"
+    required: false
 runs:
   using: "composite"
   steps:
-    - name: Brawl Override
-      id: brawl-override
-      if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
-      shell: bash
-      run: |
-        PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
-        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-        RUN_COMMIT_SHA=$(git log -1 --pretty=format:%H)
-        echo "RUN_COMMIT_SHA=$RUN_COMMIT_SHA" >> $GITHUB_ENV
+    - uses: dtolnay/rust-toolchain@stable
+      id: setup-rust
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+
+    - uses: Swatinem/rust-cache@v2
+      if: ${{ inputs.shared-key }}
+      with:
+        prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
+        shared-key: ${{ inputs.shared-key }}
+
+    - uses: taiki-e/install-action@v2
+      if: ${{ inputs.tools }}
+      with:
+        tool: ${{ inputs.tools }}
