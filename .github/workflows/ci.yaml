@@ -169,6 +169,12 @@ jobs:
           components: llvm-tools-preview
           shared-key: grind
 
+      - name: Install Valgrind
+        run: |
+          set -xeo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends valgrind
+
       - name: Run valgrind
         run: |
           set -xeo pipefail
