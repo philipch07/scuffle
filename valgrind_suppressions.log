@@ -145,3 +145,11 @@
    fun:_ZN5tokio7runtime8blocking4pool7Spawner10spawn_task*
    ...
 }
+{
+   ignore current thread initialize (nightly only)
+   Memcheck:Leak
+   match-leak-kinds: possible
+   ...
+   fun:_ZN3std6thread7current12init_current*
+   ...
+}
