@@ -45,8 +45,21 @@ jobs:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
           shared-key: clippy
 
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just,cargo-hakari
+
+      - name: Disable Hakari
+        if: ${{ github.event_name == 'push' }}
+        run: cargo hakari disable
+
       - name: Make sure code is linted
+        if: ${{ github.event_name == 'pull_request' }}
         run: cargo +${{ env.RUST_TOOLCHAIN }} clippy --all-features --all-targets
+
+      - name: Make sure code is linted
+        if: ${{ github.event_name == 'push' }}
+        run: just powerset clippy
 
   fmt:
     name: Fmt
@@ -283,8 +296,8 @@ jobs:
           accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
           command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ env.PR_NUMBER || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} --commit-dirty=true ./target/doc
 
-  powerset:
-    name: Powerset
+  package:
+    name: Package
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-24.04
     steps:
@@ -301,8 +314,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: clippy
+          toolchain: stable
 
       - name: Install ffmpeg
         run: |
@@ -321,7 +333,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
-          shared-key: powerset
+          shared-key: package
 
       - uses: taiki-e/install-action@v2
         with:
@@ -332,11 +344,11 @@ jobs:
 
       - name: Run Powerset
         run: |
-          just powerset clippy
+          just powerset package -- --allow-dirty
 
   brawl-done:
     runs-on: ubuntu-24.04
-    needs: [hakari, test, clippy, fmt, grind, docs, powerset]
+    needs: [hakari, test, clippy, fmt, grind, docs, package]
     if: ${{ !cancelled() && github.event_name == 'push' }}
     steps:
       - name: calculate the correct exit status
