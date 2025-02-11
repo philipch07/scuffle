@@ -20,6 +20,8 @@ unsafe impl Send for Scaler {}
 
 impl Scaler {
     /// Creates a new `Scaler` instance.
+    /// The unnecessary cast is needed for Scaler to work on windows.
+    #[allow(clippy::unnecessary_cast)]
     pub fn new(
         input_width: i32,
         input_height: i32,

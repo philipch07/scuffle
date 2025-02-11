@@ -18,6 +18,8 @@ jobs:
 
       - name: Setup system deps
         run: |
+          set -xeo pipefail
+          sudo apt-get update
           sudo apt-get install -y --no-install-recommends nasm libx264-dev libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2
 
       - uses: dtolnay/rust-toolchain@stable
