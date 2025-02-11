@@ -285,7 +285,7 @@ jobs:
 
   powerset:
     name: Powerset
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
