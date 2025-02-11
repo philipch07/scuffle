@@ -37,7 +37,7 @@ impl Scaler {
                 width,
                 height,
                 pixel_format,
-                SWS_BILINEAR as i32,
+                SWS_BILINEAR,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
                 std::ptr::null(),
