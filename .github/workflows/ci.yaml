@@ -302,7 +302,7 @@ jobs:
         id: setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: llvm-tools-preview
+          components: clippy
 
       - name: Install ffmpeg
         run: |
@@ -325,7 +325,7 @@ jobs:
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-nextest,cargo-llvm-cov
+          tool: just
 
       - name: Run Powerset
         run: |
