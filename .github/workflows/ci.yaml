@@ -45,11 +45,17 @@ jobs:
 
       - name: Make sure code is linted
         if: ${{ github.event_name == 'pull_request' }}
-        run: cargo +${{ env.RUST_TOOLCHAIN }} clippy --all-features --all-targets
+        run: |
+          set -xeo pipefail
+          export RUSTFLAGS="-Dwarnings"
+          cargo +${{ env.RUST_TOOLCHAIN }} clippy -Z unstable-options --all-features --all-targets --no-deps
 
       - name: Make sure code is linted
         if: ${{ github.event_name == 'push' }}
-        run: just powerset clippy
+        run: |
+          set -xeo pipefail
+          export RUSTFLAGS="-Dwarnings"
+          just powerset clippy -- --all-targets --no-deps -Z unstable-options
 
   fmt:
     name: Fmt

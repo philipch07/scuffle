@@ -348,10 +348,13 @@ macro_rules! bootstrap {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use crate::{parse_settings, Cli, Options};
+    use crate::{parse_settings, Options};
+    #[cfg(feature = "cli")]
+    use crate::Cli;
 
     #[derive(Debug, serde::Deserialize)]
     struct TestSettings {
+        #[cfg_attr(not(feature = "cli"), allow(dead_code))]
         key: String,
     }
 
@@ -363,6 +366,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "cli")]
     fn parse_cli() {
         let options = Options {
             cli: Some(Cli {
@@ -380,6 +384,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "cli")]
     fn cli_error() {
         let options = Options {
             cli: Some(Cli {
@@ -401,6 +406,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "cli")]
     fn parse_file() {
         let options = Options {
             cli: Some(Cli {
@@ -418,6 +424,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "cli")]
     fn file_error() {
         let options = Options {
             cli: Some(Cli {
@@ -443,6 +450,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "cli")]
     fn parse_env() {
         let options = Options {
             cli: Some(Cli {
@@ -462,6 +470,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "cli")]
     fn overrides() {
         let options = Options {
             cli: Some(Cli {
@@ -481,6 +490,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "templates", feature = "cli"))]
     fn templates() {
         let options = Options {
             cli: Some(Cli {

@@ -39,6 +39,7 @@ scuffle-workspace-hack.workspace = true
 [dev-dependencies]
 scuffle-metrics.workspace = true
 reqwest = { version = "0.12.12", default-features = false, features = [ "rustls-tls" ] }
+tokio = { version = "1", features = [ "macros" ] }
 
 [features]
 default = ["prometheus", "pprof", "opentelemetry-metrics", "opentelemetry-traces", "opentelemetry-logs"]
