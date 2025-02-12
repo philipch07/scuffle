@@ -348,9 +348,9 @@ macro_rules! bootstrap {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use crate::{parse_settings, Options};
     #[cfg(feature = "cli")]
     use crate::Cli;
+    use crate::{parse_settings, Options};
 
     #[derive(Debug, serde::Deserialize)]
     struct TestSettings {

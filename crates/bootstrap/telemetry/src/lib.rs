@@ -426,7 +426,11 @@ async fn opentelemetry_flush<G: TelemetryConfig>(
 
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
-#[cfg(all(feature = "opentelemetry-metrics", feature = "opentelemetry-traces", feature = "opentelemetry-logs"))]
+#[cfg(all(
+    feature = "opentelemetry-metrics",
+    feature = "opentelemetry-traces",
+    feature = "opentelemetry-logs"
+))]
 mod tests {
     use std::net::SocketAddr;
     use std::sync::Arc;
