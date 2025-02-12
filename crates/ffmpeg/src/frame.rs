@@ -1,9 +1,9 @@
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::{ffi::*, AVPictureType};
+use crate::ffi::*;
 use crate::rational::Rational;
 use crate::smart_object::{SmartObject, SmartPtr};
 use crate::utils::{check_i64, or_nopts};
-use crate::AVPixelFormat;
+use crate::{AVPictureType, AVPixelFormat};
 
 /// A frame. Thin wrapper around [`AVFrame`].
 pub struct GenericFrame(SmartPtr<AVFrame>);
