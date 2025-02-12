@@ -61,7 +61,7 @@ impl CheckPr {
 
         anyhow::ensure!(has_logs, "no change logs found for any package");
 
-        println!("Done in {:?}", start.elapsed());
+        eprintln!("Done in {:?}", start.elapsed());
 
         Ok(())
     }

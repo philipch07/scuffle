@@ -161,18 +161,23 @@ impl Generate {
             .iter()
             .filter(|p| workspace_package_ids.contains(&p.id) && !IGNORED_PACKAGES.contains(&p.name.as_str()))
             .filter(|p| self.packages.is_empty() || self.packages.contains(&p.name))
-            .filter(|p| self.exclude_packages.is_empty() || !self.exclude_packages.contains(&p.name));
+            .filter(|p| self.exclude_packages.is_empty() || !self.exclude_packages.contains(&p.name))
+            .collect::<Vec<_>>();
+
+        for package in &self.packages {
+            anyhow::ensure!(packages.iter().any(|p| p.name == *package), "Package {} not found", package);
+        }
 
         for package in packages {
             let change_logs = generate_change_logs(package.name.as_str(), &mut change_fragments).context("generate")?;
             if !change_logs.is_empty() {
                 update_change_log(&change_logs, &package.manifest_path).context("update")?;
                 save_change_fragments(&mut change_fragments).context("save")?;
-                println!("Updated change logs for {}", package.name);
+                eprintln!("Updated change logs for {}", package.name);
             }
         }
 
-        println!("Done in {:?}", start.elapsed());
+        eprintln!("Done in {:?}", start.elapsed());
 
         Ok(())
     }
