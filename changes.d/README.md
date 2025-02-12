@@ -1,10 +1,10 @@
-# Changelog Fragments
+# Change Log Fragments
 
 This directory contains the changelog fragments for the Scuffle project.
 
 Each file in this directory corresponds to a pull request.
 
-Files should be named like `pr-<pr-number>.yaml`.
+Files should be named like `pr-<pr-number>.toml`.
 
 The content of the file should be a package name followed by a list of changes.
 
