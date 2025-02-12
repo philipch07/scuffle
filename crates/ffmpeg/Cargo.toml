@@ -55,6 +55,10 @@ additive-features = [
     "tracing",
 ]
 
+always_include_features = [
+    "link_system_ffmpeg",
+]
+
 [package.metadata.docs.rs]
 features = ["channel", "tokio-channel", "crossbeam-channel", "tracing"]
 rustdoc-args = ["--cfg", "docsrs"]
