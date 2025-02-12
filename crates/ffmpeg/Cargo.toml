@@ -46,8 +46,8 @@ link_vcpkg_ffmpeg = ["rusty_ffmpeg/link_vcpkg_ffmpeg"]
 default = ["link_system_ffmpeg"]
 
 [package.metadata.xtask]
-# Note: build is not an additive feature because it changes the build.rs and therefore
-# requires a full rebuild of the crate.
+# Note: `link_system_ffmpeg` nor `link_vcpkg_ffmpeg` are additive features because
+# they change the build.rs and therefore require a full rebuild of the crate.
 additive-features = [
     "channel",
     "tokio-channel",
