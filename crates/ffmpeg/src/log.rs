@@ -3,8 +3,9 @@ use std::ptr::NonNull;
 use std::sync::Arc;
 
 use arc_swap::ArcSwapOption;
-use ffmpeg_sys_next::*;
 use nutype_enum::nutype_enum;
+
+use crate::ffi::*;
 
 nutype_enum! {
     /// The logging level
@@ -12,21 +13,21 @@ nutype_enum! {
         /// Quiet logging level.
         Quiet = AV_LOG_QUIET,
         /// Panic logging level.
-        Panic = AV_LOG_PANIC,
+        Panic = AV_LOG_PANIC as i32,
         /// Fatal logging level.
-        Fatal = AV_LOG_FATAL,
+        Fatal = AV_LOG_FATAL as i32,
         /// Error logging level.
-        Error = AV_LOG_ERROR,
+        Error = AV_LOG_ERROR as i32,
         /// Warning logging level.
-        Warning = AV_LOG_WARNING,
+        Warning = AV_LOG_WARNING as i32,
         /// Info logging level.
-        Info = AV_LOG_INFO,
+        Info = AV_LOG_INFO as i32,
         /// Verbose logging level.
-        Verbose = AV_LOG_VERBOSE,
+        Verbose = AV_LOG_VERBOSE as i32,
         /// Debug logging level.
-        Debug = AV_LOG_DEBUG,
+        Debug = AV_LOG_DEBUG as i32,
         /// Trace logging level.
-        Trace = AV_LOG_TRACE,
+        Trace = AV_LOG_TRACE as i32,
     }
 }
 
@@ -150,9 +151,9 @@ mod tests {
     use std::ffi::CString;
     use std::sync::{Arc, Mutex};
 
-    use ffmpeg_sys_next::{av_log, av_log_get_level, avcodec_find_decoder, AVCodecID};
-
+    use crate::ffi::{av_log, av_log_get_level, avcodec_find_decoder};
     use crate::log::{log_callback_set, log_callback_unset, set_log_level, LogLevel};
+    use crate::AVCodecID;
 
     #[test]
     fn test_log_level_as_str_using_from_i32() {
@@ -238,7 +239,7 @@ mod tests {
     #[test]
     fn test_log_callback_with_class() {
         // Safety: `avcodec_find_decoder` is safe to call.
-        let codec = unsafe { avcodec_find_decoder(AVCodecID::AV_CODEC_ID_H264) };
+        let codec = unsafe { avcodec_find_decoder(AVCodecID::H264.0 as u32) };
         assert!(!codec.is_null(), "Failed to find H264 codec");
 
         // Safety: `(*codec).priv_class` is safe to access.

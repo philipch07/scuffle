@@ -1,4 +1,6 @@
-use ffmpeg_sys_next::*;
+use rusty_ffmpeg::ffi::*;
+
+use crate::AVCodecID;
 
 /// A wrapper around an [`AVCodec`] pointer.
 ///
@@ -20,7 +22,7 @@ impl std::fmt::Debug for DecoderCodec {
         } else {
             f.debug_struct("DecoderCodec")
                 .field("name", &"null")
-                .field("id", &AVCodecID::AV_CODEC_ID_NONE)
+                .field("id", &AVCodecID::None)
                 .finish()
         }
     }
@@ -40,7 +42,7 @@ impl DecoderCodec {
     /// Creates a [`DecoderCodec`] from a [`AVCodecID`].
     pub fn new(codec_id: AVCodecID) -> Option<Self> {
         // Safety: `avcodec_find_decoder` is safe to call.
-        let codec = unsafe { avcodec_find_decoder(codec_id) };
+        let codec = unsafe { avcodec_find_decoder(codec_id.0 as crate::ffi::AVCodecID) };
         if codec.is_null() {
             None
         } else {
@@ -95,7 +97,7 @@ impl std::fmt::Debug for EncoderCodec {
         } else {
             f.debug_struct("EncoderCodec")
                 .field("name", &"null")
-                .field("id", &AVCodecID::AV_CODEC_ID_NONE)
+                .field("id", &AVCodecID::None)
                 .finish()
         }
     }
@@ -115,7 +117,7 @@ impl EncoderCodec {
     /// Creates an [`EncoderCodec`] from a [`AVCodecID`].
     pub fn new(codec_id: AVCodecID) -> Option<Self> {
         // Safety: `avcodec_find_encoder` is safe to call.
-        let codec = unsafe { avcodec_find_encoder(codec_id) };
+        let codec = unsafe { avcodec_find_encoder(codec_id.0 as crate::ffi::AVCodecID) };
         if codec.is_null() {
             None
         } else {
@@ -164,30 +166,28 @@ impl From<DecoderCodec> for *const AVCodec {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use ffmpeg_sys_next::AVCodecID::{self, AV_CODEC_ID_AAC, AV_CODEC_ID_H264};
-    use ffmpeg_sys_next::{avcodec_find_decoder, avcodec_find_encoder, AVCodec};
-
-    use crate::codec::{DecoderCodec, EncoderCodec};
+    use crate::codec::{AVCodecID, DecoderCodec, EncoderCodec};
+    use crate::ffi::{avcodec_find_decoder, avcodec_find_encoder, AVCodec};
 
     #[test]
     fn test_decoder_codec_debug_null() {
         let decoder_codec = DecoderCodec::empty();
         let debug_output = format!("{:?}", decoder_codec);
 
-        insta::assert_snapshot!(debug_output, @r#"DecoderCodec { name: "null", id: AV_CODEC_ID_NONE }"#);
+        insta::assert_snapshot!(debug_output, @r#"DecoderCodec { name: "null", id: AVCodecID::None }"#);
     }
 
     #[test]
     fn test_decoder_codec_debug_non_null() {
-        let decoder_codec = DecoderCodec::new(AV_CODEC_ID_H264).expect("H264 codec should be available");
+        let decoder_codec = DecoderCodec::new(AVCodecID::H264).expect("H264 codec should be available");
         let debug_output = format!("{:?}", decoder_codec);
 
-        insta::assert_snapshot!(debug_output, @r#"DecoderCodec { name: "h264", id: AV_CODEC_ID_H264 }"#);
+        insta::assert_snapshot!(debug_output, @r#"DecoderCodec { name: "h264", id: 27 }"#);
     }
 
     #[test]
     fn test_decoder_codec_new_invalid_codec_id() {
-        let invalid_codec_id = AVCodecID::AV_CODEC_ID_NONE;
+        let invalid_codec_id = AVCodecID::None;
         let result = DecoderCodec::new(invalid_codec_id);
 
         assert!(
@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn test_decoder_codec_from_ptr_valid() {
         // Safety: `avcodec_find_decoder` is safe to call.
-        let codec_ptr = unsafe { avcodec_find_decoder(AVCodecID::AV_CODEC_ID_H264) };
+        let codec_ptr = unsafe { avcodec_find_decoder(AVCodecID::H264.0 as crate::ffi::AVCodecID) };
         assert!(!codec_ptr.is_null(), "Expected a valid codec pointer for H264");
 
         // Safety: The pointer was allocated by `avcodec_find_decoder` and is valid.
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn test_encoder_codec_debug_valid() {
         // Safety: `avcodec_find_encoder` is safe to call.
-        let codec_ptr = unsafe { avcodec_find_encoder(AVCodecID::AV_CODEC_ID_MPEG4) };
+        let codec_ptr = unsafe { avcodec_find_encoder(AVCodecID::Mpeg4.0 as crate::ffi::AVCodecID) };
 
         assert!(!codec_ptr.is_null(), "Expected a valid codec pointer for MPEG4");
 
@@ -246,7 +246,7 @@ mod tests {
         insta::assert_debug_snapshot!(encoder_codec, @r#"
         EncoderCodec {
             name: "mpeg4",
-            id: AV_CODEC_ID_MPEG4,
+            id: 12,
         }
         "#);
     }
@@ -257,7 +257,7 @@ mod tests {
         insta::assert_debug_snapshot!(encoder_codec, @r#"
         EncoderCodec {
             name: "null",
-            id: AV_CODEC_ID_NONE,
+            id: AVCodecID::None,
         }
         "#);
     }
@@ -273,14 +273,14 @@ mod tests {
         insta::assert_debug_snapshot!(encoder_codec, @r#"
         EncoderCodec {
             name: "null",
-            id: AV_CODEC_ID_NONE,
+            id: AVCodecID::None,
         }
         "#);
     }
 
     #[test]
     fn test_encoder_codec_new_invalid_codec() {
-        let invalid_codec_id = AVCodecID::AV_CODEC_ID_NONE;
+        let invalid_codec_id = AVCodecID::None;
         let result = EncoderCodec::new(invalid_codec_id);
 
         assert!(result.is_none(), "Expected None for an invalid codec ID");
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_encoder_codec_into_raw_ptr() {
-        let valid_codec_id = AV_CODEC_ID_AAC;
+        let valid_codec_id = AVCodecID::Aac;
         let encoder_codec = EncoderCodec::new(valid_codec_id).expect("Expected a valid encoder codec for AAC");
         let raw_ptr: *const AVCodec = encoder_codec.into();
 
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn test_decoder_codec_into_raw_ptr() {
-        let valid_codec_id = AV_CODEC_ID_AAC;
+        let valid_codec_id = AVCodecID::Aac;
         let decoder_codec = DecoderCodec::new(valid_codec_id).expect("Expected a valid decoder codec for AAC");
         let raw_ptr: *const AVCodec = decoder_codec.into();
 

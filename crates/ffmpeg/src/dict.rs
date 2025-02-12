@@ -3,10 +3,10 @@ use std::borrow::Cow;
 use std::ffi::CString;
 use std::ptr::NonNull;
 
-use ffmpeg_sys_next::*;
-
 use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::ffi::*;
 use crate::smart_object::SmartPtr;
+use crate::AVDictionaryFlags;
 
 /// A dictionary of key-value pairs.
 pub struct Dictionary {
@@ -182,7 +182,7 @@ impl Dictionary {
 
         let mut entry =
             // Safety: av_dict_get is safe to call
-            NonNull::new(unsafe { av_dict_get(self.as_ptr(), key.as_ptr(), std::ptr::null_mut(), AV_DICT_IGNORE_SUFFIX) })?;
+            NonNull::new(unsafe { av_dict_get(self.as_ptr(), key.as_ptr(), std::ptr::null_mut(), AVDictionaryFlags::IgnoreSuffix.into()) })?;
 
         // Safety: The pointer here is valid.
         let mut_ref = unsafe { entry.as_mut() };
@@ -263,7 +263,14 @@ impl<'a> Iterator for DictionaryIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         // Safety: av_dict_get is safe to call
-        self.entry = unsafe { av_dict_get(self.dict.as_ptr(), &[0] as *const _ as _, self.entry, AV_DICT_IGNORE_SUFFIX) };
+        self.entry = unsafe {
+            av_dict_get(
+                self.dict.as_ptr(),
+                &[0] as *const _ as _,
+                self.entry,
+                AVDictionaryFlags::IgnoreSuffix.into(),
+            )
+        };
 
         let mut entry = NonNull::new(self.entry)?;
 

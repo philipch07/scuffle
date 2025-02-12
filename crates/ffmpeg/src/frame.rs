@@ -1,13 +1,14 @@
-use ffmpeg_sys_next::*;
-
 use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::ffi::*;
+use crate::rational::Rational;
 use crate::smart_object::{SmartObject, SmartPtr};
 use crate::utils::{check_i64, or_nopts};
+use crate::AVPixelFormat;
 
 /// A frame. Thin wrapper around [`AVFrame`].
-pub struct Frame(SmartPtr<AVFrame>);
+pub struct GenericFrame(SmartPtr<AVFrame>);
 
-impl Clone for Frame {
+impl Clone for GenericFrame {
     fn clone(&self) -> Self {
         // Safety: `av_frame_clone` is safe to call.
         let clone = unsafe { av_frame_clone(self.0.as_ptr()) };
@@ -18,22 +19,22 @@ impl Clone for Frame {
 }
 
 /// Safety: `Frame` is safe to send between threads.
-unsafe impl Send for Frame {}
+unsafe impl Send for GenericFrame {}
 
 /// Safety: `Frame` is safe to share between threads.
-unsafe impl Sync for Frame {}
+unsafe impl Sync for GenericFrame {}
 
-/// A video frame. Thin wrapper around [`Frame`]. Like a frame but has specific video properties.
+/// A video frame. Thin wrapper around [`GenericFrame`]. Like a frame but has specific video properties.
 #[derive(Clone)]
-pub struct VideoFrame(pub Frame);
+pub struct VideoFrame(GenericFrame);
 
-/// An audio frame. Thin wrapper around [`Frame`]. Like a frame but has specific audio properties.
+/// An audio frame. Thin wrapper around [`GenericFrame`]. Like a frame but has specific audio properties.
 #[derive(Clone)]
-pub struct AudioFrame(pub Frame);
+pub struct AudioFrame(GenericFrame);
 
-impl Frame {
+impl GenericFrame {
     /// Creates a new frame.
-    pub fn new() -> Result<Self, FfmpegError> {
+    pub(crate) fn new() -> Result<Self, FfmpegError> {
         // Safety: `av_frame_alloc` is safe to call.
         let frame = unsafe { av_frame_alloc() };
 
@@ -45,7 +46,7 @@ impl Frame {
     ///
     /// # Safety
     /// `ptr` must be a valid pointer to an `AVFrame`.
-    unsafe fn wrap(ptr: *mut AVFrame) -> Option<Self> {
+    pub(crate) unsafe fn wrap(ptr: *mut AVFrame) -> Option<Self> {
         SmartPtr::wrap_non_null(ptr, |ptr| av_frame_free(ptr)).map(Self)
     }
 
@@ -55,7 +56,7 @@ impl Frame {
     /// This function is unsafe because the caller must ensure the frame has not been allocated yet.
     /// Also the frame must be properly initialized after the allocation as the data is not zeroed out.
     /// Therefore reading from the frame after allocation will result in reading uninitialized data.
-    pub unsafe fn alloc_frame_buffer(&mut self, alignment: Option<i32>) -> Result<(), FfmpegError> {
+    pub(crate) unsafe fn alloc_frame_buffer(&mut self, alignment: Option<i32>) -> Result<(), FfmpegError> {
         // Safety: `self.as_mut_ptr()` is assumed to provide a valid mutable pointer to an
         // `AVFrame` structure. The `av_frame_get_buffer` function from FFMPEG allocates
         // and attaches a buffer to the `AVFrame` if it doesn't already exist.
@@ -66,93 +67,93 @@ impl Frame {
     }
 
     /// Returns a pointer to the frame.
-    pub const fn as_ptr(&self) -> *const AVFrame {
+    pub(crate) const fn as_ptr(&self) -> *const AVFrame {
         self.0.as_ptr()
     }
 
     /// Returns a mutable pointer to the frame.
-    pub const fn as_mut_ptr(&mut self) -> *mut AVFrame {
+    pub(crate) const fn as_mut_ptr(&mut self) -> *mut AVFrame {
         self.0.as_mut_ptr()
     }
 
     /// Make this frame a video frame.
-    pub const fn video(self) -> VideoFrame {
+    pub(crate) const fn video(self) -> VideoFrame {
         VideoFrame(self)
     }
 
     /// Make this frame an audio frame.
-    pub const fn audio(self) -> AudioFrame {
+    pub(crate) const fn audio(self) -> AudioFrame {
         AudioFrame(self)
     }
 
     /// Returns the presentation timestamp of the frame.
-    pub const fn pts(&self) -> Option<i64> {
+    pub(crate) const fn pts(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().pts)
     }
 
     /// Sets the presentation timestamp of the frame.
-    pub const fn set_pts(&mut self, pts: Option<i64>) {
+    pub(crate) const fn set_pts(&mut self, pts: Option<i64>) {
         self.0.as_deref_mut_except().pts = or_nopts(pts);
         self.0.as_deref_mut_except().best_effort_timestamp = or_nopts(pts);
     }
 
     /// Returns the duration of the frame.
-    pub const fn duration(&self) -> Option<i64> {
+    pub(crate) const fn duration(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().duration)
     }
 
     /// Sets the duration of the frame.
-    pub const fn set_duration(&mut self, duration: Option<i64>) {
+    pub(crate) const fn set_duration(&mut self, duration: Option<i64>) {
         self.0.as_deref_mut_except().duration = or_nopts(duration);
     }
 
     /// Returns the best effort timestamp of the frame.
-    pub const fn best_effort_timestamp(&self) -> Option<i64> {
+    pub(crate) const fn best_effort_timestamp(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().best_effort_timestamp)
     }
 
     /// Returns the decoding timestamp of the frame.
-    pub const fn dts(&self) -> Option<i64> {
+    pub(crate) const fn dts(&self) -> Option<i64> {
         check_i64(self.0.as_deref_except().pkt_dts)
     }
 
     /// Sets the decoding timestamp of the frame.
-    pub const fn set_dts(&mut self, dts: Option<i64>) {
+    pub(crate) const fn set_dts(&mut self, dts: Option<i64>) {
         self.0.as_deref_mut_except().pkt_dts = or_nopts(dts);
     }
 
     /// Returns the time base of the frame.
-    pub const fn time_base(&self) -> AVRational {
-        self.0.as_deref_except().time_base
+    pub(crate) fn time_base(&self) -> Rational {
+        self.0.as_deref_except().time_base.into()
     }
 
     /// Sets the time base of the frame.
-    pub const fn set_time_base(&mut self, time_base: AVRational) {
-        self.0.as_deref_mut_except().time_base = time_base;
+    pub(crate) fn set_time_base(&mut self, time_base: impl Into<Rational>) {
+        self.0.as_deref_mut_except().time_base = time_base.into().into();
     }
 
     /// Returns the format of the frame.
-    pub const fn format(&self) -> i32 {
+    pub(crate) const fn format(&self) -> i32 {
         self.0.as_deref_except().format
     }
 
     /// Sets the format of the frame.
-    pub const fn set_format(&mut self, format: i32) {
+    pub(crate) const fn set_format(&mut self, format: i32) {
         self.0.as_deref_mut_except().format = format;
     }
 
     /// Returns true if the frame is an audio frame.
-    pub const fn is_audio(&self) -> bool {
+    pub(crate) const fn is_audio(&self) -> bool {
         self.0.as_deref_except().ch_layout.nb_channels != 0
     }
 
     /// Returns true if the frame is a video frame.
-    pub const fn is_video(&self) -> bool {
+    pub(crate) const fn is_video(&self) -> bool {
         self.0.as_deref_except().width != 0
     }
 
     /// Returns the linesize of the frame.
-    pub const fn linesize(&self, index: usize) -> Option<i32> {
+    pub(crate) const fn linesize(&self, index: usize) -> Option<i32> {
         if index >= self.0.as_deref_except().linesize.len() {
             return None;
         }
@@ -160,9 +161,9 @@ impl Frame {
     }
 }
 
-impl std::fmt::Debug for Frame {
+impl std::fmt::Debug for GenericFrame {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Frame")
+        f.debug_struct("GenericFrame")
             .field("pts", &self.pts())
             .field("dts", &self.dts())
             .field("duration", &self.duration())
@@ -176,6 +177,12 @@ impl std::fmt::Debug for Frame {
 }
 
 impl VideoFrame {
+    /// Creates a new video frame.
+    pub fn new() -> Result<Self, FfmpegError> {
+        let frame = GenericFrame::new()?;
+        Ok(VideoFrame(frame))
+    }
+
     /// Returns the width of the frame.
     pub const fn width(&self) -> usize {
         self.0 .0.as_deref_except().width as usize
@@ -187,13 +194,13 @@ impl VideoFrame {
     }
 
     /// Returns the sample aspect ratio of the frame.
-    pub const fn sample_aspect_ratio(&self) -> AVRational {
-        self.0 .0.as_deref_except().sample_aspect_ratio
+    pub fn sample_aspect_ratio(&self) -> Rational {
+        self.0 .0.as_deref_except().sample_aspect_ratio.into()
     }
 
     /// Sets the sample aspect ratio of the frame.
-    pub const fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
-        self.0 .0.as_deref_mut_except().sample_aspect_ratio = sample_aspect_ratio;
+    pub fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: impl Into<Rational>) {
+        self.0 .0.as_deref_mut_except().sample_aspect_ratio = sample_aspect_ratio.into().into();
     }
 
     /// Sets the width of the frame.
@@ -223,13 +230,27 @@ impl VideoFrame {
 
     /// Returns the data of the frame. By specifying the index of the plane.
     pub fn data(&self, index: usize) -> Option<&[u8]> {
-        let raw = self.0 .0.as_deref_except().data.get(index)?;
-
         let line = self.linesize(index)? as usize;
         let height = self.height();
+        let raw = *self.0 .0.as_deref_except().data.get(index)?;
 
         // Safety: The pointer here is valid & has the sizeof the `line * height`.
-        unsafe { Some(std::slice::from_raw_parts(*raw, line * height)) }
+        unsafe { Some(std::slice::from_raw_parts(raw, line * height)) }
+    }
+
+    /// Returns the data of the frame. By specifying the index of the plane.
+    pub fn data_mut(&mut self, index: usize) -> Option<&mut [u8]> {
+        let line = self.linesize(index)? as usize;
+        let height = self.height();
+        let raw = *self.0 .0.as_deref_mut_except().data.get(index)?;
+
+        // Safety: The pointer here is valid & has the sizeof the `line * height`.
+        unsafe { Some(std::slice::from_raw_parts_mut(raw, line * height)) }
+    }
+
+    /// Get the pixel format of the frame.
+    pub const fn format(&self) -> AVPixelFormat {
+        AVPixelFormat(self.0 .0.as_deref_except().format)
     }
 }
 
@@ -253,7 +274,7 @@ impl std::fmt::Debug for VideoFrame {
 }
 
 impl std::ops::Deref for VideoFrame {
-    type Target = Frame;
+    type Target = GenericFrame;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -345,7 +366,7 @@ impl AudioFrame {
     }
 
     /// Sets channel layout to a custom layout. Note that the channel count
-    /// is defined by the given `ffmpeg_sys_next::AVChannelLayout`.
+    /// is defined by the given `crate::ffi::AVChannelLayout`.
     pub fn set_channel_layout_custom(&mut self, custom_layout: AudioChannelLayout) -> Result<(), FfmpegError> {
         custom_layout.validate()?;
 
@@ -407,7 +428,7 @@ impl std::fmt::Debug for AudioFrame {
 }
 
 impl std::ops::Deref for AudioFrame {
-    type Target = Frame;
+    type Target = GenericFrame;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -423,37 +444,32 @@ impl std::ops::DerefMut for AudioFrame {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use ffmpeg_sys_next::AVPixelFormat::AV_PIX_FMT_YUV420P;
-    use ffmpeg_sys_next::AVSampleFormat::AV_SAMPLE_FMT_S16;
-    use ffmpeg_sys_next::{av_frame_get_buffer, AVRational, AV_PIX_FMT_RGB32};
     use insta::assert_debug_snapshot;
     use rand::{thread_rng, Rng};
+    use rusty_ffmpeg::ffi::{AVRational, AV_PICTURE_TYPE_I};
 
-    use crate::frame::{AudioChannelLayout, Frame};
+    use crate::ffi::av_frame_get_buffer;
+    use crate::frame::{AudioChannelLayout, GenericFrame, VideoFrame};
+    use crate::rational::Rational;
+    use crate::{AVChannelOrder, AVPixelFormat, AVSampleFormat};
 
     #[test]
     fn test_frame_clone() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        let mut frame = VideoFrame::new().expect("Failed to create frame");
+        frame.set_format(AVPixelFormat::Yuv420p.into());
 
         // Safety: Our pointer is valid.
-        let av_frame = unsafe { frame.as_mut_ptr().as_mut() }.expect("Failed to get mutable pointer");
-        av_frame.width = 16;
-        av_frame.height = 16;
+        frame.set_width(16);
+        frame.set_height(16);
 
         // Safety: `av_frame_get_buffer` is safe to call.
-        unsafe {
-            assert!(av_frame_get_buffer(av_frame, 32) >= 0, "Failed to allocate buffer for frame.");
-
-            let buf_size = av_frame.linesize[0] * av_frame.height;
-            assert_eq!(buf_size, 512, "Allocated buffer size should match.");
-        }
+        unsafe { frame.alloc_frame_buffer(Some(32)) }.expect("Failed to allocate frame buffer");
 
         frame.set_pts(Some(12));
         frame.set_dts(Some(34));
         frame.set_duration(Some(5));
-        frame.set_time_base(AVRational { num: 1, den: 30 });
-        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        frame.set_time_base(Rational::static_new::<1, 30>());
+        frame.set_format(AVPixelFormat::Yuv420p.into());
 
         let cloned_frame = frame.clone();
 
@@ -466,7 +482,7 @@ mod tests {
 
     #[test]
     fn test_audio_conversion() {
-        let frame = Frame::new().expect("Failed to create frame");
+        let frame = GenericFrame::new().expect("Failed to create frame");
         let mut audio_frame = frame.audio();
 
         assert!(audio_frame.set_channel_layout_default(2).is_ok());
@@ -476,60 +492,54 @@ mod tests {
 
     #[test]
     fn test_set_format() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
+        frame.set_format(AVPixelFormat::Yuv420p.into());
         assert_eq!(
             frame.format(),
-            AV_PIX_FMT_YUV420P as i32,
+            AVPixelFormat::Yuv420p.0,
             "The format should match the set value."
         );
 
-        frame.set_format(AV_PIX_FMT_RGB32 as i32);
+        frame.set_format(AVPixelFormat::Rgb24.into());
         assert_eq!(
             frame.format(),
-            AV_PIX_FMT_RGB32 as i32,
+            AVPixelFormat::Rgb24.0,
             "The format should match the updated value."
         );
     }
 
     #[test]
     fn test_linesize() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_PIX_FMT_YUV420P as i32);
-        let mut video_frame = frame.video();
-        video_frame.set_width(1920);
-        video_frame.set_height(1080);
+        let mut frame = VideoFrame::new().expect("Failed to create frame");
+        frame.set_format(AVPixelFormat::Yuv420p.into());
+        frame.set_width(1920);
+        frame.set_height(1080);
 
-        // Safety: Our pointer is valid.
-        let av_frame = unsafe { video_frame.as_mut_ptr().as_mut() }.expect("Failed to get mutable pointer");
         // Safety: `av_frame_get_buffer` is safe to call.
-
-        unsafe {
-            assert!(av_frame_get_buffer(av_frame, 32) >= 0, "Failed to allocate buffer for frame.");
-        }
+        unsafe { frame.alloc_frame_buffer(Some(32)) }.expect("Failed to allocate frame buffer");
 
         assert!(
-            video_frame.linesize(0).unwrap_or(0) > 0,
+            frame.linesize(0).unwrap_or(0) > 0,
             "Linesize should be greater than zero for valid index."
         );
 
         assert!(
-            video_frame.linesize(100).is_none(),
+            frame.linesize(100).is_none(),
             "Linesize at an invalid index should return None."
         );
     }
 
     #[test]
     fn test_frame_debug() {
-        let mut frame = Frame::new().expect("Failed to create frame");
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
         frame.set_pts(Some(12345));
         frame.set_dts(Some(67890));
         frame.set_duration(Some(1000));
-        frame.set_time_base(AVRational { num: 1, den: 30 });
-        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        frame.set_time_base(Rational::static_new::<1, 30>());
+        frame.set_format(AVPixelFormat::Yuv420p.into());
 
         assert_debug_snapshot!(frame, @r"
-        Frame {
+        GenericFrame {
             pts: Some(
                 12345,
             ),
@@ -542,9 +552,9 @@ mod tests {
             best_effort_timestamp: Some(
                 12345,
             ),
-            time_base: AVRational {
-                num: 1,
-                den: 30,
+            time_base: Rational {
+                numerator: 1,
+                denominator: 30,
             },
             format: 0,
             is_audio: false,
@@ -555,9 +565,9 @@ mod tests {
 
     #[test]
     fn test_sample_aspect_ratio() {
-        let frame = Frame::new().expect("Failed to create frame");
+        let frame = GenericFrame::new().expect("Failed to create frame");
         let mut video_frame = frame.video();
-        let sample_aspect_ratio = AVRational { num: 16, den: 9 };
+        let sample_aspect_ratio = Rational::static_new::<16, 9>();
         video_frame.set_sample_aspect_ratio(sample_aspect_ratio);
 
         assert_eq!(
@@ -569,8 +579,7 @@ mod tests {
 
     #[test]
     fn test_pict_type() {
-        use ffmpeg_sys_next::AVPictureType::AV_PICTURE_TYPE_I;
-        let frame = Frame::new().expect("Failed to create frame");
+        let frame = GenericFrame::new().expect("Failed to create frame");
         let mut video_frame = frame.video();
         video_frame.set_pict_type(AV_PICTURE_TYPE_I);
 
@@ -583,8 +592,8 @@ mod tests {
 
     #[test]
     fn test_data_allocation_and_access() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
+        frame.set_format(AVPixelFormat::Yuv420p.into());
         let mut video_frame = frame.video();
         video_frame.set_width(16);
         video_frame.set_height(16);
@@ -623,12 +632,12 @@ mod tests {
 
     #[test]
     fn test_video_frame_debug() {
-        let mut frame = Frame::new().expect("Failed to create frame");
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
         frame.set_pts(Some(12345));
         frame.set_dts(Some(67890));
         frame.set_duration(Some(1000));
         frame.set_time_base(AVRational { num: 1, den: 30 });
-        frame.set_format(AV_PIX_FMT_YUV420P as i32);
+        frame.set_format(AVPixelFormat::Yuv420p.into());
         let mut video_frame = frame.video();
         video_frame.set_width(1920);
         video_frame.set_height(1080);
@@ -638,9 +647,9 @@ mod tests {
         VideoFrame {
             width: 1920,
             height: 1080,
-            sample_aspect_ratio: AVRational {
-                num: 16,
-                den: 9,
+            sample_aspect_ratio: Rational {
+                numerator: 16,
+                denominator: 9,
             },
             pts: Some(
                 12345,
@@ -654,11 +663,11 @@ mod tests {
             best_effort_timestamp: Some(
                 12345,
             ),
-            time_base: AVRational {
-                num: 1,
-                den: 30,
+            time_base: Rational {
+                numerator: 1,
+                denominator: 30,
             },
-            format: 0,
+            format: AVPixelFormat::Yuv420p,
             is_audio: false,
             is_video: true,
             is_keyframe: false,
@@ -668,7 +677,7 @@ mod tests {
 
     #[test]
     fn test_set_channel_layout_default_invalid_count_error() {
-        let frame = Frame::new().expect("Failed to create frame");
+        let frame = GenericFrame::new().expect("Failed to create frame");
         let mut audio_frame = frame.audio();
 
         assert!(
@@ -679,16 +688,14 @@ mod tests {
 
     #[test]
     fn test_set_channel_layout_custom_invalid_layout_error() {
-        let frame = Frame::new().expect("Failed to create frame");
+        let frame = GenericFrame::new().expect("Failed to create frame");
         let mut audio_frame = frame.audio();
         // Safety: This is safe to be deallocated by the layout destructor.
         let custom_layout = unsafe {
-            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
-                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+            AudioChannelLayout::wrap(crate::ffi::AVChannelLayout {
+                order: AVChannelOrder::Native.into(),
                 nb_channels: -1,
-                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
-                    mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
-                },
+                u: crate::ffi::AVChannelLayout__bindgen_ty_1 { mask: 2 },
                 opaque: std::ptr::null_mut(),
             })
         };
@@ -701,16 +708,14 @@ mod tests {
 
     #[test]
     fn test_set_channel_layout_custom() {
-        let frame = Frame::new().expect("Failed to create frame");
+        let frame = GenericFrame::new().expect("Failed to create frame");
         let mut audio_frame = frame.audio();
         // Safety: This is safe to be deallocated by the layout destructor.
         let custom_layout = unsafe {
-            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
-                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+            AudioChannelLayout::wrap(crate::ffi::AVChannelLayout {
+                order: AVChannelOrder::Native.into(),
                 nb_channels: 2,
-                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 {
-                    mask: ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
-                },
+                u: crate::ffi::AVChannelLayout__bindgen_ty_1 { mask: 3 },
                 opaque: std::ptr::null_mut(),
             })
         };
@@ -725,12 +730,12 @@ mod tests {
         assert_eq!(
             // Safety: this should be a mask not a pointer.
             unsafe { layout.u.mask },
-            ffmpeg_sys_next::AV_CH_LAYOUT_STEREO,
+            3,
             "Expected channel mask to match AV_CH_LAYOUT_STEREO."
         );
         assert_eq!(
-            layout.order,
-            ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+            AVChannelOrder(layout.order),
+            AVChannelOrder::Native,
             "Expected channel order to be AV_CHANNEL_ORDER_NATIVE."
         );
     }
@@ -740,8 +745,8 @@ mod tests {
         let cases = [(None, true), (Some(0), true), (Some(32), true), (Some(-1), false)];
 
         for alignment in cases {
-            let mut frame = Frame::new().expect("Failed to create frame");
-            frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+            let mut frame = GenericFrame::new().expect("Failed to create frame");
+            frame.set_format(AVSampleFormat::S16.into());
             let mut audio_frame = frame.audio();
             audio_frame.set_nb_samples(1024);
             audio_frame.set_sample_rate(44100);
@@ -766,8 +771,8 @@ mod tests {
         let cases = [None, Some(0), Some(32), Some(-1)];
 
         for alignment in cases {
-            let mut frame = Frame::new().expect("Failed to create frame");
-            frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+            let mut frame = GenericFrame::new().expect("Failed to create frame");
+            frame.set_format(AVSampleFormat::S16.into());
             let mut audio_frame = frame.audio();
             audio_frame.set_nb_samples(1024);
 
@@ -782,8 +787,8 @@ mod tests {
 
     #[test]
     fn test_nb_samples() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
+        frame.set_format(AVSampleFormat::S16.into());
         let mut audio_frame = frame.audio();
         audio_frame.set_nb_samples(1024);
 
@@ -796,8 +801,8 @@ mod tests {
 
     #[test]
     fn test_sample_rate() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
+        frame.set_format(AVSampleFormat::S16.into());
         let mut audio_frame = frame.audio();
         audio_frame.set_sample_rate(44100);
 
@@ -810,8 +815,8 @@ mod tests {
 
     #[test]
     fn test_audio_frame_debug() {
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
+        frame.set_format(AVSampleFormat::S16.into());
         let mut audio_frame = frame.audio();
         audio_frame.set_nb_samples(1024);
         audio_frame.set_sample_rate(44100);
@@ -841,9 +846,9 @@ mod tests {
             best_effort_timestamp: Some(
                 12345,
             ),
-            time_base: AVRational {
-                num: 1,
-                den: 44100,
+            time_base: Rational {
+                numerator: 1,
+                denominator: 44100,
             },
             format: 1,
             is_audio: true,

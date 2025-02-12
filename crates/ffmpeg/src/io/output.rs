@@ -1,14 +1,14 @@
 use std::ffi::CString;
 use std::ptr::NonNull;
 
-use ffmpeg_sys_next::*;
-
 use super::internal::{seek, write_packet, Inner, InnerOptions};
 use crate::consts::DEFAULT_BUFFER_SIZE;
 use crate::dict::Dictionary;
 use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::ffi::*;
 use crate::packet::Packet;
 use crate::stream::Stream;
+use crate::{AVFmtFlags, AVFormatFlags};
 
 /// A struct that represents the options for the output.
 #[derive(Debug, Clone, bon::Builder)]
@@ -283,8 +283,18 @@ impl<T: Send + Sync> Output<T> {
     }
 
     /// Returns the flags for the output.
-    pub const fn flags(&self) -> i32 {
-        self.inner.context.as_deref_except().flags
+    pub const fn flags(&self) -> AVFmtFlags {
+        AVFmtFlags(self.inner.context.as_deref_except().flags)
+    }
+
+    /// Returns the flags for the output.
+    pub const fn output_flags(&self) -> Option<AVFormatFlags> {
+        // Safety: The format is valid.
+        let Some(oformat) = (unsafe { self.inner.context.as_deref_except().oformat.as_ref() }) else {
+            return None;
+        };
+
+        Some(AVFormatFlags(oformat.flags))
     }
 }
 
@@ -307,14 +317,14 @@ mod tests {
     use std::ptr;
 
     use bytes::{Buf, Bytes};
-    use ffmpeg_sys_next::AVMediaType;
     use sha2::Digest;
     use tempfile::Builder;
 
     use crate::dict::Dictionary;
     use crate::error::FfmpegError;
-    use crate::io::output::{AVCodec, AVRational, OutputState, AVFMT_FLAG_AUTO_BSF};
+    use crate::io::output::{AVCodec, AVRational, OutputState};
     use crate::io::{Input, Output, OutputOptions};
+    use crate::{AVFmtFlags, AVMediaType};
 
     #[test]
     fn test_output_options_get_format_ffi_null() {
@@ -322,7 +332,7 @@ mod tests {
         let format_mime_type = CString::new("").unwrap();
         // Safety: `av_guess_format` is safe to call and all arguments are valid.
         let format_ptr =
-            unsafe { ffmpeg_sys_next::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr()) };
+            unsafe { crate::ffi::av_guess_format(format_name.as_ptr(), ptr::null(), format_mime_type.as_ptr()) };
 
         assert!(
             !format_ptr.is_null(),
@@ -451,7 +461,7 @@ mod tests {
         let output = Output::new(data, options).expect("Failed to create Output");
         let flags = output.flags();
 
-        assert_eq!(flags, AVFMT_FLAG_AUTO_BSF, "Expected default flag to be AVFMT_FLAG_AUTO_BSF");
+        assert_eq!(flags, AVFmtFlags::AutoBsf, "Expected default flag to be AVFMT_FLAG_AUTO_BSF");
     }
 
     #[test]
@@ -499,7 +509,7 @@ mod tests {
         let mut input = Input::seekable(std::fs::File::open(dir.join("avc_aac.mp4")).expect("Failed to open file"))
             .expect("Failed to create Input");
         let streams = input.streams();
-        let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
+        let best_video_stream = streams.best(AVMediaType::Video).expect("no video stream found");
 
         output.copy_stream(&best_video_stream).expect("Failed to copy stream");
 
@@ -539,7 +549,7 @@ mod tests {
         let mut input = Input::seekable(std::fs::File::open(dir.join("avc_aac.mp4")).expect("Failed to open file"))
             .expect("Failed to create Input");
         let streams = input.streams();
-        let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
+        let best_video_stream = streams.best(AVMediaType::Video).expect("no video stream found");
 
         output.copy_stream(&best_video_stream).expect("Failed to copy stream");
 

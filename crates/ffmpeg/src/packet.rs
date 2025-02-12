@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
-use ffmpeg_sys_next::*;
-
 use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::ffi::*;
+use crate::rational::Rational;
 use crate::smart_object::SmartPtr;
 use crate::utils::{check_i64, or_nopts};
+use crate::{AVPktFlags, AVRounding};
 
 /// A collection of packets. [`Packets`] implements [`Iterator`] and will yield packets until the end of the stream is reached.
 /// A wrapper around an [`AVFormatContext`].
@@ -158,21 +159,27 @@ impl Packet {
     }
 
     /// Converts the timebase of the packet.
-    pub fn convert_timebase(&mut self, from: AVRational, to: AVRational) {
+    pub fn convert_timebase(&mut self, from: impl Into<Rational>, to: impl Into<Rational>) {
+        let from = from.into();
+        let to = to.into();
+
         // Safety: av_rescale_q_rnd is safe to call
         self.set_pts(self.pts().map(|pts| {
             // Safety: av_rescale_q_rnd is safe to call
-            unsafe { av_rescale_q_rnd(pts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
+            unsafe { av_rescale_q_rnd(pts, from.into(), to.into(), AVRounding::NearestAwayFromZero.0 as u32) }
         }));
 
         // Safety: av_rescale_q_rnd is safe to call
         self.set_dts(self.dts().map(|dts| {
             // Safety: av_rescale_q_rnd is safe to call
-            unsafe { av_rescale_q_rnd(dts, from, to, AVRounding::AV_ROUND_NEAR_INF) }
+            unsafe { av_rescale_q_rnd(dts, from.into(), to.into(), AVRounding::NearestAwayFromZero.0 as u32) }
         }));
 
-        // Safety: av_rescale_q is safe to call
-        self.set_duration(self.duration().map(|duration| unsafe { av_rescale_q(duration, from, to) }));
+        self.set_duration(
+            self.duration()
+                // Safety: av_rescale_q is safe to call
+                .map(|duration| unsafe { av_rescale_q(duration, from.into(), to.into()) }),
+        );
     }
 
     /// Returns the position of the packet.
@@ -196,37 +203,42 @@ impl Packet {
     }
 
     /// Returns whether the packet is a key frame.
-    pub const fn is_key(&self) -> bool {
-        self.0.as_deref_except().flags & AV_PKT_FLAG_KEY != 0
+    pub fn is_key(&self) -> bool {
+        self.flags() & AVPktFlags::Key != 0
     }
 
     /// Returns whether the packet is corrupt.
-    pub const fn is_corrupt(&self) -> bool {
-        self.0.as_deref_except().flags & AV_PKT_FLAG_CORRUPT != 0
+    pub fn is_corrupt(&self) -> bool {
+        self.flags() & AVPktFlags::Corrupt != 0
     }
 
     /// Returns whether the packet should be discarded.
-    pub const fn is_discard(&self) -> bool {
-        self.0.as_deref_except().flags & AV_PKT_FLAG_DISCARD != 0
+    pub fn is_discard(&self) -> bool {
+        self.flags() & AVPktFlags::Discard != 0
     }
 
     /// Returns whether the packet is trusted.
-    pub const fn is_trusted(&self) -> bool {
-        self.0.as_deref_except().flags & AV_PKT_FLAG_TRUSTED != 0
+    pub fn is_trusted(&self) -> bool {
+        self.flags() & AVPktFlags::Trusted != 0
     }
 
     /// Returns whether the packet is disposable.
-    pub const fn is_disposable(&self) -> bool {
-        self.0.as_deref_except().flags & AV_PKT_FLAG_DISPOSABLE != 0
+    pub fn is_disposable(&self) -> bool {
+        self.flags() & AVPktFlags::Disposable != 0
+    }
+
+    /// Returns the flags of the packet.
+    pub const fn flags(&self) -> AVPktFlags {
+        AVPktFlags(self.0.as_deref_except().flags)
     }
 }
 
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use ffmpeg_sys_next::AVRational;
     use insta::assert_debug_snapshot;
 
+    use crate::ffi::AVRational;
     use crate::packet::Packet;
 
     #[test]

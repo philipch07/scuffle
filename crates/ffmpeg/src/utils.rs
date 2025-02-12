@@ -1,4 +1,4 @@
-use ffmpeg_sys_next::*;
+use crate::ffi::*;
 
 /// Checks if a value is AV_NOPTS_VALUE and returns None if it is.
 pub const fn check_i64(val: i64) -> Option<i64> {

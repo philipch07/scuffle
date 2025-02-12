@@ -1,11 +1,10 @@
 use std::ffi::CStr;
 
-use ffmpeg_sys_next::*;
-
 use super::internal::{read_packet, seek, Inner, InnerOptions};
 use crate::consts::{Const, DEFAULT_BUFFER_SIZE};
 use crate::dict::Dictionary;
 use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::ffi::*;
 use crate::packet::{Packet, Packets};
 use crate::smart_object::SmartObject;
 use crate::stream::Streams;
@@ -278,9 +277,9 @@ mod tests {
                     Stream {
                         index: 0,
                         id: 1,
-                        time_base: AVRational {
-                            num: 1,
-                            den: 15360,
+                        time_base: Rational {
+                            numerator: 1,
+                            denominator: 15360,
                         },
                         start_time: Some(
                             0,
@@ -292,10 +291,10 @@ mod tests {
                             64,
                         ),
                         disposition: 1,
-                        discard: AVDISCARD_DEFAULT,
-                        sample_aspect_ratio: AVRational {
-                            num: 1,
-                            den: 1,
+                        discard: AVDiscard::Default,
+                        sample_aspect_ratio: Rational {
+                            numerator: 1,
+                            denominator: 1,
                         },
                         metadata: {
                             "language": "und",
@@ -303,21 +302,21 @@ mod tests {
                             "vendor_id": "[0][0][0][0]",
                             "encoder": "Lavc60.9.100 libx264",
                         },
-                        avg_frame_rate: AVRational {
-                            num: 60,
-                            den: 1,
+                        avg_frame_rate: Rational {
+                            numerator: 60,
+                            denominator: 1,
                         },
-                        r_frame_rate: AVRational {
-                            num: 60,
-                            den: 1,
+                        r_frame_rate: Rational {
+                            numerator: 60,
+                            denominator: 1,
                         },
                     },
                     Stream {
                         index: 1,
                         id: 2,
-                        time_base: AVRational {
-                            num: 1,
-                            den: 48000,
+                        time_base: Rational {
+                            numerator: 1,
+                            denominator: 48000,
                         },
                         start_time: Some(
                             0,
@@ -329,23 +328,23 @@ mod tests {
                             48,
                         ),
                         disposition: 1,
-                        discard: AVDISCARD_DEFAULT,
-                        sample_aspect_ratio: AVRational {
-                            num: 0,
-                            den: 1,
+                        discard: AVDiscard::Default,
+                        sample_aspect_ratio: Rational {
+                            numerator: 0,
+                            denominator: 1,
                         },
                         metadata: {
                             "language": "und",
                             "handler_name": "GPAC ISO Audio Handler",
                             "vendor_id": "[0][0][0][0]",
                         },
-                        avg_frame_rate: AVRational {
-                            num: 0,
-                            den: 0,
+                        avg_frame_rate: Rational {
+                            numerator: 0,
+                            denominator: 1,
                         },
-                        r_frame_rate: AVRational {
-                            num: 0,
-                            den: 0,
+                        r_frame_rate: Rational {
+                            numerator: 0,
+                            denominator: 1,
                         },
                     },
                 ],

@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
-use ffmpeg_sys_next::*;
-
 use crate::consts::{Const, Mut};
 use crate::dict::Dictionary;
+use crate::ffi::*;
+use crate::rational::Rational;
 use crate::utils::check_i64;
+use crate::{AVDiscard, AVMediaType};
 
 /// A collection of streams. Streams implements [`IntoIterator`] to iterate over the streams.
 pub struct Streams<'a> {
@@ -47,7 +48,7 @@ impl<'a> Streams<'a> {
         // Safety: av_find_best_stream is safe to call, 'input' is a valid pointer
         // We upcast the pointer to a mutable pointer because the function signature
         // requires it, but it does not mutate the pointer.
-        let stream = unsafe { av_find_best_stream(self.input, media_type, -1, -1, std::ptr::null_mut(), 0) };
+        let stream = unsafe { av_find_best_stream(self.input, media_type.into(), -1, -1, std::ptr::null_mut(), 0) };
         if stream < 0 {
             return None;
         }
@@ -198,13 +199,13 @@ impl<'a> Stream<'a> {
     }
 
     /// Returns the time base of the stream.
-    pub const fn time_base(&self) -> AVRational {
-        self.0.time_base
+    pub fn time_base(&self) -> Rational {
+        self.0.time_base.into()
     }
 
     /// Sets the time base of the stream.
-    pub const fn set_time_base(&mut self, time_base: AVRational) {
-        self.0.time_base = time_base;
+    pub fn set_time_base(&mut self, time_base: impl Into<Rational>) {
+        self.0.time_base = time_base.into().into();
     }
 
     /// Returns the start time of the stream.
@@ -255,22 +256,22 @@ impl<'a> Stream<'a> {
 
     /// Returns the discard flag of the stream.
     pub const fn discard(&self) -> AVDiscard {
-        self.0.discard
+        AVDiscard(self.0.discard)
     }
 
     /// Sets the discard flag of the stream.
-    pub const fn set_discard(&mut self, discard: AVDiscard) {
-        self.0.discard = discard;
+    pub fn set_discard(&mut self, discard: AVDiscard) {
+        self.0.discard = discard.into();
     }
 
     /// Returns the sample aspect ratio of the stream.
-    pub const fn sample_aspect_ratio(&self) -> AVRational {
-        self.0.sample_aspect_ratio
+    pub fn sample_aspect_ratio(&self) -> Rational {
+        self.0.sample_aspect_ratio.into()
     }
 
     /// Sets the sample aspect ratio of the stream.
-    pub const fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: AVRational) {
-        self.0.sample_aspect_ratio = sample_aspect_ratio;
+    pub fn set_sample_aspect_ratio(&mut self, sample_aspect_ratio: impl Into<Rational>) {
+        self.0.sample_aspect_ratio = sample_aspect_ratio.into().into();
     }
 
     /// Returns the metadata of the stream.
@@ -288,13 +289,13 @@ impl<'a> Stream<'a> {
     }
 
     /// Returns the average frame rate of the stream.
-    pub const fn avg_frame_rate(&self) -> AVRational {
-        self.0.avg_frame_rate
+    pub fn avg_frame_rate(&self) -> Rational {
+        self.0.avg_frame_rate.into()
     }
 
     /// Returns the real frame rate of the stream.
-    pub const fn r_frame_rate(&self) -> AVRational {
-        self.0.r_frame_rate
+    pub fn r_frame_rate(&self) -> Rational {
+        self.0.r_frame_rate.into()
     }
 
     /// Returns the format context of the stream.
@@ -330,12 +331,15 @@ impl std::fmt::Debug for Stream<'_> {
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
     use std::collections::BTreeMap;
+    use std::num::NonZero;
 
-    use ffmpeg_sys_next::{AVDiscard, AVRational, AVStream};
     use insta::{assert_debug_snapshot, Settings};
 
+    use crate::ffi::AVStream;
     use crate::io::Input;
+    use crate::rational::Rational;
     use crate::stream::AVMediaType;
+    use crate::AVDiscard;
 
     #[test]
     fn test_best_stream() {
@@ -343,7 +347,7 @@ mod tests {
         let input = Input::open(valid_file_path).expect("Failed to open valid file");
         let streams = input.streams();
 
-        let media_type = AVMediaType::AVMEDIA_TYPE_VIDEO;
+        let media_type = AVMediaType::Video;
         let best_stream = streams.best(media_type);
 
         assert!(best_stream.is_some(), "Expected best stream to be found");
@@ -356,7 +360,7 @@ mod tests {
         let valid_file_path = "../../assets/avc_aac_large.mp4";
         let input = Input::open(valid_file_path).expect("Failed to open valid file");
         let streams = input.streams();
-        let invalid_media_type = AVMediaType::AVMEDIA_TYPE_SUBTITLE;
+        let invalid_media_type = AVMediaType::Subtitle;
         let best_stream = streams.best(invalid_media_type);
 
         assert!(
@@ -371,7 +375,7 @@ mod tests {
         let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
         let mut streams = input.streams_mut();
 
-        let media_type = AVMediaType::AVMEDIA_TYPE_VIDEO;
+        let media_type = AVMediaType::Video;
         let best_mut_stream = streams.best_mut(media_type);
 
         assert!(best_mut_stream.is_some(), "Expected best mutable stream to be found");
@@ -500,7 +504,7 @@ mod tests {
         let mut streams = input.streams_mut();
         let mut stream = streams.get(0).expect("Expected a valid stream");
 
-        let test_discard = AVDiscard::AVDISCARD_ALL;
+        let test_discard = AVDiscard::All;
         stream.set_discard(test_discard);
         assert_eq!(stream.discard(), test_discard, "Expected `discard` to match the set value");
     }
@@ -512,7 +516,7 @@ mod tests {
         let mut streams = input.streams_mut();
         let mut stream = streams.get(0).expect("Expected a valid stream");
 
-        let test_aspect_ratio = AVRational { num: 4, den: 3 };
+        let test_aspect_ratio = Rational::new(4, NonZero::new(3).unwrap());
         stream.set_sample_aspect_ratio(test_aspect_ratio);
         assert_eq!(
             stream.sample_aspect_ratio(),
@@ -564,8 +568,8 @@ mod tests {
         let avg_frame_rate = stream.avg_frame_rate();
         let real_frame_rate = stream.r_frame_rate();
 
-        assert!(avg_frame_rate.num > 0, "Expected non-zero avg_frame_rate numerator");
-        assert!(real_frame_rate.num > 0, "Expected non-zero r_frame_rate numerator");
+        assert!(avg_frame_rate.as_f64() > 0.0, "Expected non-zero avg_frame_rate numerator");
+        assert!(real_frame_rate.as_f64() > 0.0, "Expected non-zero r_frame_rate numerator");
     }
 
     #[test]
@@ -618,9 +622,9 @@ mod tests {
             Stream {
                 index: 0,
                 id: 1,
-                time_base: AVRational {
-                    num: 1,
-                    den: 15360,
+                time_base: Rational {
+                    numerator: 1,
+                    denominator: 15360,
                 },
                 start_time: Some(
                     0,
@@ -632,10 +636,10 @@ mod tests {
                     64,
                 ),
                 disposition: 1,
-                discard: AVDISCARD_DEFAULT,
-                sample_aspect_ratio: AVRational {
-                    num: 1,
-                    den: 1,
+                discard: AVDiscard::Default,
+                sample_aspect_ratio: Rational {
+                    numerator: 1,
+                    denominator: 1,
                 },
                 metadata: {
                     "encoder": "Lavc60.9.100 libx264",
@@ -643,13 +647,13 @@ mod tests {
                     "language": "und",
                     "vendor_id": "[0][0][0][0]",
                 },
-                avg_frame_rate: AVRational {
-                    num: 60,
-                    den: 1,
+                avg_frame_rate: Rational {
+                    numerator: 60,
+                    denominator: 1,
                 },
-                r_frame_rate: AVRational {
-                    num: 60,
-                    den: 1,
+                r_frame_rate: Rational {
+                    numerator: 60,
+                    denominator: 1,
                 },
             }
             "#);

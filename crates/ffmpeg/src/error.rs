@@ -1,5 +1,6 @@
-use ffmpeg_sys_next::*;
 use nutype_enum::nutype_enum;
+
+use crate::ffi::*;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 /// An error that occurs when the ffmpeg operation fails.

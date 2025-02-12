@@ -64,3 +64,77 @@ macro_rules! nutype_enum {
         }
     };
 }
+
+/// Helper macro to create a bitwise enum.
+///
+/// The enum type is derived with the `BitAnd`, `BitOr`, `BitXor`, `BitAndAssign`,
+/// `BitOrAssign`, and `BitXorAssign` traits.
+///
+/// # Examples
+///
+/// ```rust
+/// # use nutype_enum::{nutype_enum, bitwise_enum};
+/// nutype_enum! {
+///     pub enum IoFlags(u8) {
+///         Seek = 0x1,
+///         Write = 0x2,
+///         Read = 0x4,
+///     }
+/// }
+///
+/// bitwise_enum!(IoFlags);
+/// ```
+#[macro_export]
+macro_rules! bitwise_enum {
+    ($name:ident) => {
+        impl ::std::ops::BitAnd for $name {
+            type Output = Self;
+
+            fn bitand(self, rhs: Self) -> Self::Output {
+                Self(self.0 & rhs.0)
+            }
+        }
+
+        impl ::std::ops::BitOr for $name {
+            type Output = Self;
+
+            fn bitor(self, rhs: Self) -> Self::Output {
+                Self(self.0 | rhs.0)
+            }
+        }
+
+        impl ::std::ops::BitXor for $name {
+            type Output = Self;
+
+            fn bitxor(self, rhs: Self) -> Self::Output {
+                Self(self.0 ^ rhs.0)
+            }
+        }
+
+        impl ::std::ops::Not for $name {
+            type Output = Self;
+
+            fn not(self) -> Self::Output {
+                Self(!self.0)
+            }
+        }
+
+        impl ::std::ops::BitAndAssign for $name {
+            fn bitand_assign(&mut self, rhs: Self) {
+                self.0 &= rhs.0;
+            }
+        }
+
+        impl ::std::ops::BitOrAssign for $name {
+            fn bitor_assign(&mut self, rhs: Self) {
+                self.0 |= rhs.0;
+            }
+        }
+
+        impl ::std::ops::BitXorAssign for $name {
+            fn bitxor_assign(&mut self, rhs: Self) {
+                self.0 ^= rhs.0;
+            }
+        }
+    };
+}

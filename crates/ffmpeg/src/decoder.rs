@@ -1,11 +1,12 @@
-use ffmpeg_sys_next::*;
-
 use crate::codec::DecoderCodec;
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::frame::{AudioFrame, Frame, VideoFrame};
+use crate::ffi::*;
+use crate::frame::{AudioFrame, GenericFrame, VideoFrame};
 use crate::packet::Packet;
+use crate::rational::Rational;
 use crate::smart_object::SmartPtr;
 use crate::stream::Stream;
+use crate::{AVCodecID, AVMediaType, AVPixelFormat, AVSampleFormat};
 
 /// Either a [`VideoDecoder`] or an [`AudioDecoder`].
 ///
@@ -97,7 +98,7 @@ impl Decoder {
 
         let codec = options
             .codec
-            .or_else(|| DecoderCodec::new(codec_params.codec_id))
+            .or_else(|| DecoderCodec::new(AVCodecID(codec_params.codec_id as i32)))
             .ok_or(FfmpegError::NoDecoder)?;
 
         if codec.is_empty() {
@@ -120,11 +121,11 @@ impl Decoder {
 
         let decoder_mut = decoder.as_deref_mut_except();
 
-        decoder_mut.pkt_timebase = ist.time_base();
-        decoder_mut.time_base = ist.time_base();
+        decoder_mut.pkt_timebase = ist.time_base().into();
+        decoder_mut.time_base = ist.time_base().into();
         decoder_mut.thread_count = options.thread_count;
 
-        if decoder_mut.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO {
+        if AVMediaType(decoder_mut.codec_type) == AVMediaType::Video {
             // Safety: Even though we are upcasting `AVFormatContext` from a const pointer to a
             // mutable pointer, it is still safe becasuse av_guess_frame_rate does not use
             // the pointer to modify the `AVFormatContext`. https://github.com/FFmpeg/FFmpeg/blame/268d0b6527cba1ebac1f44347578617341f85c35/libavformat/avformat.c#L763
@@ -137,17 +138,14 @@ impl Decoder {
                 unsafe { av_guess_frame_rate(format_context, ist.as_ptr() as *mut AVStream, std::ptr::null_mut()) };
         }
 
-        if matches!(
-            decoder_mut.codec_type,
-            AVMediaType::AVMEDIA_TYPE_VIDEO | AVMediaType::AVMEDIA_TYPE_AUDIO
-        ) {
+        if matches!(AVMediaType(decoder_mut.codec_type), AVMediaType::Video | AVMediaType::Audio) {
             // Safety: `codec` is a valid pointer, and `decoder` is a valid pointer.
             FfmpegErrorCode(unsafe { avcodec_open2(decoder_mut, codec.as_ptr(), std::ptr::null_mut()) }).result()?;
         }
 
-        Ok(match decoder_mut.codec_type {
-            AVMediaType::AVMEDIA_TYPE_VIDEO => Self::Video(VideoDecoder(GenericDecoder { decoder })),
-            AVMediaType::AVMEDIA_TYPE_AUDIO => Self::Audio(AudioDecoder(GenericDecoder { decoder })),
+        Ok(match AVMediaType(decoder_mut.codec_type) {
+            AVMediaType::Video => Self::Video(VideoDecoder(GenericDecoder { decoder })),
+            AVMediaType::Audio => Self::Audio(AudioDecoder(GenericDecoder { decoder })),
             _ => Err(FfmpegError::NoDecoder)?,
         })
     }
@@ -172,7 +170,7 @@ impl Decoder {
 impl GenericDecoder {
     /// Returns the codec type of the decoder.
     pub const fn codec_type(&self) -> AVMediaType {
-        self.decoder.as_deref_except().codec_type
+        AVMediaType(self.decoder.as_deref_except().codec_type)
     }
 
     /// Returns the time base of the decoder.
@@ -195,8 +193,8 @@ impl GenericDecoder {
     }
 
     /// Receives a frame from the decoder.
-    pub fn receive_frame(&mut self) -> Result<Option<Frame>, FfmpegError> {
-        let mut frame = Frame::new()?;
+    pub fn receive_frame(&mut self) -> Result<Option<GenericFrame>, FfmpegError> {
+        let mut frame = GenericFrame::new()?;
 
         // Safety: `frame` is a valid pointer, and `self.decoder` is a valid pointer.
         let ret = FfmpegErrorCode(unsafe { avcodec_receive_frame(self.decoder.as_mut_ptr(), frame.as_mut_ptr()) });
@@ -225,17 +223,17 @@ impl VideoDecoder {
 
     /// Returns the pixel format of the video frame.
     pub const fn pixel_format(&self) -> AVPixelFormat {
-        self.0.decoder.as_deref_except().pix_fmt
+        AVPixelFormat(self.0.decoder.as_deref_except().pix_fmt)
     }
 
     /// Returns the frame rate of the video frame.
-    pub const fn frame_rate(&self) -> AVRational {
-        self.0.decoder.as_deref_except().framerate
+    pub fn frame_rate(&self) -> Rational {
+        self.0.decoder.as_deref_except().framerate.into()
     }
 
     /// Returns the sample aspect ratio of the video frame.
-    pub const fn sample_aspect_ratio(&self) -> AVRational {
-        self.0.decoder.as_deref_except().sample_aspect_ratio
+    pub fn sample_aspect_ratio(&self) -> Rational {
+        self.0.decoder.as_deref_except().sample_aspect_ratio.into()
     }
 
     /// Receives a frame from the decoder.
@@ -271,7 +269,7 @@ impl AudioDecoder {
 
     /// Returns the sample format of the audio frame.
     pub const fn sample_format(&self) -> AVSampleFormat {
-        self.0.decoder.as_deref_except().sample_fmt
+        AVSampleFormat(self.0.decoder.as_deref_except().sample_fmt)
     }
 
     /// Receives a frame from the decoder.
@@ -297,12 +295,10 @@ impl std::ops::DerefMut for AudioDecoder {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use ffmpeg_sys_next::AVCodecID::{AV_CODEC_ID_AAC, AV_CODEC_ID_H264};
-    use ffmpeg_sys_next::AVMediaType;
-
     use crate::codec::DecoderCodec;
     use crate::decoder::{Decoder, DecoderOptions};
     use crate::io::Input;
+    use crate::{AVCodecID, AVMediaType};
 
     #[test]
     fn test_generic_decoder_debug() {
@@ -313,18 +309,18 @@ mod tests {
             .iter()
             .find(|s| {
                 s.codec_parameters()
-                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .map(|p| AVMediaType(p.codec_type) == AVMediaType::Video)
                     .unwrap_or(false)
             })
             .expect("No video stream found");
         let codec_params = stream.codec_parameters().expect("Missing codec parameters");
         assert_eq!(
-            codec_params.codec_type,
-            AVMediaType::AVMEDIA_TYPE_VIDEO,
+            AVMediaType(codec_params.codec_type),
+            AVMediaType::Video,
             "Expected the stream to be a video stream"
         );
         let decoder_options = DecoderOptions {
-            codec: Some(DecoderCodec::new(AV_CODEC_ID_H264).expect("Failed to find H264 codec")),
+            codec: Some(DecoderCodec::new(AVCodecID::H264).expect("Failed to find H264 codec")),
             thread_count: 2,
         };
         let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
@@ -339,7 +335,7 @@ mod tests {
                 num: 1,
                 den: 15360,
             },
-            codec_type: AVMEDIA_TYPE_VIDEO,
+            codec_type: AVMediaType::Video,
         }
         ");
     }
@@ -353,19 +349,19 @@ mod tests {
             .iter()
             .find(|s| {
                 s.codec_parameters()
-                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .map(|p| AVMediaType(p.codec_type) == AVMediaType::Video)
                     .unwrap_or(false)
             })
             .expect("No video stream found");
         let codec_params = stream.codec_parameters().expect("Missing codec parameters");
         assert_eq!(
-            codec_params.codec_type,
-            AVMediaType::AVMEDIA_TYPE_VIDEO,
+            AVMediaType(codec_params.codec_type),
+            AVMediaType::Video,
             "Expected the stream to be a video stream"
         );
 
         let decoder_options = DecoderOptions {
-            codec: Some(DecoderCodec::new(AV_CODEC_ID_H264).expect("Failed to find H264 codec")),
+            codec: Some(DecoderCodec::new(AVCodecID::H264).expect("Failed to find H264 codec")),
             thread_count: 2,
         };
         let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
@@ -383,14 +379,14 @@ mod tests {
             },
             width: 3840,
             height: 2160,
-            pixel_format: AV_PIX_FMT_YUV420P,
-            frame_rate: AVRational {
-                num: 60,
-                den: 1,
+            pixel_format: AVPixelFormat::Yuv420p,
+            frame_rate: Rational {
+                numerator: 60,
+                denominator: 1,
             },
-            sample_aspect_ratio: AVRational {
-                num: 1,
-                den: 1,
+            sample_aspect_ratio: Rational {
+                numerator: 1,
+                denominator: 1,
             },
         }
         ");
@@ -405,18 +401,18 @@ mod tests {
             .iter()
             .find(|s| {
                 s.codec_parameters()
-                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO)
+                    .map(|p| AVMediaType(p.codec_type) == AVMediaType::Audio)
                     .unwrap_or(false)
             })
             .expect("No audio stream found");
         let codec_params = stream.codec_parameters().expect("Missing codec parameters");
         assert_eq!(
-            codec_params.codec_type,
-            AVMediaType::AVMEDIA_TYPE_AUDIO,
+            AVMediaType(codec_params.codec_type),
+            AVMediaType::Audio,
             "Expected the stream to be an audio stream"
         );
         let decoder_options = DecoderOptions {
-            codec: Some(DecoderCodec::new(AV_CODEC_ID_AAC).expect("Failed to find AAC codec")),
+            codec: Some(DecoderCodec::new(AVCodecID::Aac).expect("Failed to find AAC codec")),
             thread_count: 2,
         };
         let decoder = Decoder::with_options(&stream, decoder_options).expect("Failed to create Decoder");
@@ -433,7 +429,7 @@ mod tests {
             },
             sample_rate: 48000,
             channels: 2,
-            sample_fmt: AV_SAMPLE_FMT_FLTP,
+            sample_fmt: AVSampleFormat::Fltp,
         }
         ");
     }
@@ -455,7 +451,7 @@ mod tests {
             .iter()
             .find(|s| {
                 s.codec_parameters()
-                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .map(|p| AVMediaType(p.codec_type) == AVMediaType::Video)
                     .unwrap_or(false)
             })
             .expect("No video stream found");
@@ -509,7 +505,7 @@ mod tests {
         let codecpar = unsafe { (*stream.as_mut_ptr()).codecpar };
         // Safety: We are setting the `codec_type` to `AVMEDIA_TYPE_SUBTITLE` to simulate a non-video/audio codec type.
         unsafe {
-            (*codecpar).codec_type = AVMediaType::AVMEDIA_TYPE_SUBTITLE;
+            (*codecpar).codec_type = AVMediaType::Subtitle.into();
         }
         let decoder_result = Decoder::with_options(&stream, DecoderOptions::default());
 
@@ -534,7 +530,7 @@ mod tests {
             .iter()
             .find(|s| {
                 s.codec_parameters()
-                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO)
+                    .map(|p| AVMediaType(p.codec_type) == AVMediaType::Video)
                     .unwrap_or(false)
             })
             .expect("No video stream found");
@@ -570,7 +566,7 @@ mod tests {
             .iter()
             .find(|s| {
                 s.codec_parameters()
-                    .map(|p| p.codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO)
+                    .map(|p| AVMediaType(p.codec_type) == AVMediaType::Audio)
                     .unwrap_or(false)
             })
             .expect("No audio stream found");
@@ -602,8 +598,8 @@ mod tests {
         let valid_file_path = "../../assets/avc_aac_large.mp4";
         let mut input = Input::open(valid_file_path).expect("Failed to open valid file");
         let streams = input.streams();
-        let video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("No video stream found");
-        let audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("No audio stream found");
+        let video_stream = streams.best(AVMediaType::Video).expect("No video stream found");
+        let audio_stream = streams.best(AVMediaType::Audio).expect("No audio stream found");
         let mut video_decoder = Decoder::new(&video_stream)
             .expect("Failed to create decoder")
             .video()

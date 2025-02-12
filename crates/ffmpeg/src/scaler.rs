@@ -1,13 +1,11 @@
-use ffmpeg_sys_next::*;
-#[cfg(windows)]
-use SwsFlags::*;
-
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::frame::{Frame, VideoFrame};
+use crate::ffi::*;
+use crate::frame::VideoFrame;
 use crate::smart_object::SmartPtr;
+use crate::AVPixelFormat;
 
 /// A scaler is a wrapper around an [`SwsContext`]. Which is used to scale or transform video frames.
-pub struct Scaler {
+pub struct VideoScaler {
     ptr: SmartPtr<SwsContext>,
     frame: VideoFrame,
     pixel_format: AVPixelFormat,
@@ -16,12 +14,10 @@ pub struct Scaler {
 }
 
 /// Safety: `Scaler` is safe to send between threads.
-unsafe impl Send for Scaler {}
+unsafe impl Send for VideoScaler {}
 
-impl Scaler {
+impl VideoScaler {
     /// Creates a new `Scaler` instance.
-    /// The unnecessary cast is needed for Scaler to work on windows.
-    #[allow(clippy::unnecessary_cast)]
     pub fn new(
         input_width: i32,
         input_height: i32,
@@ -35,10 +31,10 @@ impl Scaler {
             sws_getContext(
                 input_width,
                 input_height,
-                incoming_pixel_fmt,
+                incoming_pixel_fmt.into(),
                 width,
                 height,
-                pixel_format,
+                pixel_format.into(),
                 SWS_BILINEAR as i32,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
@@ -58,22 +54,18 @@ impl Scaler {
         // Safety: `ptr` is a valid pointer & `destructor` has been setup to free the context.
         let ptr = unsafe { SmartPtr::wrap_non_null(ptr, destructor) }.ok_or(FfmpegError::Alloc)?;
 
-        let mut frame = Frame::new()?;
+        let mut frame = VideoFrame::new()?;
 
-        // Safety: `frame` is a valid pointer
-        let frame_mut = unsafe { &mut *frame.as_mut_ptr() };
+        frame.set_width(width as usize);
+        frame.set_height(height as usize);
+        frame.set_format(pixel_format.into());
 
-        frame_mut.width = width;
-        frame_mut.height = height;
-        frame_mut.format = pixel_format as i32;
-
-        // Safety: `av_frame_get_buffer` is safe to call, and the pointer returned is
-        // valid.
-        FfmpegErrorCode(unsafe { av_frame_get_buffer(frame_mut, 32) }).result()?;
+        // Safety: `av_frame_get_buffer` is safe to call.
+        unsafe { frame.alloc_frame_buffer(Some(32)) }.expect("Failed to allocate frame buffer");
 
         Ok(Self {
             ptr,
-            frame: frame.video(),
+            frame,
             pixel_format,
             width,
             height,
@@ -96,7 +88,7 @@ impl Scaler {
     }
 
     /// Processes a frame through the scalar.
-    pub fn process<'a>(&'a mut self, frame: &Frame) -> Result<&'a VideoFrame, FfmpegError> {
+    pub fn process<'a>(&'a mut self, frame: &VideoFrame) -> Result<&'a VideoFrame, FfmpegError> {
         // Safety: `frame` is a valid pointer, and `self.ptr` is a valid pointer.
         let frame_ptr = unsafe { frame.as_ptr().as_ref().unwrap() };
         // Safety: `self.frame` is a valid pointer.
@@ -129,23 +121,21 @@ impl Scaler {
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
 mod tests {
-    use ffmpeg_sys_next::av_frame_get_buffer;
     use insta::assert_debug_snapshot;
     use rand::Rng;
 
-    use crate::error::FfmpegErrorCode;
-    use crate::frame::Frame;
-    use crate::scaler::{AVPixelFormat, Scaler};
+    use crate::frame::VideoFrame;
+    use crate::scaler::{AVPixelFormat, VideoScaler};
 
     #[test]
     fn test_scalar_new() {
         let input_width = 1920;
         let input_height = 1080;
-        let incoming_pixel_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
+        let incoming_pixel_fmt = AVPixelFormat::Yuv420p;
         let output_width = 1280;
         let output_height = 720;
-        let output_pixel_fmt = AVPixelFormat::AV_PIX_FMT_RGB24;
-        let scalar = Scaler::new(
+        let output_pixel_fmt = AVPixelFormat::Rgb24;
+        let scalar = VideoScaler::new(
             input_width,
             input_height,
             incoming_pixel_fmt,
@@ -178,12 +168,12 @@ mod tests {
     fn test_scalar_process() {
         let input_width = 1920;
         let input_height = 1080;
-        let incoming_pixel_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
+        let incoming_pixel_fmt = AVPixelFormat::Yuv420p;
         let output_width = 1280;
         let output_height = 720;
-        let output_pixel_fmt = AVPixelFormat::AV_PIX_FMT_RGB24;
+        let output_pixel_fmt = AVPixelFormat::Rgb24;
 
-        let mut scalar = Scaler::new(
+        let mut scalar = VideoScaler::new(
             input_width,
             input_height,
             incoming_pixel_fmt,
@@ -193,26 +183,21 @@ mod tests {
         )
         .expect("Failed to create Scalar");
 
-        let mut input_frame = Frame::new().expect("Failed to create Frame");
+        let mut input_frame: VideoFrame = VideoFrame::new().expect("Failed to create Frame");
         // Safety: `input_frame` is a valid pointer
-        let frame_mut = unsafe { &mut *input_frame.as_mut_ptr() };
-        frame_mut.width = input_width;
-        frame_mut.height = input_height;
-        frame_mut.format = incoming_pixel_fmt as i32;
+        input_frame.set_width(input_width as usize);
+        input_frame.set_height(input_height as usize);
+        input_frame.set_format(incoming_pixel_fmt.into());
 
-        // Safety: `av_frame_get_buffer` is safe to call, and the pointer returned is
-        // valid.
-        FfmpegErrorCode(unsafe { av_frame_get_buffer(frame_mut, 32) })
-            .result()
-            .expect("Failed to allocate input frame buffer");
+        // Safety: `av_frame_get_buffer` is safe to call.
+        unsafe { input_frame.alloc_frame_buffer(Some(32)) }.expect("Failed to allocate frame buffer");
 
         // We need to fill the buffer with random data otherwise the result will be based off uninitialized data.
 
         for y in 0..input_height {
             // Safety: `frame_mut.data[0]` is a valid pointer
-            let row = unsafe { frame_mut.data[0].add((y * frame_mut.linesize[0]) as usize) };
-            // Safety: `row` is a valid pointer
-            let row = unsafe { std::slice::from_raw_parts_mut(row, input_width as usize) };
+            let y = (y * input_frame.linesize(0).unwrap()) as usize;
+            let row = &mut input_frame.data_mut(0).unwrap()[y..y + input_width as usize];
             rand::thread_rng().fill(row);
         }
 
@@ -220,18 +205,14 @@ mod tests {
         let half_width = (input_width + 1) / 2;
 
         for y in 0..half_height {
-            // Safety: `frame_mut.data[1]` is a valid pointer
-            let row = unsafe { frame_mut.data[1].add((y * frame_mut.linesize[1]) as usize) };
-            // Safety: `row` is a valid pointer
-            let row = unsafe { std::slice::from_raw_parts_mut(row, half_width as usize) };
+            let y = (y * input_frame.linesize(1).unwrap()) as usize;
+            let row = &mut input_frame.data_mut(1).unwrap()[y..y + half_width as usize];
             rand::thread_rng().fill(row);
         }
 
         for y in 0..half_height {
-            // Safety: `frame_mut.data[2]` is a valid pointer
-            let row = unsafe { frame_mut.data[2].add((y * frame_mut.linesize[2]) as usize) };
-            // Safety: `row` is a valid pointer
-            let row = unsafe { std::slice::from_raw_parts_mut(row, half_width as usize) };
+            let y = (y * input_frame.linesize(2).unwrap()) as usize;
+            let row = &mut input_frame.data_mut(2).unwrap()[y..y + half_width as usize];
             rand::thread_rng().fill(row);
         }
 
@@ -248,9 +229,9 @@ mod tests {
         VideoFrame {
             width: 1280,
             height: 720,
-            sample_aspect_ratio: AVRational {
-                num: 0,
-                den: 1,
+            sample_aspect_ratio: Rational {
+                numerator: 0,
+                denominator: 1,
             },
             pts: None,
             dts: None,
@@ -258,11 +239,11 @@ mod tests {
                 0,
             ),
             best_effort_timestamp: None,
-            time_base: AVRational {
-                num: 0,
-                den: 1,
+            time_base: Rational {
+                numerator: 0,
+                denominator: 1,
             },
-            format: 2,
+            format: AVPixelFormat::Rgb24,
             is_audio: false,
             is_video: true,
             is_keyframe: false,

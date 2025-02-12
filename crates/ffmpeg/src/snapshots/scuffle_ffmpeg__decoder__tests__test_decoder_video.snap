@@ -7,9 +7,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             0,
@@ -23,11 +23,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             0,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: true,
@@ -35,9 +35,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             256,
@@ -51,11 +51,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             256,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -63,9 +63,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             512,
@@ -79,11 +79,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             512,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -91,9 +91,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             768,
@@ -107,11 +107,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             768,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -119,9 +119,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             1024,
@@ -135,11 +135,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             1024,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -147,9 +147,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             1280,
@@ -163,11 +163,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             1280,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -175,9 +175,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             1536,
@@ -191,11 +191,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             1536,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -203,9 +203,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             1792,
@@ -219,11 +219,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             1792,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -231,9 +231,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             2048,
@@ -247,11 +247,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             2048,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -259,9 +259,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             2304,
@@ -275,11 +275,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             2304,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -287,9 +287,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             2560,
@@ -303,11 +303,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             2560,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -315,9 +315,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             2816,
@@ -331,11 +331,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             2816,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -343,9 +343,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             3072,
@@ -359,11 +359,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             3072,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -371,9 +371,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             3328,
@@ -387,11 +387,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             3328,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -399,9 +399,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             3584,
@@ -415,11 +415,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             3584,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -427,9 +427,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             3840,
@@ -443,11 +443,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             3840,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -455,9 +455,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             4096,
@@ -471,11 +471,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             4096,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -483,9 +483,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             4352,
@@ -499,11 +499,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             4352,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -511,9 +511,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             4608,
@@ -527,11 +527,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             4608,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -539,9 +539,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             4864,
@@ -555,11 +555,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             4864,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -567,9 +567,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             5120,
@@ -583,11 +583,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             5120,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -595,9 +595,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             5376,
@@ -611,11 +611,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             5376,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -623,9 +623,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             5632,
@@ -639,11 +639,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             5632,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -651,9 +651,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             5888,
@@ -667,11 +667,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             5888,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -679,9 +679,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             6144,
@@ -695,11 +695,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             6144,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -707,9 +707,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             6400,
@@ -723,11 +723,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             6400,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -735,9 +735,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             6656,
@@ -751,11 +751,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             6656,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -763,9 +763,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             6912,
@@ -779,11 +779,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             6912,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -791,9 +791,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             7168,
@@ -807,11 +807,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             7168,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -819,9 +819,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             7424,
@@ -835,11 +835,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             7424,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -847,9 +847,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             7680,
@@ -863,11 +863,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             7680,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: true,
@@ -875,9 +875,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             7936,
@@ -891,11 +891,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             7936,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -903,9 +903,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             8192,
@@ -919,11 +919,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             8192,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -931,9 +931,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             8448,
@@ -947,11 +947,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             8448,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -959,9 +959,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             8704,
@@ -975,11 +975,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             8704,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -987,9 +987,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             8960,
@@ -1003,11 +1003,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             8960,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1015,9 +1015,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             9216,
@@ -1031,11 +1031,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             9216,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1043,9 +1043,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             9472,
@@ -1059,11 +1059,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             9472,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1071,9 +1071,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             9728,
@@ -1087,11 +1087,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             9728,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1099,9 +1099,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             9984,
@@ -1115,11 +1115,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             9984,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1127,9 +1127,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             10240,
@@ -1143,11 +1143,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             10240,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1155,9 +1155,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             10496,
@@ -1171,11 +1171,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             10496,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1183,9 +1183,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             10752,
@@ -1199,11 +1199,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             10752,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1211,9 +1211,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             11008,
@@ -1227,11 +1227,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             11008,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1239,9 +1239,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             11264,
@@ -1255,11 +1255,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             11264,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1267,9 +1267,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             11520,
@@ -1283,11 +1283,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             11520,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1295,9 +1295,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             11776,
@@ -1311,11 +1311,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             11776,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1323,9 +1323,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             12032,
@@ -1339,11 +1339,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             12032,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1351,9 +1351,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             12288,
@@ -1367,11 +1367,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             12288,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1379,9 +1379,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             12544,
@@ -1395,11 +1395,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             12544,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1407,9 +1407,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             12800,
@@ -1423,11 +1423,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             12800,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1435,9 +1435,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             13056,
@@ -1451,11 +1451,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             13056,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1463,9 +1463,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             13312,
@@ -1479,11 +1479,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             13312,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1491,9 +1491,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             13568,
@@ -1507,11 +1507,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             13568,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1519,9 +1519,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             13824,
@@ -1535,11 +1535,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             13824,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1547,9 +1547,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             14080,
@@ -1563,11 +1563,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             14080,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1575,9 +1575,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             14336,
@@ -1591,11 +1591,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             14336,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1603,9 +1603,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             14592,
@@ -1619,11 +1619,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             14592,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1631,9 +1631,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             14848,
@@ -1647,11 +1647,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             14848,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1659,9 +1659,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             15104,
@@ -1675,11 +1675,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             15104,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1687,9 +1687,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             15360,
@@ -1703,11 +1703,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             15360,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: true,
@@ -1715,9 +1715,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             15616,
@@ -1731,11 +1731,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             15616,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1743,9 +1743,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             15872,
@@ -1757,11 +1757,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             15872,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,
@@ -1769,9 +1769,9 @@ snapshot_kind: text
     VideoFrame {
         width: 3840,
         height: 2160,
-        sample_aspect_ratio: AVRational {
-            num: 1,
-            den: 1,
+        sample_aspect_ratio: Rational {
+            numerator: 1,
+            denominator: 1,
         },
         pts: Some(
             16128,
@@ -1783,11 +1783,11 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             16128,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 15360,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 15360,
         },
-        format: 0,
+        format: AVPixelFormat::Yuv420p,
         is_audio: false,
         is_video: true,
         is_keyframe: false,

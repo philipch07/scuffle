@@ -1,10 +1,9 @@
 use std::ffi::CString;
 use std::ptr::NonNull;
 
-use ffmpeg_sys_next::*;
-
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::frame::Frame;
+use crate::ffi::*;
+use crate::frame::GenericFrame;
 use crate::smart_object::SmartPtr;
 
 /// A filter graph. Used to chain filters together when transforming media data.
@@ -279,7 +278,7 @@ unsafe impl Send for FilterContextSource<'_> {}
 
 impl FilterContextSource<'_> {
     /// Sends a frame to the filter context.
-    pub fn send_frame(&mut self, frame: &Frame) -> Result<(), FfmpegError> {
+    pub fn send_frame(&mut self, frame: &GenericFrame) -> Result<(), FfmpegError> {
         // Safety: `frame` is a valid pointer, and `self.0` is a valid pointer.
         FfmpegErrorCode(unsafe { av_buffersrc_write_frame(self.0, frame.as_ptr()) }).result()?;
         Ok(())
@@ -307,8 +306,8 @@ unsafe impl Send for FilterContextSink<'_> {}
 
 impl FilterContextSink<'_> {
     /// Receives a frame from the filter context.
-    pub fn receive_frame(&mut self) -> Result<Option<Frame>, FfmpegError> {
-        let mut frame = Frame::new()?;
+    pub fn receive_frame(&mut self) -> Result<Option<GenericFrame>, FfmpegError> {
+        let mut frame = GenericFrame::new()?;
 
         // Safety: `frame` is a valid pointer, and `self.0` is a valid pointer.
         match FfmpegErrorCode(unsafe { av_buffersink_get_frame(self.0, frame.as_mut_ptr()) }) {
@@ -324,11 +323,10 @@ impl FilterContextSink<'_> {
 mod tests {
     use std::ffi::CString;
 
-    use ffmpeg_sys_next::avfilter_get_by_name;
-    use ffmpeg_sys_next::AVSampleFormat::{AV_SAMPLE_FMT_FLTP, AV_SAMPLE_FMT_S16};
-
+    use crate::ffi::avfilter_get_by_name;
     use crate::filter_graph::{Filter, FilterGraph, FilterGraphParser};
-    use crate::frame::Frame;
+    use crate::frame::GenericFrame;
+    use crate::AVSampleFormat;
 
     #[test]
     fn test_filter_graph_new() {
@@ -541,8 +539,8 @@ mod tests {
         let source_context_name = "Parsed_abuffer_0";
         let sink_context_name = "Parsed_abuffersink_1";
 
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_SAMPLE_FMT_S16 as i32);
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
+        frame.set_format(AVSampleFormat::S16.into());
         let mut audio_frame = frame.audio();
         audio_frame.set_nb_samples(1024);
         audio_frame.set_sample_rate(44100);
@@ -576,16 +574,16 @@ mod tests {
         assert!(received_frame.is_some(), "No frame received from sink context");
 
         insta::assert_debug_snapshot!(received_frame.unwrap(), @r"
-        Frame {
+        GenericFrame {
             pts: None,
             dts: None,
             duration: Some(
                 1024,
             ),
             best_effort_timestamp: None,
-            time_base: AVRational {
-                num: 0,
-                den: 1,
+            time_base: Rational {
+                numerator: 0,
+                denominator: 1,
             },
             format: 1,
             is_audio: true,
@@ -612,8 +610,8 @@ mod tests {
             .source();
 
         // create frame w/ mismatched format and sample rate
-        let mut frame = Frame::new().expect("Failed to create frame");
-        frame.set_format(AV_SAMPLE_FMT_FLTP as i32);
+        let mut frame = GenericFrame::new().expect("Failed to create frame");
+        frame.set_format(AVSampleFormat::Fltp.into());
         let result = source_context.send_frame(&frame);
 
         assert!(result.is_err(), "send_frame should fail when sending an invalid frame");
