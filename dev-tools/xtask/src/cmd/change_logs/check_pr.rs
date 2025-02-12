@@ -25,10 +25,10 @@ impl CheckPr {
 
         let path = metadata
             .workspace_root
-            .parent()
-            .expect("it must have a parent")
             .join("changes.d")
             .join(format!("pr-{}.toml", self.pr_number));
+
+        eprintln!("checking {}", path);
 
         if !self.required && !path.exists() {
             return Ok(());

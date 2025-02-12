@@ -1,19 +1,20 @@
 use std::ptr::NonNull;
 
-use ffmpeg_sys_next::*;
-
 use crate::codec::EncoderCodec;
 use crate::dict::Dictionary;
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::frame::{AudioChannelLayout, Frame};
+use crate::ffi::*;
+use crate::frame::{AudioChannelLayout, GenericFrame};
 use crate::io::Output;
 use crate::packet::Packet;
+use crate::rational::Rational;
 use crate::smart_object::SmartPtr;
+use crate::{AVFormatFlags, AVPixelFormat, AVSampleFormat};
 
 /// Represents an encoder.
 pub struct Encoder {
-    incoming_time_base: AVRational,
-    outgoing_time_base: AVRational,
+    incoming_time_base: Rational,
+    outgoing_time_base: Rational,
     encoder: SmartPtr<AVCodecContext>,
     stream_index: i32,
     previous_dts: i64,
@@ -27,14 +28,14 @@ unsafe impl Send for Encoder {}
 pub struct VideoEncoderSettings {
     width: i32,
     height: i32,
-    frame_rate: AVRational,
+    frame_rate: Rational,
     pixel_format: AVPixelFormat,
     gop_size: Option<i32>,
     qmax: Option<i32>,
     qmin: Option<i32>,
     thread_count: Option<i32>,
     thread_type: Option<i32>,
-    sample_aspect_ratio: Option<AVRational>,
+    sample_aspect_ratio: Option<Rational>,
     bitrate: Option<i64>,
     rc_min_rate: Option<i64>,
     rc_max_rate: Option<i64>,
@@ -47,11 +48,7 @@ pub struct VideoEncoderSettings {
 
 impl VideoEncoderSettings {
     fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
-        if self.width <= 0
-            || self.height <= 0
-            || self.frame_rate.num <= 0
-            || self.frame_rate.den <= 0
-            || self.pixel_format == AVPixelFormat::AV_PIX_FMT_NONE
+        if self.width <= 0 || self.height <= 0 || self.frame_rate.numerator <= 0 || self.pixel_format == AVPixelFormat::None
         {
             return Err(FfmpegError::Arguments(
                 "width, height, frame_rate and pixel_format must be set",
@@ -60,9 +57,12 @@ impl VideoEncoderSettings {
 
         encoder.width = self.width;
         encoder.height = self.height;
-        encoder.pix_fmt = self.pixel_format;
-        encoder.sample_aspect_ratio = self.sample_aspect_ratio.unwrap_or(encoder.sample_aspect_ratio);
-        encoder.framerate = self.frame_rate;
+        encoder.pix_fmt = self.pixel_format.into();
+        encoder.sample_aspect_ratio = self
+            .sample_aspect_ratio
+            .map(Into::into)
+            .unwrap_or(encoder.sample_aspect_ratio);
+        encoder.framerate = self.frame_rate.into();
         encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
         encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);
         encoder.gop_size = self.gop_size.unwrap_or(encoder.gop_size);
@@ -99,7 +99,7 @@ pub struct AudioEncoderSettings {
 
 impl AudioEncoderSettings {
     fn apply(self, encoder: &mut AVCodecContext) -> Result<(), FfmpegError> {
-        if self.sample_rate <= 0 || self.sample_fmt == AVSampleFormat::AV_SAMPLE_FMT_NONE {
+        if self.sample_rate <= 0 || self.sample_fmt == AVSampleFormat::None {
             return Err(FfmpegError::Arguments(
                 "sample_rate, channel_layout and sample_fmt must be set",
             ));
@@ -107,7 +107,7 @@ impl AudioEncoderSettings {
 
         encoder.sample_rate = self.sample_rate;
         self.ch_layout.apply(&mut encoder.ch_layout);
-        encoder.sample_fmt = self.sample_fmt;
+        encoder.sample_fmt = self.sample_fmt.into();
         encoder.thread_count = self.thread_count.unwrap_or(encoder.thread_count);
         encoder.thread_type = self.thread_type.unwrap_or(encoder.thread_type);
         encoder.bit_rate = self.bitrate.unwrap_or(encoder.bit_rate);
@@ -162,8 +162,8 @@ impl Encoder {
     pub fn new<T: Send + Sync>(
         codec: EncoderCodec,
         output: &mut Output<T>,
-        incoming_time_base: AVRational,
-        outgoing_time_base: AVRational,
+        incoming_time_base: impl Into<Rational>,
+        outgoing_time_base: impl Into<Rational>,
         settings: impl Into<EncoderSettings>,
     ) -> Result<Self, FfmpegError> {
         if codec.as_ptr().is_null() {
@@ -172,7 +172,9 @@ impl Encoder {
 
         let mut settings = settings.into();
 
-        let global_header = output.flags() & AVFMT_GLOBALHEADER != 0;
+        let global_header = output
+            .output_flags()
+            .is_some_and(|flags| flags & AVFormatFlags::GlobalHeader != 0);
 
         let destructor = |ptr: &mut *mut AVCodecContext| {
             // Safety: `avcodec_free_context` is safe to call when the pointer is valid, and it is because it comes from `avcodec_alloc_context3`.
@@ -189,7 +191,10 @@ impl Encoder {
 
         let encoder_mut = encoder.as_deref_mut_except();
 
-        encoder_mut.time_base = incoming_time_base;
+        let incoming_time_base = incoming_time_base.into();
+        let outgoing_time_base = outgoing_time_base.into();
+
+        encoder_mut.time_base = incoming_time_base.into();
 
         let mut codec_options = settings.codec_specific_options().cloned();
 
@@ -234,7 +239,7 @@ impl Encoder {
     }
 
     /// Sends a frame to the encoder.
-    pub fn send_frame(&mut self, frame: &Frame) -> Result<(), FfmpegError> {
+    pub fn send_frame(&mut self, frame: &GenericFrame) -> Result<(), FfmpegError> {
         // Safety: `self.encoder` and `frame` are valid pointers.
         FfmpegErrorCode(unsafe { avcodec_send_frame(self.encoder.as_mut_ptr(), frame.as_ptr()) }).result()?;
         Ok(())
@@ -279,12 +284,12 @@ impl Encoder {
     }
 
     /// Returns the incoming time base of the encoder.
-    pub const fn incoming_time_base(&self) -> AVRational {
+    pub const fn incoming_time_base(&self) -> Rational {
         self.incoming_time_base
     }
 
     /// Returns the outgoing time base of the encoder.
-    pub const fn outgoing_time_base(&self) -> AVRational {
+    pub const fn outgoing_time_base(&self) -> Rational {
         self.outgoing_time_base
     }
 }
@@ -295,8 +300,7 @@ mod tests {
     use std::io::Write;
 
     use bytes::{Buf, Bytes};
-    use ffmpeg_sys_next::AVCodecID::AV_CODEC_ID_MPEG4;
-    use ffmpeg_sys_next::{AVCodecContext, AVMediaType, AVPixelFormat, AVRational, AVSampleFormat};
+    use rusty_ffmpeg::ffi::AVRational;
     use sha2::Digest;
 
     use crate::codec::EncoderCodec;
@@ -304,15 +308,18 @@ mod tests {
     use crate::dict::Dictionary;
     use crate::encoder::{AudioChannelLayout, AudioEncoderSettings, Encoder, EncoderSettings, VideoEncoderSettings};
     use crate::error::FfmpegError;
+    use crate::ffi::AVCodecContext;
     use crate::io::{Input, Output, OutputOptions};
+    use crate::rational::Rational;
+    use crate::{AVChannelOrder, AVCodecID, AVMediaType, AVPixelFormat, AVSampleFormat};
 
     #[test]
     fn test_video_encoder_apply() {
         let width = 1920;
         let height = 1080;
         let frame_rate = 30;
-        let pixel_format = AVPixelFormat::AV_PIX_FMT_YUV420P;
-        let sample_aspect_ratio = AVRational { num: 1, den: 1 };
+        let pixel_format = AVPixelFormat::Yuv420p;
+        let sample_aspect_ratio = 1;
         let gop_size = 12;
         let qmax = 31;
         let qmin = 1;
@@ -332,9 +339,9 @@ mod tests {
         let settings = VideoEncoderSettings::builder()
             .width(width)
             .height(height)
-            .frame_rate(AVRational { num: frame_rate, den: 1 })
+            .frame_rate(frame_rate.into())
             .pixel_format(pixel_format)
-            .sample_aspect_ratio(sample_aspect_ratio)
+            .sample_aspect_ratio(sample_aspect_ratio.into())
             .gop_size(gop_size)
             .qmax(qmax)
             .qmin(qmin)
@@ -352,9 +359,9 @@ mod tests {
 
         assert_eq!(settings.width, width);
         assert_eq!(settings.height, height);
-        assert_eq!(settings.frame_rate, AVRational { num: frame_rate, den: 1 });
+        assert_eq!(settings.frame_rate, frame_rate.into());
         assert_eq!(settings.pixel_format, pixel_format);
-        assert_eq!(settings.sample_aspect_ratio, Some(sample_aspect_ratio));
+        assert_eq!(settings.sample_aspect_ratio, Some(sample_aspect_ratio.into()));
         assert_eq!(settings.gop_size, Some(gop_size));
         assert_eq!(settings.qmax, Some(qmax));
         assert_eq!(settings.qmin, Some(qmin));
@@ -379,10 +386,9 @@ mod tests {
 
         assert_eq!(encoder.width, width);
         assert_eq!(encoder.height, height);
-        assert_eq!(encoder.pix_fmt, pixel_format);
-        assert_eq!(encoder.sample_aspect_ratio, sample_aspect_ratio);
-        assert_eq!(encoder.framerate.num, frame_rate);
-        assert_eq!(encoder.framerate.den, 1);
+        assert_eq!(AVPixelFormat(encoder.pix_fmt), pixel_format);
+        assert_eq!(Rational::from(encoder.sample_aspect_ratio), sample_aspect_ratio.into());
+        assert_eq!(Rational::from(encoder.framerate), frame_rate.into());
         assert_eq!(encoder.thread_count, thread_count);
         assert_eq!(encoder.thread_type, thread_type);
         assert_eq!(encoder.gop_size, gop_size);
@@ -402,8 +408,8 @@ mod tests {
         let settings = VideoEncoderSettings::builder()
             .width(0)
             .height(0)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(AVRational { num: 0, den: 1 })
+            .pixel_format(AVPixelFormat::Yuv420p)
+            .frame_rate(0.into())
             .build();
         // Safety: We are zeroing the memory for the encoder context.
         let mut encoder = unsafe { std::mem::zeroed::<AVCodecContext>() };
@@ -420,7 +426,7 @@ mod tests {
     fn test_audio_encoder_apply() {
         let sample_rate = 44100;
         let channel_count = 2;
-        let sample_fmt = AVSampleFormat::AV_SAMPLE_FMT_S16;
+        let sample_fmt = AVSampleFormat::S16;
         let thread_count = 4;
         let thread_type = 1;
         let bitrate = 128_000;
@@ -472,10 +478,10 @@ mod tests {
     fn test_ch_layout_valid_layout() {
         // Safety: This is safe to call and the channel layout is allocated on the stack.
         let channel_layout = unsafe {
-            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
-                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_NATIVE,
+            AudioChannelLayout::wrap(crate::ffi::AVChannelLayout {
+                order: AVChannelOrder::Native.into(),
                 nb_channels: 2,
-                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0b11 },
+                u: crate::ffi::AVChannelLayout__bindgen_ty_1 { mask: 0b11 },
                 opaque: std::ptr::null_mut(),
             })
         };
@@ -487,10 +493,10 @@ mod tests {
     fn test_ch_layout_invalid_layout() {
         // Safety: This is safe to call and the channel layout is allocated on the stack.
         let channel_layout = unsafe {
-            AudioChannelLayout::wrap(ffmpeg_sys_next::AVChannelLayout {
-                order: ffmpeg_sys_next::AVChannelOrder::AV_CHANNEL_ORDER_UNSPEC,
+            AudioChannelLayout::wrap(crate::ffi::AVChannelLayout {
+                order: AVChannelOrder::Unspecified.into(),
                 nb_channels: 0,
-                u: ffmpeg_sys_next::AVChannelLayout__bindgen_ty_1 { mask: 0 },
+                u: crate::ffi::AVChannelLayout__bindgen_ty_1 { mask: 0 },
                 opaque: std::ptr::null_mut(),
             })
         };
@@ -502,7 +508,7 @@ mod tests {
     fn test_audio_encoder_settings_apply_error() {
         let settings = AudioEncoderSettings::builder()
             .sample_rate(0)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_NONE)
+            .sample_fmt(AVSampleFormat::None)
             .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .build();
 
@@ -523,9 +529,9 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(AVRational { num: 30, den: 1 })
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .sample_aspect_ratio(sample_aspect_ratio)
+            .frame_rate(30.into())
+            .pixel_format(AVPixelFormat::Yuv420p)
+            .sample_aspect_ratio(sample_aspect_ratio.into())
             .gop_size(12)
             .build();
 
@@ -537,16 +543,15 @@ mod tests {
         assert!(result.is_ok(), "Failed to apply video settings: {:?}", result.err());
         assert_eq!(encoder.width, 1920);
         assert_eq!(encoder.height, 1080);
-        assert_eq!(encoder.pix_fmt, AVPixelFormat::AV_PIX_FMT_YUV420P);
-        assert_eq!(encoder.sample_aspect_ratio.num, 1);
-        assert_eq!(encoder.sample_aspect_ratio.den, 1);
+        assert_eq!(AVPixelFormat(encoder.pix_fmt), AVPixelFormat::Yuv420p);
+        assert_eq!(Rational::from(encoder.sample_aspect_ratio), sample_aspect_ratio.into());
     }
 
     #[test]
     fn test_encoder_settings_apply_audio() {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
+            .sample_fmt(AVSampleFormat::Fltp)
             .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .build();
@@ -558,7 +563,7 @@ mod tests {
 
         assert!(result.is_ok(), "Failed to apply audio settings: {:?}", result.err());
         assert_eq!(encoder.sample_rate, 44100);
-        assert_eq!(encoder.sample_fmt, AVSampleFormat::AV_SAMPLE_FMT_FLTP);
+        assert_eq!(AVSampleFormat(encoder.sample_fmt), AVSampleFormat::Fltp);
         assert_eq!(encoder.thread_count, 4);
     }
 
@@ -570,8 +575,8 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(8)
             .height(8)
-            .frame_rate(AVRational { num: 30, den: 1 })
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(30.into())
+            .pixel_format(AVPixelFormat::Yuv420p)
             .codec_specific_options(video_codec_options.clone())
             .build();
         let mut encoder_settings = EncoderSettings::Video(video_settings);
@@ -584,7 +589,7 @@ mod tests {
         audio_codec_options.set(c"bitrate", c"128k").expect("Failed to set bitrate");
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
+            .sample_fmt(AVSampleFormat::Fltp)
             .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .codec_specific_options(audio_codec_options)
@@ -602,9 +607,9 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(AVRational { num: 30, den: 1 })
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .sample_aspect_ratio(sample_aspect_ratio)
+            .frame_rate(30.into())
+            .pixel_format(AVPixelFormat::Yuv420p)
+            .sample_aspect_ratio(sample_aspect_ratio.into())
             .gop_size(12)
             .build();
         let encoder_settings: EncoderSettings = video_settings.into();
@@ -612,9 +617,9 @@ mod tests {
         if let EncoderSettings::Video(actual_video_settings) = encoder_settings {
             assert_eq!(actual_video_settings.width, 1920);
             assert_eq!(actual_video_settings.height, 1080);
-            assert_eq!(actual_video_settings.frame_rate, AVRational { num: 30, den: 1 });
-            assert_eq!(actual_video_settings.pixel_format, AVPixelFormat::AV_PIX_FMT_YUV420P);
-            assert_eq!(actual_video_settings.sample_aspect_ratio, Some(sample_aspect_ratio));
+            assert_eq!(actual_video_settings.frame_rate, 30.into());
+            assert_eq!(actual_video_settings.pixel_format, AVPixelFormat::Yuv420p);
+            assert_eq!(actual_video_settings.sample_aspect_ratio, Some(sample_aspect_ratio.into()));
             assert_eq!(actual_video_settings.gop_size, Some(12));
         } else {
             panic!("Expected EncoderSettings::Video variant");
@@ -625,7 +630,7 @@ mod tests {
     fn test_from_audio_encoder_settings() {
         let audio_settings = AudioEncoderSettings::builder()
             .sample_rate(44100)
-            .sample_fmt(AVSampleFormat::AV_SAMPLE_FMT_FLTP)
+            .sample_fmt(AVSampleFormat::Fltp)
             .ch_layout(AudioChannelLayout::new(2).expect("channel_count is a valid value"))
             .thread_count(4)
             .build();
@@ -633,7 +638,7 @@ mod tests {
 
         if let EncoderSettings::Audio(actual_audio_settings) = encoder_settings {
             assert_eq!(actual_audio_settings.sample_rate, 44100);
-            assert_eq!(actual_audio_settings.sample_fmt, AVSampleFormat::AV_SAMPLE_FMT_FLTP);
+            assert_eq!(actual_audio_settings.sample_fmt, AVSampleFormat::Fltp);
             assert_eq!(actual_audio_settings.thread_count, Some(4));
         } else {
             panic!("Expected EncoderSettings::Audio variant");
@@ -651,8 +656,8 @@ mod tests {
         let settings = VideoEncoderSettings::builder()
             .width(0)
             .height(0)
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
-            .frame_rate(AVRational { num: 0, den: 1 })
+            .pixel_format(AVPixelFormat::Yuv420p)
+            .frame_rate(0.into())
             .build();
         let result = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, settings);
 
@@ -661,7 +666,7 @@ mod tests {
 
     #[test]
     fn test_encoder_new_success() {
-        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4);
+        let codec = EncoderCodec::new(AVCodecID::Mpeg4);
         assert!(codec.is_some(), "Failed to find MPEG-4 encoder");
         let data = std::io::Cursor::new(Vec::new());
         let options = OutputOptions::builder().format_name("mp4").unwrap().build();
@@ -671,32 +676,30 @@ mod tests {
         let settings = VideoEncoderSettings::builder()
             .width(1920)
             .height(1080)
-            .frame_rate(AVRational { num: 30, den: 1 })
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(30.into())
+            .pixel_format(AVPixelFormat::Yuv420p)
             .build();
         let result = Encoder::new(codec.unwrap(), &mut output, incoming_time_base, outgoing_time_base, settings);
 
         assert!(result.is_ok(), "Encoder creation failed: {:?}", result.err());
 
         let encoder = result.unwrap();
-        assert_eq!(encoder.incoming_time_base.num, 1);
-        assert_eq!(encoder.incoming_time_base.den, 1000);
-        assert_eq!(encoder.outgoing_time_base.num, 1);
-        assert_eq!(encoder.outgoing_time_base.den, 1000);
+        assert_eq!(encoder.incoming_time_base, Rational::static_new::<1, 1000>());
+        assert_eq!(encoder.outgoing_time_base, Rational::static_new::<1, 1000>());
         assert_eq!(encoder.stream_index, 0);
     }
 
     #[test]
     fn test_send_eof() {
-        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
+        let codec = EncoderCodec::new(AVCodecID::Mpeg4).expect("Failed to find MPEG-4 encoder");
         let data = std::io::Cursor::new(Vec::new());
         let options = OutputOptions::builder().format_name("mp4").unwrap().build();
         let mut output = Output::new(data, options).expect("Failed to create Output");
         let video_settings = VideoEncoderSettings::builder()
             .width(640)
             .height(480)
-            .frame_rate(AVRational { num: 30, den: 1 })
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(30.into())
+            .pixel_format(AVPixelFormat::Yuv420p)
             .build();
         let mut encoder = Encoder::new(
             codec,
@@ -714,7 +717,7 @@ mod tests {
 
     #[test]
     fn test_encoder_getters() {
-        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder");
+        let codec = EncoderCodec::new(AVCodecID::Mpeg4).expect("Failed to find MPEG-4 encoder");
         let data = std::io::Cursor::new(Vec::new());
         let options = OutputOptions::builder().format_name("mp4").unwrap().build();
         let mut output = Output::new(data, options).expect("Failed to create Output");
@@ -723,8 +726,8 @@ mod tests {
         let video_settings = VideoEncoderSettings::builder()
             .width(640)
             .height(480)
-            .frame_rate(AVRational { num: 30, den: 1 })
-            .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+            .frame_rate(30.into())
+            .pixel_format(AVPixelFormat::Yuv420p)
             .build();
         let encoder = Encoder::new(codec, &mut output, incoming_time_base, outgoing_time_base, video_settings)
             .expect("Failed to create encoder");
@@ -734,16 +737,20 @@ mod tests {
 
         let actual_incoming_time_base = encoder.incoming_time_base();
         assert_eq!(
-            actual_incoming_time_base, incoming_time_base,
+            actual_incoming_time_base,
+            incoming_time_base.into(),
             "Unexpected incoming_time_base: expected {:?}, got {:?}",
-            incoming_time_base, actual_incoming_time_base
+            incoming_time_base,
+            actual_incoming_time_base
         );
 
         let actual_outgoing_time_base = encoder.outgoing_time_base();
         assert_eq!(
-            actual_outgoing_time_base, outgoing_time_base,
+            actual_outgoing_time_base,
+            outgoing_time_base.into(),
             "Unexpected outgoing_time_base: expected {:?}, got {:?}",
-            outgoing_time_base, actual_outgoing_time_base
+            outgoing_time_base,
+            actual_outgoing_time_base
         );
     }
 
@@ -751,7 +758,7 @@ mod tests {
     fn test_encoder_encode_video() {
         let mut input = Input::open("../../assets/avc_aac.mp4").expect("Failed to open input file");
         let streams = input.streams();
-        let video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("No video stream found");
+        let video_stream = streams.best(AVMediaType::Video).expect("No video stream found");
         let mut decoder = Decoder::new(&video_stream)
             .expect("Failed to create decoder")
             .video()
@@ -762,7 +769,7 @@ mod tests {
         )
         .expect("Failed to create Output");
         let mut encoder = Encoder::new(
-            EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Failed to find MPEG-4 encoder"),
+            EncoderCodec::new(AVCodecID::Mpeg4).expect("Failed to find MPEG-4 encoder"),
             &mut output,
             AVRational { num: 1, den: 1000 },
             video_stream.time_base(),
@@ -802,17 +809,28 @@ mod tests {
         let mut boxes = Vec::new();
         while cursor.has_remaining() {
             let mut _box = scuffle_mp4::DynBox::demux(&mut cursor).expect("Failed to demux box");
-            if let scuffle_mp4::DynBox::Mdat(mdat) = &mut _box {
-                mdat.data.iter_mut().for_each(|buf| {
-                    let mut hash = sha2::Sha256::new();
-                    hash.write_all(buf).unwrap();
-                    *buf = hash.finalize().to_vec().into();
-                });
+            match &mut _box {
+                scuffle_mp4::DynBox::Mdat(mdat) => {
+                    mdat.data.iter_mut().for_each(|buf| {
+                        let mut hash = sha2::Sha256::new();
+                        hash.write_all(buf).unwrap();
+                        *buf = Bytes::new();
+                    });
+                }
+                scuffle_mp4::DynBox::Moov(moov) => {
+                    moov.traks.iter_mut().for_each(|trak| {
+                        // these can change from version to version
+                        trak.mdia.minf.stbl.stsd.entries.clear();
+                        if let Some(stsz) = trak.mdia.minf.stbl.stsz.as_mut() {
+                            stsz.samples.clear();
+                        }
+                        trak.mdia.minf.stbl.stco.entries.clear();
+                    });
+                }
+                _ => {}
             }
-
             boxes.push(_box);
         }
-
         insta::assert_debug_snapshot!("test_encoder_encode_video", &boxes);
     }
 
@@ -828,7 +846,7 @@ mod tests {
         let mut settings = Dictionary::new();
         settings.set(c"key", c"value").expect("Failed to set Dictionary entry");
 
-        let codec = EncoderCodec::new(AV_CODEC_ID_MPEG4).expect("Missing MPEG-4 codec");
+        let codec = EncoderCodec::new(AVCodecID::Mpeg4).expect("Missing MPEG-4 codec");
 
         Encoder::new(
             codec,
@@ -838,8 +856,8 @@ mod tests {
             VideoEncoderSettings::builder()
                 .width(16)
                 .height(16)
-                .frame_rate(AVRational { num: 30, den: 1 })
-                .pixel_format(AVPixelFormat::AV_PIX_FMT_YUV420P)
+                .frame_rate(30.into())
+                .pixel_format(AVPixelFormat::Yuv420p)
                 .codec_specific_options(settings)
                 .build(),
         )

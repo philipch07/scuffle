@@ -298,6 +298,8 @@ dependencies = [
  "cexpr",
  "clang-sys",
  "itertools 0.12.1",
+ "log",
+ "prettyplease",
  "proc-macro2",
  "quote",
  "regex",
@@ -922,20 +924,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
-name = "ffmpeg-sys-next"
-version = "7.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bc3234d0a4b2f7d083699d0860c6c9dd83713908771b60f94a96f8704adfe45"
-dependencies = [
- "bindgen 0.70.1",
- "cc",
- "libc",
- "num_cpus",
- "pkg-config",
- "vcpkg",
-]
-
-[[package]]
 name = "findshlibs"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1220,12 +1208,6 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
-
-[[package]]
-name = "hermit-abi"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hermit-abi"
@@ -1558,7 +1540,7 @@ version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "261f68e344040fbd0edea105bef17c66edf46f984ddb1115b775ce31be948f4b"
 dependencies = [
- "hermit-abi 0.4.0",
+ "hermit-abi",
  "libc",
  "windows-sys 0.52.0",
 ]
@@ -1847,16 +1829,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "num_cpus"
-version = "1.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4161fcb6d602d4d2081af7c3a45852d875a03dd337a6bfdd6e06407b61342a43"
-dependencies = [
- "hermit-abi 0.3.9",
- "libc",
 ]
 
 [[package]]
@@ -2651,6 +2623,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e819f2bc632f285be6d7cd36e25940d45b2391dd6d9b939e79de557f7014248"
 
 [[package]]
+name = "rusty_ffmpeg"
+version = "0.16.1+ffmpeg.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2c55bdb58510a7625f460fe4b57a90b5a763e082da2dc7038ac02a9e5f2cfb9"
+dependencies = [
+ "bindgen 0.70.1",
+ "camino",
+ "libc",
+ "once_cell",
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2849,11 +2835,11 @@ dependencies = [
  "bon",
  "bytes",
  "crossbeam-channel",
- "ffmpeg-sys-next",
  "insta",
  "libc",
  "nutype-enum",
  "rand",
+ "rusty_ffmpeg",
  "scuffle-mp4",
  "scuffle-workspace-hack",
  "sha2",
@@ -3145,6 +3131,7 @@ dependencies = [
  "bitflags 2.6.0",
  "byteorder",
  "bytes",
+ "camino",
  "cc",
  "chrono",
  "clap",
@@ -3154,7 +3141,6 @@ dependencies = [
  "digest",
  "either",
  "fastrand",
- "ffmpeg-sys-next",
  "futures-channel",
  "futures-core",
  "futures-executor",
@@ -3175,6 +3161,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry_sdk",
  "percent-encoding",
+ "prettyplease",
  "proc-macro2",
  "quote",
  "rand",
@@ -3183,6 +3170,7 @@ dependencies = [
  "regex-syntax 0.8.5",
  "rustls",
  "rustls-webpki",
+ "rusty_ffmpeg",
  "serde",
  "serde_json",
  "smallvec",

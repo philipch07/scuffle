@@ -20,9 +20,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             0,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -44,9 +44,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             1024,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -68,9 +68,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             2048,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -92,9 +92,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             3072,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -116,9 +116,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             4096,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -140,9 +140,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             5120,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -164,9 +164,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             6144,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -188,9 +188,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             7168,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -212,9 +212,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             8192,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -236,9 +236,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             9216,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -260,9 +260,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             10240,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -284,9 +284,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             11264,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -308,9 +308,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             12288,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -332,9 +332,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             13312,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -356,9 +356,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             14336,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -380,9 +380,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             15360,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -404,9 +404,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             16384,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -428,9 +428,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             17408,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -452,9 +452,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             18432,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -476,9 +476,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             19456,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -500,9 +500,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             20480,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -524,9 +524,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             21504,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -548,9 +548,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             22528,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -572,9 +572,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             23552,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -596,9 +596,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             24576,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -620,9 +620,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             25600,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -644,9 +644,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             26624,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -668,9 +668,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             27648,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -692,9 +692,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             28672,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -716,9 +716,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             29696,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -740,9 +740,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             30720,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -764,9 +764,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             31744,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -788,9 +788,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             32768,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -812,9 +812,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             33792,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -836,9 +836,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             34816,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -860,9 +860,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             35840,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -884,9 +884,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             36864,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -908,9 +908,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             37888,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -932,9 +932,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             38912,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -956,9 +956,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             39936,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -980,9 +980,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             40960,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -1004,9 +1004,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             41984,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -1028,9 +1028,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             43008,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -1052,9 +1052,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             44032,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -1076,9 +1076,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             45056,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -1100,9 +1100,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             46080,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,
@@ -1124,9 +1124,9 @@ snapshot_kind: text
         best_effort_timestamp: Some(
             47104,
         ),
-        time_base: AVRational {
-            num: 1,
-            den: 48000,
+        time_base: Rational {
+            numerator: 1,
+            denominator: 48000,
         },
         format: 8,
         is_audio: true,

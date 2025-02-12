@@ -130,7 +130,11 @@ impl Generate {
 
         let workspace_package_ids = metadata.workspace_members.iter().cloned().collect::<HashSet<_>>();
 
-        let mut change_fragments = std::fs::read_dir("changes.d")?
+        let path = metadata.workspace_root.join("changes.d");
+
+        eprintln!("reading {}", path);
+
+        let mut change_fragments = std::fs::read_dir(&path)?
             .filter_map(|entry| entry.ok())
             .filter_map(|entry| {
                 let path = entry.path();

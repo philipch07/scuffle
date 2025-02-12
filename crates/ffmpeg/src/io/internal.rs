@@ -1,8 +1,9 @@
-use ffmpeg_sys_next::*;
-use libc::{c_void, SEEK_CUR, SEEK_END, SEEK_SET};
+use libc::c_void;
 
 use crate::error::{FfmpegError, FfmpegErrorCode};
+use crate::ffi::*;
 use crate::smart_object::SmartPtr;
+use crate::{AVIOFlag, AVSeekWhence};
 
 const AVERROR_IO: i32 = AVERROR(EIO);
 
@@ -40,17 +41,19 @@ pub(crate) unsafe extern "C" fn write_packet<T: std::io::Write>(
 
 /// Safety: The function must be used with the same type as the one used to
 /// generically create the function pointer
-pub(crate) unsafe extern "C" fn seek<T: std::io::Seek>(opaque: *mut libc::c_void, offset: i64, mut whence: i32) -> i64 {
+pub(crate) unsafe extern "C" fn seek<T: std::io::Seek>(opaque: *mut libc::c_void, offset: i64, whence: i32) -> i64 {
     let this = &mut *(opaque as *mut T);
 
-    let seek_size = whence & AVSEEK_SIZE != 0;
+    let mut whence = AVSeekWhence(whence);
+
+    let seek_size = whence & AVSeekWhence::Size != 0;
     if seek_size {
-        whence &= !AVSEEK_SIZE;
+        whence &= !AVSeekWhence::Size;
     }
 
-    let seek_force = whence & AVSEEK_FORCE != 0;
+    let seek_force = whence & AVSeekWhence::Force != 0;
     if seek_force {
-        whence &= !AVSEEK_FORCE;
+        whence &= !AVSeekWhence::Force;
     }
 
     if seek_size {
@@ -72,9 +75,9 @@ pub(crate) unsafe extern "C" fn seek<T: std::io::Seek>(opaque: *mut libc::c_void
     }
 
     let whence = match whence {
-        SEEK_SET => std::io::SeekFrom::Start(offset as u64),
-        SEEK_CUR => std::io::SeekFrom::Current(offset),
-        SEEK_END => std::io::SeekFrom::End(offset),
+        AVSeekWhence::Start => std::io::SeekFrom::Start(offset as u64),
+        AVSeekWhence::Current => std::io::SeekFrom::Current(offset),
+        AVSeekWhence::End => std::io::SeekFrom::End(offset),
         _ => return -1,
     };
 
@@ -248,8 +251,14 @@ impl Inner<()> {
         }
 
         // Safety: avio_open is safe to call and all arguments are valid
-        FfmpegErrorCode(unsafe { avio_open(&mut this.context.as_deref_mut_except().pb, path.as_ptr(), AVIO_FLAG_WRITE) })
-            .result()?;
+        FfmpegErrorCode(unsafe {
+            avio_open(
+                &mut this.context.as_deref_mut_except().pb,
+                path.as_ptr(),
+                AVIOFlag::Write.into(),
+            )
+        })
+        .result()?;
 
         this.context.set_destructor(|mut_ref| {
             // We own this resource so we need to free it
@@ -279,12 +288,13 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Once;
 
-    use ffmpeg_sys_next::{av_guess_format, AVSEEK_FORCE};
-    use libc::{c_void, SEEK_CUR, SEEK_END};
+    use libc::c_void;
     use tempfile::Builder;
 
     use crate::error::FfmpegError;
+    use crate::ffi::av_guess_format;
     use crate::io::internal::{read_packet, seek, write_packet, Inner, InnerOptions, AVERROR_EOF};
+    use crate::AVSeekWhence;
 
     #[test]
     fn test_read_packet_eof() {
@@ -321,13 +331,13 @@ mod tests {
         let opaque = &raw mut cursor as *mut c_void;
         assert_eq!(cursor.position(), 0);
         let offset = 10;
-        let mut whence = SEEK_CUR | AVSEEK_FORCE;
+        let mut whence = AVSeekWhence::Current | AVSeekWhence::Force;
         // Safety: The pointer is valid.
-        let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, whence) };
+        let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, whence.into()) };
 
         assert_eq!(result, { offset });
-        whence &= !AVSEEK_FORCE;
-        assert_eq!(whence, SEEK_CUR);
+        whence &= !AVSeekWhence::Force;
+        assert_eq!(whence, AVSeekWhence::Current);
         assert_eq!(cursor.position(), offset as u64);
     }
 
@@ -336,9 +346,8 @@ mod tests {
         let mut cursor = Cursor::new(vec![0u8; 100]);
         let opaque = &raw mut cursor as *mut libc::c_void;
         let offset = -10;
-        let whence = SEEK_END;
         // Safety: The pointer is valid.
-        let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, whence) };
+        let result = unsafe { seek::<Cursor<Vec<u8>>>(opaque, offset, AVSeekWhence::End.into()) };
 
         assert_eq!(result, 90);
         assert_eq!(cursor.position(), 90);

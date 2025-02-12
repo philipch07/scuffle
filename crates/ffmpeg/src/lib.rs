@@ -18,7 +18,7 @@
 //!
 //! ```rust
 //! # use std::path::PathBuf;
-//! # use scuffle_ffmpeg::ffi::AVMediaType;
+//! # use scuffle_ffmpeg::AVMediaType;
 //! # fn test_fn() -> Result<(), Box<dyn std::error::Error>> {
 //! # let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets").join("avc_aac.mp4");
 //! // 1. Store the input of the file from the path `path`
@@ -31,8 +31,8 @@
 //! dbg!(&streams);
 //!
 //! // 3. Store video and audio stream into respective their variables; we will panic if either one doesn't exist.
-//! let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
-//! let best_audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("no audio stream found");
+//! let best_video_stream = streams.best(AVMediaType::Video).expect("no video stream found");
+//! let best_audio_stream = streams.best(AVMediaType::Audio).expect("no audio stream found");
 //!
 //! dbg!(&best_video_stream);
 //! dbg!(&best_audio_stream);
@@ -87,7 +87,7 @@
 //!
 //! ```rust
 //! # use std::path::PathBuf;
-//! # use scuffle_ffmpeg::ffi::{AVMediaType, AVCodecID};
+//! # use scuffle_ffmpeg::{AVMediaType, AVCodecID};
 //! # use scuffle_ffmpeg::encoder::{AudioEncoderSettings, VideoEncoderSettings};
 //! # use scuffle_ffmpeg::io::OutputOptions;
 //! # use scuffle_ffmpeg::frame::AudioChannelLayout;
@@ -103,8 +103,8 @@
 //! let streams = input.streams();
 //!
 //! // 3. Store the best video and audio streams into respective their variables; we will panic if either one doesn't exist.
-//! let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
-//! let best_audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("no audio stream found");
+//! let best_video_stream = streams.best(AVMediaType::Video).expect("no video stream found");
+//! let best_audio_stream = streams.best(AVMediaType::Audio).expect("no audio stream found");
 //!
 //! // 4. Create and store the respective video and audio decoders; we will panic if either one doesn't exist, or is an invalid decoder.
 //! let mut video_decoder = scuffle_ffmpeg::decoder::Decoder::new(&best_video_stream)?.video().expect("not an video decoder");
@@ -115,8 +115,8 @@
 //! let mut output = scuffle_ffmpeg::io::Output::seekable(std::io::Cursor::new(Vec::new()), OutputOptions::builder().format_name("mp4")?.build())?;
 //!
 //! // 6. Find the respective encoders for the video and audio streams.
-//! let x264 = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::AV_CODEC_ID_H264).expect("no h264 encoder found");
-//! let aac = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::AV_CODEC_ID_AAC).expect("no aac encoder found");
+//! let x264 = scuffle_ffmpeg::codec::EncoderCodec::by_name("libx264").expect("no h264 encoder found");
+//! let aac = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::Aac).expect("no aac encoder found");
 //!
 //! // 7. Create the respective encoder settings for the video and audio streams.
 //! let video_settings = VideoEncoderSettings::builder()
@@ -237,6 +237,8 @@ pub mod io;
 pub mod log;
 /// Packet specific functionality.
 pub mod packet;
+/// Rational number specific functionality.
+pub mod rational;
 /// Scalar specific functionality.
 pub mod scaler;
 /// Stream specific functionality.
@@ -244,6 +246,10 @@ pub mod stream;
 /// Utility functionality.
 pub mod utils;
 
-pub use ffmpeg_sys_next as ffi;
+pub use rusty_ffmpeg::ffi;
 
 mod smart_object;
+
+mod enums;
+
+pub use enums::*;

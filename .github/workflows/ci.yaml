@@ -244,36 +244,9 @@ jobs:
           accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
           command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ steps.brawl-override.outputs.pr_number || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} --commit-dirty=true ./target/doc
 
-  package:
-    name: Package
-    if: ${{ github.event_name == 'push' }}
-    runs-on: ubuntu-24.04
-    env:
-      RUST_TOOLCHAIN: stable
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.SHA }}
-
-      - name: Setup FFmpeg
-        uses: ./.github/actions/setup-ffmpeg
-
-      - name: Setup Rust
-        uses: ./.github/actions/setup-rust
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          shared-key: package
-          tools: just,cargo-hakari
-
-      - name: Disable Hakari
-        run: cargo hakari disable
-
-      - name: Run Cargo Package on Powerset
-        run: just powerset package -- --allow-dirty
-
   brawl-done:
     runs-on: ubuntu-24.04
-    needs: [hakari, test, clippy, fmt, grind, docs, package]
+    needs: [hakari, test, clippy, fmt, grind, docs]
     if: ${{ !cancelled() && github.event_name == 'push' }}
     steps:
       - name: calculate the correct exit status

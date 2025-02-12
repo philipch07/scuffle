@@ -36,8 +36,8 @@ let streams = input.streams();
 dbg!(&streams);
 
 // 3. Store video and audio stream into respective their variables; we will panic if either one doesn't exist.
-let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
-let best_audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("no audio stream found");
+let best_video_stream = streams.best(AVMediaType::Video).expect("no video stream found");
+let best_audio_stream = streams.best(AVMediaType::Audio).expect("no audio stream found");
 
 dbg!(&best_video_stream);
 dbg!(&best_audio_stream);
@@ -96,8 +96,8 @@ let input = scuffle_ffmpeg::io::Input::seekable(std::fs::File::open(path)?)?;
 let streams = input.streams();
 
 // 3. Store the best video and audio streams into respective their variables; we will panic if either one doesn't exist.
-let best_video_stream = streams.best(AVMediaType::AVMEDIA_TYPE_VIDEO).expect("no video stream found");
-let best_audio_stream = streams.best(AVMediaType::AVMEDIA_TYPE_AUDIO).expect("no audio stream found");
+let best_video_stream = streams.best(AVMediaType::Video).expect("no video stream found");
+let best_audio_stream = streams.best(AVMediaType::Audio).expect("no audio stream found");
 
 // 4. Create and store the respective video and audio decoders; we will panic if either one doesn't exist, or is an invalid decoder.
 let mut video_decoder = scuffle_ffmpeg::decoder::Decoder::new(&best_video_stream)?.video().expect("not an video decoder");
@@ -108,8 +108,8 @@ let mut audio_decoder = scuffle_ffmpeg::decoder::Decoder::new(&best_audio_stream
 let mut output = scuffle_ffmpeg::io::Output::seekable(std::io::Cursor::new(Vec::new()), OutputOptions::builder().format_name("mp4")?.build())?;
 
 // 6. Find the respective encoders for the video and audio streams.
-let x264 = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::AV_CODEC_ID_H264).expect("no h264 encoder found");
-let aac = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::AV_CODEC_ID_AAC).expect("no aac encoder found");
+let x264 = scuffle_ffmpeg::codec::EncoderCodec::by_name("libx264").expect("no h264 encoder found");
+let aac = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::Aac).expect("no aac encoder found");
 
 // 7. Create the respective encoder settings for the video and audio streams.
 let video_settings = VideoEncoderSettings::builder()
