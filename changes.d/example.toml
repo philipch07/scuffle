@@ -1,0 +1,14 @@
+[[scuffle-transmuxer]]
+category = "feat"
+description = "Added a new feature"
+authors = ["@TroyKomodo"]
+
+[[scuffle-aac]]
+category = "chore"
+description = "improved build times"
+
+[[scuffle-nutype-enum]]
+category = "fix"
+description = "Fixed a bug"
+breaking = true
+authors = ["@TroyKomodo", "@0Lennart"]

@@ -32,3 +32,5 @@ category will be grouped together in the changelog. Breaking changes will be in 
 The `breaking` field is optional. If it is not present, the change is not considered a breaking change.
 
 The `authors` field is optional. If it is not present, the change will not have any authors.
+
+You can refer to the [example file](./example.toml) for an example of how to write a changelog fragment.

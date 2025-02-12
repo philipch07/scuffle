@@ -87,7 +87,7 @@ fn update_change_log(logs: &[PackageChangeLog], manifest_path: &Utf8Path) -> any
     }
 
     if !other_changes.is_empty() {
-        replaced.push_str("\n### 🛠️ Other changes\n\n");
+        replaced.push_str("\n### 🛠️ Non-breaking changes\n\n");
         replaced.push_str(&other_changes);
         replaced.push('\n');
     }

@@ -11,6 +11,8 @@ use crate::cmd::IGNORED_PACKAGES;
 pub struct CheckPr {
     /// The PR number to check
     pr_number: u64,
+    #[clap(long, default_value = "true", action = clap::ArgAction::Set)]
+    required: bool,
 }
 
 impl CheckPr {
@@ -27,6 +29,10 @@ impl CheckPr {
             .expect("it must have a parent")
             .join("changes.d")
             .join(format!("pr-{}.toml", self.pr_number));
+
+        if !self.required && !path.exists() {
+            return Ok(());
+        }
 
         let fragment = Fragment::new(self.pr_number, &PathBuf::from(path))?;
 
