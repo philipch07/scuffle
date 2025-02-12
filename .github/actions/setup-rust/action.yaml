@@ -1,0 +1,35 @@
+name: Setup Rust
+description: Configures the Rust toolchain
+inputs:
+  toolchain:
+    description: "The toolchain to use"
+    required: true
+    default: "stable"
+  components:
+    description: "The components to install"
+    required: false
+  shared-key:
+    description: "The key to use for the shared cache"
+    required: false
+  tools:
+    description: "The tools to install"
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      id: setup-rust
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+
+    - uses: Swatinem/rust-cache@v2
+      if: ${{ inputs.shared-key }}
+      with:
+        prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
+        shared-key: ${{ inputs.shared-key }}
+
+    - uses: taiki-e/install-action@v2
+      if: ${{ inputs.tools }}
+      with:
+        tool: ${{ inputs.tools }}

@@ -28,25 +28,34 @@ jobs:
         with:
           ref: ${{ env.SHA }}
 
-      - name: Setup system deps
-        run: |
-          set -xeo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx264-dev
+      - name: Setup FFmpeg
+        uses: ./.github/actions/setup-ffmpeg
 
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: clippy
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
           shared-key: clippy
+          tools: just,cargo-hakari
 
-      - name: Make sure code is linted
-        run: cargo +${{ env.RUST_TOOLCHAIN }} clippy --all-features --all-targets
+      - name: Disable Hakari
+        if: ${{ github.event_name == 'push' }}
+        run: cargo hakari disable
+
+      - name: Run Clippy
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -xeo pipefail
+          export RUSTFLAGS="-Dwarnings"
+          cargo +${{ env.RUST_TOOLCHAIN }} clippy -Z unstable-options --all-features --all-targets --no-deps
+
+      - name: Run Clippy on Powerset
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          set -xeo pipefail
+          export RUSTFLAGS="-Dwarnings"
+          just powerset clippy -- --all-targets --no-deps -Z unstable-options
 
   fmt:
     name: Fmt
@@ -58,8 +67,8 @@ jobs:
         with:
           ref: ${{ env.SHA }}
 
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt
@@ -75,14 +84,11 @@ jobs:
         with:
           ref: ${{ env.SHA }}
 
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-hakari
+          tools: cargo-hakari
 
       - name: Make sure Hakari is up-to-date
         run: |
@@ -100,40 +106,16 @@ jobs:
         with:
           ref: ${{ env.SHA }}
 
-      - name: Setup system deps
-        run: |
-          set -xeo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2 nasm libx264-dev
+      - name: Setup FFmpeg
+        uses: ./.github/actions/setup-ffmpeg
 
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
+          tools: cargo-nextest,cargo-llvm-cov
           components: llvm-tools-preview
-
-      - name: Install ffmpeg
-        run: |
-          set -xeo pipefail
-
-          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz
-          tar -xvf ffmpeg.tar.xz
-
-          sudo mv ffmpeg-7.1-linux-clang-default/include/* /usr/include
-          sudo mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib
-          sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
-          sudo rm -rf ffmpeg-7.1-linux-clang-default
-          sudo rm -rf ffmpeg.tar.xz
-          sudo ldconfig
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
           shared-key: test
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest,cargo-llvm-cov
 
       # Note; we don't run the powerset here because it's very slow on CI
       # Perhaps we should consider it at some point.
@@ -146,21 +128,22 @@ jobs:
           cargo +${{ env.RUST_TOOLCHAIN }} llvm-cov test --all-features --doc --no-report
           cargo +${{ env.RUST_TOOLCHAIN }} llvm-cov report --lcov --output-path ./lcov.info
 
-      - name: Codecov Override
+      - name: Brawl Override
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
+        id: brawl-override
         run: |
           PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
           RUN_COMMIT_SHA=$(git log -1 --pretty=format:%H)
-          echo "RUN_COMMIT_SHA=$RUN_COMMIT_SHA" >> $GITHUB_ENV
+          echo "run_commit_sha=$RUN_COMMIT_SHA" >> $GITHUB_OUTPUT
 
       - uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
           files: ./lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
-          override_pr: ${{ env.PR_NUMBER || github.event.pull_request.number || '' }}
-          override_commit: ${{ env.RUN_COMMIT_SHA || env.SHA }}
+          override_pr: ${{ steps.brawl-override.outputs.pr_number || github.event.pull_request.number || '' }}
+          override_commit: ${{ steps.brawl-override.outputs.run_commit_sha || env.SHA }}
           verbose: true
 
       - name: Upload test results to Codecov
@@ -168,8 +151,8 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           files: ./target/nextest/ci/junit.xml
-          override_pr: ${{ env.PR_NUMBER || github.event.pull_request.number || '' }}
-          override_commit: ${{ env.RUN_COMMIT_SHA || env.SHA }}
+          override_pr: ${{ steps.brawl-override.outputs.pr_number || github.event.pull_request.number || '' }}
+          override_commit: ${{ steps.brawl-override.outputs.run_commit_sha || env.SHA }}
           token: ${{ secrets.CODECOV_TOKEN }}
 
   grind:
@@ -181,44 +164,29 @@ jobs:
         with:
           ref: ${{ env.SHA }}
 
-      - name: Setup system deps
+      - name: Setup FFmpeg
+        uses: ./.github/actions/setup-ffmpeg
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          tools: cargo-nextest,cargo-llvm-cov
+          components: llvm-tools-preview
+          shared-key: grind
+
+      - name: Install Valgrind
         run: |
           set -xeo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2 nasm libx264-dev valgrind
-
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: llvm-tools-preview
-
-      - name: Install ffmpeg
-        run: |
-          set -xeo pipefail
-
-          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz
-          tar -xvf ffmpeg.tar.xz
-
-          sudo mv ffmpeg-7.1-linux-clang-default/include/* /usr/include
-          sudo mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib
-          sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
-          sudo rm -rf ffmpeg-7.1-linux-clang-default
-          sudo rm -rf ffmpeg.tar.xz
-          sudo ldconfig
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
-          shared-key: grind
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest,cargo-llvm-cov
+          sudo apt-get install -y --no-install-recommends valgrind
 
       - name: Run valgrind
         run: |
-          RUSTFLAGS="--cfg=valgrind" CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=$(pwd)/valgrind_suppressions.log" cargo +${{ env.RUST_TOOLCHAIN }} nextest run --all-features --no-fail-fast --profile ci
+          set -xeo pipefail
+          export RUSTFLAGS="--cfg=valgrind"
+          export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=$(pwd)/valgrind_suppressions.log"
+          cargo +${{ env.RUST_TOOLCHAIN }} nextest run --all-features --no-fail-fast --profile ci
 
   docs:
     name: Docs
@@ -230,43 +198,36 @@ jobs:
         with:
           ref: ${{ env.SHA }}
 
-      - name: Setup system deps
-        run: |
-          sudo apt-get install -y --no-install-recommends nasm libx264-dev
+      - name: Setup FFmpeg
+        uses: ./.github/actions/setup-ffmpeg
 
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rust-docs
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
           shared-key: docs
 
       - name: Build docs
         run: |
-          RUSTDOCFLAGS="-D warnings --cfg docsrs --enable-index-page -Zunstable-options" cargo +${{ env.RUST_TOOLCHAIN }} doc --no-deps --all-features
+          set -xeo pipefail
+          export RUSTDOCFLAGS="-D warnings --cfg docsrs --enable-index-page -Zunstable-options"
+          cargo +${{ env.RUST_TOOLCHAIN }} doc --no-deps --all-features
 
-      - name: Get PR Number
+      - name: Brawl Override
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') }}
+        id: brawl-override
         run: |
           PR_NUMBER=$(echo ${{ github.ref }} | sed -n 's/^refs\/heads\/automation\/brawl\/try\/\([0-9]*\)$/\1/p')
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-
-      - name: Get short commit SHA
-        run: |
-          SHORT_SHA=$(echo ${{ env.SHA }} | cut -c 1-7)
-          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
       - name: Insert custom html for PR
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/try/') || github.event.pull_request.head.repo.full_name == github.repository }}
-        run: .github/patch-docs.sh ${{ github.event.repository.html_url }} ${{ env.SHA }} ${{ env.SHORT_SHA }} ${{ env.PR_NUMBER || github.event.pull_request.number }}
+        run: .github/patch-docs.sh ${{ github.event.repository.html_url }} ${{ env.SHA }} ${{ steps.brawl-override.outputs.pr_number || github.event.pull_request.number }}
 
       - name: Insert custom html for merge
         if: ${{ startsWith(github.ref, 'refs/heads/automation/brawl/merge/') }}
-        run: .github/patch-docs.sh ${{ github.event.repository.html_url }} ${{ env.SHA }} ${{ env.SHORT_SHA }}
+        run: .github/patch-docs.sh ${{ github.event.repository.html_url }} ${{ env.SHA }}
 
       - name: Upload docs
         uses: actions/upload-artifact@v4
@@ -281,62 +242,38 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_DOCS_API_KEY }}
           accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
-          command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ env.PR_NUMBER || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} --commit-dirty=true ./target/doc
+          command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ steps.brawl-override.outputs.pr_number || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} --commit-dirty=true ./target/doc
 
-  powerset:
-    name: Powerset
+  package:
+    name: Package
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-24.04
+    env:
+      RUST_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.SHA }}
 
-      - name: Setup system deps
-        run: |
-          set -xeo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2 nasm libx264-dev valgrind
+      - name: Setup FFmpeg
+        uses: ./.github/actions/setup-ffmpeg
 
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: clippy
-
-      - name: Install ffmpeg
-        run: |
-          set -xeo pipefail
-
-          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz
-          tar -xvf ffmpeg.tar.xz
-
-          sudo mv ffmpeg-7.1-linux-clang-default/include/* /usr/include
-          sudo mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib
-          sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
-          sudo rm -rf ffmpeg-7.1-linux-clang-default
-          sudo rm -rf ffmpeg.tar.xz
-          sudo ldconfig
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
-          shared-key: powerset
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: just,cargo-hakari
+          shared-key: package
+          tools: just,cargo-hakari
 
       - name: Disable Hakari
         run: cargo hakari disable
 
-      - name: Run Powerset
-        run: |
-          just powerset clippy
+      - name: Run Cargo Package on Powerset
+        run: just powerset package -- --allow-dirty
 
   brawl-done:
     runs-on: ubuntu-24.04
-    needs: [hakari, test, clippy, fmt, grind, docs, powerset]
+    needs: [hakari, test, clippy, fmt, grind, docs, package]
     if: ${{ !cancelled() && github.event_name == 'push' }}
     steps:
       - name: calculate the correct exit status

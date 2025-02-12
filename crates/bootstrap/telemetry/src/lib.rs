@@ -426,13 +426,21 @@ async fn opentelemetry_flush<G: TelemetryConfig>(
 
 #[cfg(test)]
 #[cfg_attr(all(test, coverage_nightly), coverage(off))]
+#[cfg(all(
+    feature = "opentelemetry-metrics",
+    feature = "opentelemetry-traces",
+    feature = "opentelemetry-logs"
+))]
 mod tests {
     use std::net::SocketAddr;
     use std::sync::Arc;
 
     use bytes::Bytes;
+    #[cfg(feature = "opentelemetry-logs")]
     use opentelemetry_sdk::logs::LoggerProvider;
+    #[cfg(feature = "opentelemetry-metrics")]
     use opentelemetry_sdk::metrics::SdkMeterProvider;
+    #[cfg(feature = "opentelemetry-traces")]
     use opentelemetry_sdk::trace::TracerProvider;
     use scuffle_bootstrap::{GlobalWithoutConfig, Service};
 
@@ -479,6 +487,7 @@ mod tests {
     async fn telemetry_http_server() {
         struct TestGlobal {
             bind_addr: SocketAddr,
+            #[cfg(feature = "prometheus")]
             prometheus: prometheus_client::registry::Registry,
             open_telemetry: crate::opentelemetry::OpenTelemetry,
         }
@@ -492,6 +501,7 @@ mod tests {
 
                 let exporter = scuffle_metrics::prometheus::exporter().build();
                 prometheus.register_collector(exporter.collector());
+
                 let metrics = SdkMeterProvider::builder().with_reader(exporter).build();
                 opentelemetry::global::set_meter_provider(metrics.clone());
 
