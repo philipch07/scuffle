@@ -18,7 +18,7 @@ runs:
         curl -L https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.1-latest-linux64-gpl-shared-7.1.tar.xz -o ffmpeg.tar.xz
         tar -xvf ffmpeg.tar.xz
 
-        sudo mv ffmpeg-n7.1-latest-linux64-gpl-shared-7.1/include/* /usr/include
+        sudo mv ffmpeg-n7.1-latest-linux64-gpl-shared-7.1/include/* /usr/local/include
         sudo mv ffmpeg-n7.1-latest-linux64-gpl-shared-7.1/lib/* /usr/local/lib
         sudo mv ffmpeg-n7.1-latest-linux64-gpl-shared-7.1/bin/* /usr/local/bin
         sudo rm -rf ffmpeg-n7.1-latest-linux64-gpl-shared-7.1
