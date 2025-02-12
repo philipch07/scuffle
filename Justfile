@@ -54,6 +54,6 @@ workspace-hack:
     cargo +{{RUST_TOOLCHAIN}} hakari manage-deps
     cargo +{{RUST_TOOLCHAIN}} hakari generate
 
-release-plz package:
+create-release package:
     cargo +{{RUST_TOOLCHAIN}} xtask change-logs generate --package {{package}}
     release-plz update --package {{package}}

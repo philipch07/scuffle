@@ -33,11 +33,15 @@ impl Fragment {
 pub struct PackageChangeLog {
     #[serde(skip, default)]
     pub pr_number: u64,
+    #[serde(alias = "cat")]
     pub category: String,
+    #[serde(alias = "desc")]
     pub description: String,
     #[serde(default)]
+    #[serde(alias = "author")]
     pub authors: Vec<String>,
     #[serde(default)]
+    #[serde(alias = "break", alias = "major")]
     pub breaking: bool,
 }
 
