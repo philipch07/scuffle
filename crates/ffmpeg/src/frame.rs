@@ -18,10 +18,10 @@ impl Clone for GenericFrame {
     }
 }
 
-/// Safety: `Frame` is safe to send between threads.
+/// Safety: `GenericFrame` is safe to send between threads.
 unsafe impl Send for GenericFrame {}
 
-/// Safety: `Frame` is safe to share between threads.
+/// Safety: `GenericFrame` is safe to share between threads.
 unsafe impl Sync for GenericFrame {}
 
 /// A video frame. Thin wrapper around [`GenericFrame`]. Like a frame but has specific video properties.

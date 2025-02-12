@@ -2,7 +2,9 @@
 category = "feat"
 description = "switch to rusty_ffmpeg instead of ffmpeg-sys-next"
 breaking = true
+authors = ["@TroyKomodo"]
 
 [[nutype-enum]]
 category = "feat"
 description = "add `nutype_enum::bitwise_enum`"
+authors = ["@TroyKomodo"]
