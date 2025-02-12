@@ -14,7 +14,7 @@ env:
   SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
-  check-change-log:
+  check:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +25,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
+          shared-key: change-log
           tools: just
 
       - name: Check change log entry
