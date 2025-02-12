@@ -261,12 +261,26 @@ jobs:
         run: |
           set -xeo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2 nasm libx264-dev valgrind
+          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2 nasm libx264-dev
 
       - uses: dtolnay/rust-toolchain@stable
         id: setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Install ffmpeg
+        run: |
+          set -xeo pipefail
+
+          curl -L https://sourceforge.net/projects/avbuild/files/linux/ffmpeg-7.1-linux-clang-default.tar.xz/download -o ffmpeg.tar.xz
+          tar -xvf ffmpeg.tar.xz
+
+          sudo mv ffmpeg-7.1-linux-clang-default/include/* /usr/include
+          sudo mv ffmpeg-7.1-linux-clang-default/lib/amd64/* /usr/local/lib
+          sudo mv ffmpeg-7.1-linux-clang-default/bin/amd64/* /usr/local/bin
+          sudo rm -rf ffmpeg-7.1-linux-clang-default
+          sudo rm -rf ffmpeg.tar.xz
+          sudo ldconfig
 
       - uses: taiki-e/install-action@v2
         with:
@@ -276,7 +290,7 @@ jobs:
         run: cargo hakari disable
 
       - name: Check Semver
-        uses: ob1kenobi/cargo-semver-checks-action@v2
+        uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           rust-toolchain: manual
 
