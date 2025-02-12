@@ -115,7 +115,7 @@
 //! let mut output = scuffle_ffmpeg::io::Output::seekable(std::io::Cursor::new(Vec::new()), OutputOptions::builder().format_name("mp4")?.build())?;
 //!
 //! // 6. Find the respective encoders for the video and audio streams.
-//! let x264 = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::H264).expect("no h264 encoder found");
+//! let x264 = scuffle_ffmpeg::codec::EncoderCodec::by_name("libx264").expect("no h264 encoder found");
 //! let aac = scuffle_ffmpeg::codec::EncoderCodec::new(AVCodecID::Aac).expect("no aac encoder found");
 //!
 //! // 7. Create the respective encoder settings for the video and audio streams.
