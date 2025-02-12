@@ -266,7 +266,8 @@ impl<'a> Iterator for DictionaryIterator<'a> {
         self.entry = unsafe {
             av_dict_get(
                 self.dict.as_ptr(),
-                &[0] as *const _ as _,
+                // ffmpeg expects a null terminated string when iterating over the dictionary entries.
+                &[0i8] as *const libc::c_char,
                 self.entry,
                 AVDictionaryFlags::IgnoreSuffix.into(),
             )
