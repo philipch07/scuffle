@@ -292,6 +292,7 @@ jobs:
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           rust-toolchain: manual
+          shared-key: scuffle-semver
 
   brawl-done:
     runs-on: ubuntu-24.04
