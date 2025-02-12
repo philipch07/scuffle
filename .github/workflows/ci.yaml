@@ -248,9 +248,41 @@ jobs:
           accountId: ${{ secrets.CF_DOCS_ACCOUNT_ID }}
           command: pages deploy --project-name=scuffle-docrs --branch=pr/${{ steps.brawl-override.outputs.pr_number || github.event.pull_request.number }} --commit-hash=${{ env.SHA }} --commit-dirty=true ./target/doc
 
+  semver-checks:
+    name: Semver-checks
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+
+      - name: Setup system deps
+        run: |
+          set -xeo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libdrm2 libxcb1 libasound2t64 libxv1 libc++1 libvdpau1 libva2 nasm libx264-dev valgrind
+
+      - uses: dtolnay/rust-toolchain@stable
+        id: setup-rust
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hakari
+
+      - name: Disable Hakari
+        run: cargo hakari disable
+
+      - name: Check Semver
+        uses: ob1kenobi/cargo-semver-checks-action@v2
+        with:
+          rust-toolchain: manual
+
   brawl-done:
     runs-on: ubuntu-24.04
-    needs: [hakari, test, clippy, fmt, grind, docs]
+    needs: [hakari, test, clippy, fmt, grind, docs, semver-checks]
     if: ${{ !cancelled() && github.event_name == 'push' }}
     steps:
       - name: calculate the correct exit status
