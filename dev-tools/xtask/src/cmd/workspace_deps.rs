@@ -4,6 +4,8 @@ use anyhow::Context;
 use cargo_metadata::camino::{Utf8Path, Utf8PathBuf};
 use cargo_metadata::DependencyKind;
 
+use crate::cmd::IGNORED_PACKAGES;
+
 #[derive(Debug, Clone, clap::Parser)]
 pub struct WorkspaceDeps {
     #[clap(long, short, value_delimiter = ',')]
@@ -15,8 +17,6 @@ pub struct WorkspaceDeps {
     /// Packages to exclude from testing
     exclude_packages: Vec<String>,
 }
-
-const IGNORED_PACKAGES: &[&str] = &["scuffle-workspace-hack", "xtask"];
 
 // the path that would need to be added to start to get to end
 fn relative_path(start: &Utf8Path, end: &Utf8Path) -> Utf8PathBuf {

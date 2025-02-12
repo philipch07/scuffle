@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Context;
 
-use crate::utils::{cargo_cmd, comma_delimited, parse_features, test_package_features, XTaskMetadata};
+use crate::{cmd::IGNORED_PACKAGES, utils::{cargo_cmd, comma_delimited, parse_features, test_package_features, XTaskMetadata}};
 
 #[derive(Debug, Clone, clap::Parser)]
 pub struct PowerSet {
@@ -41,8 +41,6 @@ pub struct PowerSet {
     /// Additional arguments to pass to the command
     args: Vec<String>,
 }
-
-const IGNORED_PACKAGES: &[&str] = &["scuffle-workspace-hack", "xtask"];
 
 impl PowerSet {
     pub fn run(self) -> anyhow::Result<()> {
