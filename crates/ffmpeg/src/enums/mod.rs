@@ -16,8 +16,8 @@ pub use av_sample_format::*;
 mod av_fmt_flags;
 pub use av_fmt_flags::*;
 
-mod av_picure_type;
-pub use av_picure_type::*;
+mod av_picture_type;
+pub use av_picture_type::*;
 
 mod av_seek;
 pub use av_seek::*;

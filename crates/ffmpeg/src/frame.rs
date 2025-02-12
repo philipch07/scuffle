@@ -1,5 +1,5 @@
 use crate::error::{FfmpegError, FfmpegErrorCode};
-use crate::ffi::*;
+use crate::{ffi::*, AVPictureType};
 use crate::rational::Rational;
 use crate::smart_object::{SmartObject, SmartPtr};
 use crate::utils::{check_i64, or_nopts};
@@ -220,12 +220,12 @@ impl VideoFrame {
 
     /// Returns the picture type of the frame.
     pub const fn pict_type(&self) -> AVPictureType {
-        self.0 .0.as_deref_except().pict_type
+        AVPictureType(self.0 .0.as_deref_except().pict_type as i32)
     }
 
     /// Sets the picture type of the frame.
     pub const fn set_pict_type(&mut self, pict_type: AVPictureType) {
-        self.0 .0.as_deref_mut_except().pict_type = pict_type;
+        self.0 .0.as_deref_mut_except().pict_type = pict_type.0 as u32;
     }
 
     /// Returns the data of the frame. By specifying the index of the plane.
@@ -446,12 +446,12 @@ impl std::ops::DerefMut for AudioFrame {
 mod tests {
     use insta::assert_debug_snapshot;
     use rand::{thread_rng, Rng};
-    use rusty_ffmpeg::ffi::{AVRational, AV_PICTURE_TYPE_I};
+    use rusty_ffmpeg::ffi::AVRational;
 
     use crate::ffi::av_frame_get_buffer;
     use crate::frame::{AudioChannelLayout, GenericFrame, VideoFrame};
     use crate::rational::Rational;
-    use crate::{AVChannelOrder, AVPixelFormat, AVSampleFormat};
+    use crate::{AVChannelOrder, AVPictureType, AVPixelFormat, AVSampleFormat};
 
     #[test]
     fn test_frame_clone() {
@@ -581,11 +581,11 @@ mod tests {
     fn test_pict_type() {
         let frame = GenericFrame::new().expect("Failed to create frame");
         let mut video_frame = frame.video();
-        video_frame.set_pict_type(AV_PICTURE_TYPE_I);
+        video_frame.set_pict_type(AVPictureType::Intra);
 
         assert_eq!(
             video_frame.pict_type(),
-            AV_PICTURE_TYPE_I,
+            AVPictureType::Intra,
             "Picture type should match the set value."
         );
     }
