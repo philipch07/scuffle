@@ -59,3 +59,15 @@ impl PartialEq<u32> for AVChannelOrder {
         self.0 == *other
     }
 }
+
+impl From<AVChannelOrder> for crate::ffi::AVChannelOrder {
+    fn from(value: AVChannelOrder) -> Self {
+        value.0
+    }
+}
+
+impl From<crate::ffi::AVChannelOrder> for AVChannelOrder {
+    fn from(value: crate::ffi::AVChannelOrder) -> Self {
+        AVChannelOrder(value)
+    }
+}

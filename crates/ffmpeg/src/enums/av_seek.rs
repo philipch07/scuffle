@@ -44,6 +44,18 @@ impl PartialEq<i32> for AVSeekFlag {
     }
 }
 
+impl From<u32> for AVSeekFlag {
+    fn from(value: u32) -> Self {
+        AVSeekFlag(value as i32)
+    }
+}
+
+impl From<AVSeekFlag> for u32 {
+    fn from(value: AVSeekFlag) -> Self {
+        value.0 as u32
+    }
+}
+
 nutype_enum! {
     /// Seek flags used in FFmpeg's `av_seek_frame` function.
     ///
@@ -89,5 +101,17 @@ bitwise_enum!(AVSeekWhence);
 impl PartialEq<i32> for AVSeekWhence {
     fn eq(&self, other: &i32) -> bool {
         self.0 == *other
+    }
+}
+
+impl From<u32> for AVSeekWhence {
+    fn from(value: u32) -> Self {
+        AVSeekWhence(value as i32)
+    }
+}
+
+impl From<AVSeekWhence> for u32 {
+    fn from(value: AVSeekWhence) -> Self {
+        value.0 as u32
     }
 }

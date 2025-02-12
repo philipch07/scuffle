@@ -48,3 +48,15 @@ impl PartialEq<i32> for AVIOFlag {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVIOFlag {
+    fn from(value: u32) -> Self {
+        AVIOFlag(value as i32)
+    }
+}
+
+impl From<AVIOFlag> for u32 {
+    fn from(value: AVIOFlag) -> Self {
+        value.0 as u32
+    }
+}

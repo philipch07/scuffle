@@ -44,3 +44,15 @@ impl PartialEq<i32> for AVMediaType {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVMediaType {
+    fn from(value: u32) -> Self {
+        AVMediaType(value as i32)
+    }
+}
+
+impl From<AVMediaType> for u32 {
+    fn from(value: AVMediaType) -> Self {
+        value.0 as u32
+    }
+}

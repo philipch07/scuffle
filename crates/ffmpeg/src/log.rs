@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn test_log_callback_with_class() {
         // Safety: `avcodec_find_decoder` is safe to call.
-        let codec = unsafe { avcodec_find_decoder(AVCodecID::H264.0 as u32) };
+        let codec = unsafe { avcodec_find_decoder(AVCodecID::H264.into()) };
         assert!(!codec.is_null(), "Failed to find H264 codec");
 
         // Safety: `(*codec).priv_class` is safe to access.

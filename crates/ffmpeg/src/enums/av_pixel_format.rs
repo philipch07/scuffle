@@ -159,3 +159,15 @@ impl PartialEq<i32> for AVPixelFormat {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVPixelFormat {
+    fn from(value: u32) -> Self {
+        AVPixelFormat(value as i32)
+    }
+}
+
+impl From<AVPixelFormat> for u32 {
+    fn from(value: AVPixelFormat) -> Self {
+        value.0 as u32
+    }
+}

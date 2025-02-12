@@ -53,3 +53,15 @@ impl PartialEq<i32> for AVRounding {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVRounding {
+    fn from(value: u32) -> Self {
+        AVRounding(value as i32)
+    }
+}
+
+impl From<AVRounding> for u32 {
+    fn from(value: AVRounding) -> Self {
+        value.0 as u32
+    }
+}

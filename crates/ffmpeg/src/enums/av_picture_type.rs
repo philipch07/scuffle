@@ -60,3 +60,15 @@ impl PartialEq<i32> for AVPictureType {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVPictureType {
+    fn from(value: u32) -> Self {
+        AVPictureType(value as i32)
+    }
+}
+
+impl From<AVPictureType> for u32 {
+    fn from(value: AVPictureType) -> Self {
+        value.0 as u32
+    }
+}

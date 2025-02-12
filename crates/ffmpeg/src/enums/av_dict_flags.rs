@@ -45,3 +45,15 @@ impl PartialEq<i32> for AVDictionaryFlags {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVDictionaryFlags {
+    fn from(value: u32) -> Self {
+        AVDictionaryFlags(value as i32)
+    }
+}
+
+impl From<AVDictionaryFlags> for u32 {
+    fn from(value: AVDictionaryFlags) -> Self {
+        value.0 as u32
+    }
+}

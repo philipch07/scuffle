@@ -61,3 +61,15 @@ impl PartialEq<i32> for AVDiscard {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVDiscard {
+    fn from(value: u32) -> Self {
+        AVDiscard(value as i32)
+    }
+}
+
+impl From<AVDiscard> for u32 {
+    fn from(value: AVDiscard) -> Self {
+        value.0 as u32
+    }
+}

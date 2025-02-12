@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn test_decoder_codec_from_ptr_valid() {
         // Safety: `avcodec_find_decoder` is safe to call.
-        let codec_ptr = unsafe { avcodec_find_decoder(AVCodecID::H264.0 as crate::ffi::AVCodecID) };
+        let codec_ptr = unsafe { avcodec_find_decoder(AVCodecID::H264.into()) };
         assert!(!codec_ptr.is_null(), "Expected a valid codec pointer for H264");
 
         // Safety: The pointer was allocated by `avcodec_find_decoder` and is valid.
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn test_encoder_codec_debug_valid() {
         // Safety: `avcodec_find_encoder` is safe to call.
-        let codec_ptr = unsafe { avcodec_find_encoder(AVCodecID::Mpeg4.0 as crate::ffi::AVCodecID) };
+        let codec_ptr = unsafe { avcodec_find_encoder(AVCodecID::Mpeg4.into()) };
 
         assert!(!codec_ptr.is_null(), "Expected a valid codec pointer for MPEG4");
 

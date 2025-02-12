@@ -2042,3 +2042,15 @@ impl PartialEq<i32> for AVCodecID {
         self.0 == *other
     }
 }
+
+impl From<crate::ffi::AVCodecID> for AVCodecID {
+    fn from(value: crate::ffi::AVCodecID) -> Self {
+        AVCodecID(value as i32)
+    }
+}
+
+impl From<AVCodecID> for crate::ffi::AVCodecID {
+    fn from(value: AVCodecID) -> Self {
+        value.0 as crate::ffi::AVCodecID
+    }
+}

@@ -115,6 +115,18 @@ impl PartialEq<i32> for AVFormatFlags {
     }
 }
 
+impl From<u32> for AVFormatFlags {
+    fn from(value: u32) -> Self {
+        AVFormatFlags(value as i32)
+    }
+}
+
+impl From<AVFormatFlags> for u32 {
+    fn from(value: AVFormatFlags) -> Self {
+        value.0 as u32
+    }
+}
+
 nutype_enum! {
     /// Format flags used in FFmpeg's `AVFormatContext`.
     ///
@@ -226,5 +238,17 @@ bitwise_enum!(AVFmtFlags);
 impl PartialEq<i32> for AVFmtFlags {
     fn eq(&self, other: &i32) -> bool {
         self.0 == *other
+    }
+}
+
+impl From<u32> for AVFmtFlags {
+    fn from(value: u32) -> Self {
+        AVFmtFlags(value as i32)
+    }
+}
+
+impl From<AVFmtFlags> for u32 {
+    fn from(value: AVFmtFlags) -> Self {
+        value.0 as u32
     }
 }

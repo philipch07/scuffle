@@ -126,3 +126,15 @@ impl PartialEq<i32> for AVSampleFormat {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVSampleFormat {
+    fn from(value: u32) -> Self {
+        AVSampleFormat(value as i32)
+    }
+}
+
+impl From<AVSampleFormat> for u32 {
+    fn from(value: AVSampleFormat) -> Self {
+        value.0 as u32
+    }
+}

@@ -49,3 +49,15 @@ impl PartialEq<i32> for AVPktFlags {
         self.0 == *other
     }
 }
+
+impl From<u32> for AVPktFlags {
+    fn from(value: u32) -> Self {
+        AVPktFlags(value as i32)
+    }
+}
+
+impl From<AVPktFlags> for u32 {
+    fn from(value: AVPktFlags) -> Self {
+        value.0 as u32
+    }
+}
