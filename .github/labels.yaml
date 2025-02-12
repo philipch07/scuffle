@@ -28,3 +28,5 @@
   color: "d876e3"
 - name: "wontfix"
   color: "ffffff"
+- name: "change-log-not-required"
+  color: "ffffff"
