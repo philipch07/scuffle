@@ -11,4 +11,4 @@ description = "improved build times"
 category = "fix"
 description = "Fixed a bug"
 breaking = true
-authors = ["@TroyKomodo", "@0Lennart"]
+authors = ["@TroyKomodo", "@lennartkloock"]
