@@ -19,7 +19,9 @@ impl Fragment {
         Ok(Fragment {
             pr_number,
             path: path.to_path_buf(),
-            toml: content.parse::<toml_edit::DocumentMut>().context("change log is not valid toml")?,
+            toml: content
+                .parse::<toml_edit::DocumentMut>()
+                .context("change log is not valid toml")?,
             changed: false,
             deleted: false,
         })

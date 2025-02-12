@@ -3,9 +3,8 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Context;
 use cargo_metadata::camino::Utf8Path;
 
-use crate::cmd::IGNORED_PACKAGES;
-
 use super::util::{Fragment, PackageChangeLog};
+use crate::cmd::IGNORED_PACKAGES;
 
 #[derive(Debug, Clone, clap::Parser)]
 pub struct Generate {
