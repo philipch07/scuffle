@@ -43,14 +43,14 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         run: cargo hakari disable
 
-      - name: Make sure code is linted
+      - name: Run Clippy
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           set -xeo pipefail
           export RUSTFLAGS="-Dwarnings"
           cargo +${{ env.RUST_TOOLCHAIN }} clippy -Z unstable-options --all-features --all-targets --no-deps
 
-      - name: Make sure code is linted
+      - name: Run Clippy on Powerset
         if: ${{ github.event_name == 'push' }}
         run: |
           set -xeo pipefail
@@ -268,7 +268,7 @@ jobs:
       - name: Disable Hakari
         run: cargo hakari disable
 
-      - name: Run Powerset
+      - name: Run Cargo Package on Powerset
         run: just powerset package -- --allow-dirty
 
   brawl-done:
