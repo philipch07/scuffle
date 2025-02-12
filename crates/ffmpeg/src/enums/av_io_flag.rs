@@ -1,5 +1,5 @@
+use nutype_enum::{bitwise_enum, nutype_enum};
 use rusty_ffmpeg::ffi::*;
-use nutype_enum::{nutype_enum, bitwise_enum};
 
 nutype_enum! {
     /// I/O flags used in FFmpeg's `AVIOContext`.
