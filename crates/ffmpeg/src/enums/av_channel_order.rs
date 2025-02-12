@@ -60,14 +60,14 @@ impl PartialEq<u32> for AVChannelOrder {
     }
 }
 
-impl From<AVChannelOrder> for crate::ffi::AVChannelOrder {
+impl From<AVChannelOrder> for i32 {
     fn from(value: AVChannelOrder) -> Self {
-        value.0
+        value.0 as i32
     }
 }
 
-impl From<crate::ffi::AVChannelOrder> for AVChannelOrder {
-    fn from(value: crate::ffi::AVChannelOrder) -> Self {
-        AVChannelOrder(value)
+impl From<i32> for AVChannelOrder {
+    fn from(value: i32) -> Self {
+        AVChannelOrder(value as u32)
     }
 }
