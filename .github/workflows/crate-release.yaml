@@ -5,10 +5,13 @@ on:
     branches:
       - main
 
+env:
+  RUST_TOOLCHAIN: nightly
+
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-24.04
+    runs-on: ubicloud-standard-8
     environment: crates
     permissions:
       contents: write
@@ -19,24 +22,24 @@ jobs:
       - name: Setup FFmpeg
         uses: ./.github/actions/setup-ffmpeg
 
-      - uses: dtolnay/rust-toolchain@stable
-        id: setup-rust
-
-      - uses: Swatinem/rust-cache@v2
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          prefix-key: "v0-rust-${{ steps.setup-rust.outputs.cachekey }}"
-          shared-key: release
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy
+          shared-key: clippy
+          tools: just,cargo-hakari,release-plz
+          cache-backend: ubicloud
 
       - name: Remove cargo registries
         run: |
           rm -rf ~/.cargo/registry
 
       - name: Fix workspace deps
-        run: cargo xtask workspace-deps
+        run: cargo +${{ env.RUST_TOOLCHAIN }} xtask workspace-deps
 
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: release-plz
+      - name: Cargo Hackari disable
+        run: cargo +${{ env.RUST_TOOLCHAIN }} hakari disable
 
       - uses: fregante/setup-git-user@v2
 

@@ -1,9 +1,14 @@
+name: Create Crate Release
+
 on:
   workflow_dispatch:
     inputs:
       crate:
         required: true
         type: string
+
+env:
+  RUST_TOOLCHAIN: nightly
 
 jobs:
   create-release:
@@ -19,7 +24,7 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          toolchain: nightly
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           shared-key: create-release
           tools: just,release-plz
 
