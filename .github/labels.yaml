@@ -30,3 +30,7 @@
   color: "ffffff"
 - name: "change-log-not-required"
   color: "ffffff"
+- name: "release"
+  color: "32a852"
+- name: "automated"
+  color: "a62b33"
