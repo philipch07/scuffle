@@ -50,7 +50,7 @@ jobs:
         with:
           title: Automated release of ${{ inputs.crate }}
           body-path: /tmp/pr-body.txt
-          branch: create-release/${{ inputs.crate }}
+          branch: automation/cargo-release/${{ inputs.crate }}
           labels: release,automated,change-log-not-required
           commit-message: |
             Automated release of ${{ inputs.crate }}
