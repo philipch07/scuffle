@@ -14,6 +14,7 @@ fmt *args:
 lint *args:
     cargo +{{RUST_TOOLCHAIN}} clippy --fix --allow-dirty --allow-staged --all-features --all-targets {{args}}
 
+alias coverage := test
 test *args:
     #!/bin/bash
     set -euo pipefail
@@ -28,6 +29,9 @@ test *args:
     cargo insta review
     cargo +{{RUST_TOOLCHAIN}} llvm-cov report --lcov --output-path ./lcov.info
     cargo +{{RUST_TOOLCHAIN}} llvm-cov report --html
+
+coverage-serve:
+    miniserve target/llvm-cov/html --index index.html --port 3000
 
 grind *args:
     # Runs valgrind on the tests.

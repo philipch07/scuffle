@@ -1,0 +1,3 @@
+crates/**/* @ScuffleCloud/rust
+Cargo.* @ScuffleCloud/rust
+**/* @ScuffleCloud/developers
