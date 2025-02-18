@@ -12,3 +12,7 @@ trim_trailing_whitespace = true
 # Do not trim trailing whitespace in markdown files as it can be used for line breaks
 [*.md]
 trim_trailing_whitespace = false
+
+[*.yaml,*.yml]
+indent_style = space
+indent_size = 2
