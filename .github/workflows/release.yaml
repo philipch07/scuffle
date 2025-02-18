@@ -8,6 +8,9 @@ on:
 env:
   RUST_TOOLCHAIN: nightly
 
+concurrency:
+  group: release
+
 jobs:
   crates-io:
     name: Crates.io
