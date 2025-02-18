@@ -1,19 +1,17 @@
-name: Cargo Release PR
+name: Cargo Update
 
 on:
   workflow_dispatch:
-    inputs:
-      crate:
-        required: true
-        type: string
+  schedule:
+    - cron: "0 0 * * 0" # Every Sunday at midnight
 
 env:
   RUST_TOOLCHAIN: nightly
 
 jobs:
-  cargo-release-pr:
-    name: Cargo Release PR
-    runs-on: ubicloud-standard-8
+  cargo-update:
+    name: Cargo Update
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
@@ -25,17 +23,9 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          shared-key: cargo-release-pr
-          tools: just,release-plz,cargo-hakari
-          cache-backend: ubicloud
 
-      - name: Create release
-        id: create
-        run: |
-          set -eo pipefail
-          echo "Release workflow triggered by @${{ github.actor }}" > /tmp/pr-body.txt
-          just create-release ${{ inputs.crate }} | tee -a /tmp/pr-body.txt
-          cat /tmp/pr-body.txt > $GITHUB_STEP_SUMMARY
+      - name: Update Cargo.lock
+        run: cargo update
 
       # Check if any files changed
       - name: Check if anything changed
@@ -48,12 +38,12 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         if: ${{ steps.changed.outputs.result == 1 }}
         with:
-          title: Automated release of ${{ inputs.crate }}
+          title: Automated update of Cargo.lock
           body-path: /tmp/pr-body.txt
-          branch: automation/cargo-release/${{ inputs.crate }}
+          branch: automation/cargo-update
           labels: release,automated,change-log-not-required
           commit-message: |
-            Automated release of ${{ inputs.crate }}
+            Automated update of Cargo.lock
 
             Release triggered by @${{ github.actor }}
           author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
